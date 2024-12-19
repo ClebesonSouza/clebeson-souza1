@@ -169,8 +169,8 @@ body {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 7.5rem;
-  height: 2rem;
+  width: 8.5rem;
+  height: 3rem;
   background: var(--main-color);
   border: var(--border);
   border-radius: 0.3rem;
