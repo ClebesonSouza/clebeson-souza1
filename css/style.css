@@ -122,13 +122,14 @@ body {
 
 .profile-page h1 {
   color:rgb(0, 171, 240);
-  font-size: 2.6rem;
+  font-size: 1.4rem;
   line-height: 1;
  
 }
 
 .profile-page h3 {
-  font-size: 1.5rem;
+  margin:10px ;
+  font-size: 1rem;
   color: var(--main-color);
 }
 
@@ -168,12 +169,12 @@ body {
   display: inline-flex;
   justify-content: center;
   align-items: center;
-  width: 9.5rem;
-  height: 3rem;
+  width: 6.5rem;
+  height: 2rem;
   background: var(--main-color);
   border: var(--border);
   border-radius: 0.3rem;
-  font-size: 1rem;
+  font-size: 0.9rem;
   color: var(--white-color);
   font-weight: 500;
   margin: 0 1rem;
