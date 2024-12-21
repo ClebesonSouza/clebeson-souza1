@@ -436,7 +436,7 @@ a:hover{
 }
 
 .resume-box.skills{
-    grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(26rem, 1fr));
 }
 .resume-box.skills .resume-item{
     align-items: center;
