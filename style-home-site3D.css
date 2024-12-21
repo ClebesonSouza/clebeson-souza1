@@ -117,7 +117,7 @@ a:hover{
     width: 100vw;
     height: 100vh;
     perspective: 1500px;
-    perspective-origin: 50%;
+    perspective-origin: 100%;
 
 }
 
