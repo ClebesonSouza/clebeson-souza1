@@ -71,6 +71,17 @@ p{
     cursor: pointer;
 
 }
+
+
+.nav:hover{
+
+    background: linear-gradient(var(--bg-color), var(--third-bg-color));   
+    border-radius:5em 5em 5em 5em;   
+    box-shadow: 0 0 15px var(--white-color);
+}
+
+
+
 .nav-list li:hover, 
 .nav-list li.active{
     color: var(--main-color);
