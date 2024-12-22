@@ -50,7 +50,7 @@ p{
 }
 .nav{
     position: fixed;
-    bottom: 3rem;
+    bottom: 5rem;
     left: 50%;
     transform: translateX(-50%);
     width: 60%;
