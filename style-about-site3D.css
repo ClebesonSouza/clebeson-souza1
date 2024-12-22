@@ -198,7 +198,7 @@ p{
 .about{
     display: flex;
     align-items: center;
-    gap:5rem
+    gap:1rem
 }
 
 .home-info h1{
