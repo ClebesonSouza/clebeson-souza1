@@ -301,7 +301,7 @@ p{
 }
 
 .title{
-    font-size: 4rem;
+    font-size: 3rem;
     text-align: center;
 
 }
@@ -320,7 +320,7 @@ p{
 
 .about-info .btn{
     margin: auto 1rem 1rem auto;
-    padding: 1.2rem  4rem;
+    padding: .2rem  2rem;
 }
 
 .resume,
