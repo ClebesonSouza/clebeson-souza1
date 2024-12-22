@@ -70,7 +70,8 @@ a:hover{
 }
 
 .nav{
-    top: 7rem;
+    left: 40%;
+    top: 5rem;
     width: 40rem;
 }
 .nav .nav-list{
