@@ -68,7 +68,13 @@ a{
 a:hover{
     color: var(--main-color);
 }
+
+.nav{
+    top: 7rem;
+    width: 48rem;
+}
 .nav .nav-list{
+    
     display: flex;
     justify-content: space-evenly;
 
