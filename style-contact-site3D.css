@@ -628,7 +628,9 @@ a:hover{
 }
 
 .contact-form h3{
+    
     margin-top: 2rem;
+    text-align: center;
     font-size: 3rem;
     color: var(--main-color);
     margin-bottom: 1.5rem;                  /*######Correto é 3  #####*/
