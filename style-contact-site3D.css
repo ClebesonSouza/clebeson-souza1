@@ -655,7 +655,7 @@ a:hover{
 }
 
 .contact-form .field-box textarea {
-    height: 12rem;                        /*  #####   Correto é 20    ########*/
+    height: 3rem;                        /*  #####   Correto é 20    ########*/
     resize: none;
 
 }
