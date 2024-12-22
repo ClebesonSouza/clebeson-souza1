@@ -57,6 +57,7 @@ p{
     width: 45%;
     padding: .6rem 0 ;
     background: var(--nav-bg-color);
+    box-shadow: 0 0 0 .7px; 
     border-radius: 5rem;
     z-index: 100;
 }
@@ -80,6 +81,13 @@ a:hover{
 
 }
 
+
+.nav:hover{
+
+    background: linear-gradient(var(--bg-color), var(--third-bg-color));   
+    border-radius:5em 5em 5em 5em;   
+    box-shadow: 0 0 15px var(--white-color);
+}
 
 .nav-list li:hover, 
 .nav-list li.active{
