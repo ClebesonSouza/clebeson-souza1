@@ -49,16 +49,27 @@ p{
 
 }
 .nav{
+    margin-top: 3rem;
     position: fixed;
-    bottom: 2rem;
+    bottom: 2px auto 3px auto;
     left: 50%;
     transform: translateX(-50%);
-    width: 40rem;
-    padding: 2rem 0 ;
+    width: 45%;
+    padding: .6rem 0 ;
     background: var(--nav-bg-color);
+    box-shadow: 0 0 0 .7px; 
     border-radius: 5rem;
     z-index: 100;
 }
+
+a{
+    color: var(--white-color);
+}
+
+a:hover{
+    color: var(--main-color);
+}
+
 .nav .nav-list{
     display: flex;
     justify-content: space-evenly;
@@ -70,6 +81,14 @@ p{
     font-size: 3rem;
     cursor: pointer;
 
+}
+
+
+
+.nav{
+    left: 45%;
+    top: 5rem;
+    width: 40rem;
 }
 
 
