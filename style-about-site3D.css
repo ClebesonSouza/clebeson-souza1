@@ -76,7 +76,7 @@ a:hover{
 
 }
 .nav-list li{
-    top: -.1rem;
+    top: -.3rem;
     position: relative;
     display: flex;
     font-size: 3rem;
@@ -87,8 +87,8 @@ a:hover{
 
 
 .nav{
-    height: 5.5rem;
-    left: 53%;
+    height: 5rem;
+    left: 51%;
     top: 5rem;
     width: 38rem;
 }
