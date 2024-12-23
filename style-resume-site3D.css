@@ -447,7 +447,7 @@ a:hover{
 
 }
 
-                           /*###############   Ver cifra início   ################*/
+                           /*###############   Composição################*/
 
 .resume-box.skills a{
    
@@ -501,8 +501,11 @@ a:hover{
     
 
 } 
-
-
+.bottom .btn{
+    
+    margin: auto 1rem 1rem auto;
+    padding: .8rem  2rem;
+}
 
  /*INFORMAÇÕES DO BROCO (003) work*/
 
