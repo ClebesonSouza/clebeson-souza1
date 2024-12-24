@@ -51,7 +51,7 @@ p{
 .nav{
     position: fixed;
     bottom: 5rem;
-    left: 50%;
+    left: 51%;
     transform: translateX(-50%);
     width: 60%;
     padding: .6rem 0 ;
