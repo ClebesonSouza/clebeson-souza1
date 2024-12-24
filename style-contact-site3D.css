@@ -641,7 +641,7 @@ a:hover{
 .contact-form .field-box{
     display: flex;
     flex-wrap: wrap;
-    gap: 2rem;
+    gap: .8rem;
 
 }
 
@@ -656,7 +656,7 @@ a:hover{
 }
 
 .contact-form .field-box textarea {
-    height: 10rem;                        /*  #####   Correto é 20    ########*/
+    height: 15rem;                        /*  #####   Correto é 20    ########*/
     resize: none;
 
 }
