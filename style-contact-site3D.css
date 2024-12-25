@@ -609,7 +609,8 @@ a:hover{
 
 .contact{
     padding-top: 2rem;
-    padding-bottom: 18rem;
+    padding-bottom: 8
+    .5rem;
 }
 
 .contact-wrapper{
@@ -640,7 +641,7 @@ a:hover{
 .contact-form .field-box{
     display: flex;
     flex-wrap: wrap;
-    gap: 2rem;
+    gap: 1rem;
 
 }
 
