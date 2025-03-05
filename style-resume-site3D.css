@@ -494,6 +494,19 @@ a:hover{
 .resume-box.skills .resume-item p{
     margin-top: 0;
     text-align: center;}
+
+
+
+
+    .tab-item.resume-item>p>audio{
+        margin:2rem ;
+        width:28rem;
+        color: var(--main-color);
+       
+       
+        
+
+    }
    
 
 .portfolio-list:nth-child(2) {      /*Pseudo class numeros de colunas (2)*/
