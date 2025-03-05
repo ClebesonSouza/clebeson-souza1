@@ -499,9 +499,10 @@ a:hover{
 
 
     .tab-item.resume-item>p>audio{
-        margin:2rem ;
+        margin:.2rem 2rem .2rem 2rem ;
         width:28rem;
-        color: var(--main-color);
+        
+        
        
        
         
