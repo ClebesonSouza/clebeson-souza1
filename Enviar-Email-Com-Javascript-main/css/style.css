@@ -1,0 +1,89 @@
+@import url("https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700;900&display=swap");
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Roboto", "sans-serif";
+}
+
+:root {
+  --main-color: #192039;
+  --light-color: #fff;
+  --primary-color: #0088cc;
+  --success-color: #47a447;
+  --info-color: #5bc0de;
+  --warning-color: #ed9c28;
+  --danger-color: #d2322d;
+}
+
+body {
+  background-color: var(--main-color);
+  color: var(--light-color);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.form {
+  width: 900px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  margin-top: 150px;
+}
+
+.form .form-fields {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  margin: 20px 20px;
+}
+
+.form-fields .field-name-email {
+  display: flex;
+}
+
+.form-fields .field-name-email input {
+  outline: none;
+  width: 400px;
+  height: 30px;
+  border-radius: 25px;
+  margin: 20px 0px;
+  padding: 20px;
+}
+
+.form-fields textarea {
+  outline: none;
+  width: 800px;
+  border-radius: 25px;
+  height: 150px;
+  resize: none;
+  margin: 0px 10px 0px 10px;
+  padding: 20px;
+}
+
+.form-fields  .btn { 
+  width: 800px;
+  display: flex;
+  justify-content: left;
+  margin: 20px;  
+
+}
+
+.form-fields  .btn  button{
+  width: 100px;
+  height: 50px;
+  border-radius: 25px;
+  text-transform: uppercase;
+  cursor: pointer;
+  transition: 0.3s ease;
+}
+
+.form-fields  .btn  button:hover{
+  background-color: var(--info-color);
+  color: var(--light-color);
+  -moz-transform: scale(1.2);
+  -webkit-transform: scale(1.2);
+  transform: scale(1.2);
+}

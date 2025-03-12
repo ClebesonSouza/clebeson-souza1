@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Form - Enviar E-mail Com JS</title>
+    <link rel="stylesheet" href="css/style.css" />
+  </head>
+  <body>
+    <form class="form" action="#" id="email-form">
+        <div><h1>Enviar E-mail Com Javascript</h1></div>
+      <fieldset class="form-fields">
+        <div class="field-name-email">
+          <label for="nome">
+            <input name="nome" id="nome" type="text" placeholder="Seu Nome" />
+          </label>
+
+          <label for="email">
+            <input
+              name="email"
+              id="email"
+              type="email"
+              placeholder="Seu E-mail"
+            />
+          </label>
+        </div>
+        <div>
+          <label for="mensagem">
+            <textarea
+              name="mensagem"
+              id="mensagem"
+              type="text"
+              placeholder="Sua Mensagem"
+            ></textarea>
+          </label>
+        </div>
+        <div class="btn">
+          <button id="emailButton">Enviar</button>
+        </div>
+      </fieldset>
+    </form>
+    <script src="https://smtpjs.com/v3/smtp.js"></script>
+    <script src="js/sendmail.js"></script>
+  </body>
+</html>
