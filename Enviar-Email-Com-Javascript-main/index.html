@@ -3,17 +3,17 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Form - Enviar E-mail Com JS</title>
+    <title>Area de Envio de Mensagem</title>
     <link rel="stylesheet" href="css/style.css" />
     <link rel="shortcut icon" href="favicon_io/favicon-cs-16x16.png" type="image/x-icon">
   </head>
   <body>
     <form class="form" action="#" id="email-form">
-        <div><h1>Enviar E-mail Com Javascript</h1></div>
+        <div><h1>Fale Conosco</h1></div>
       <fieldset class="form-fields">
         <div class="field-name-email">
           <label for="nome">
-            <input name="nome" id="nome" type="text" placeholder="Seu Nome" />
+            <input name="nome" id="nome" type="text" placeholder="Nome Completo" />
           </label>
 
           <label for="email">
@@ -21,7 +21,7 @@
               name="email"
               id="email"
               type="email"
-              placeholder="Seu E-mail"
+              placeholder="Digite seu E-mail Corretamente"
             />
           </label>
         </div>
@@ -31,7 +31,7 @@
               name="mensagem"
               id="mensagem"
               type="text"
-              placeholder="Sua Mensagem"
+              placeholder="Escreva sua mensagem ..."
             ></textarea>
           </label>
         </div>
@@ -39,7 +39,7 @@
           <button id="emailButton">Enviar</button>
         </div>
       </fieldset>
-    </form>
+    </form> 
     <script src="https://smtpjs.com/v3/smtp.js"></script>
     <script src="js/sendmail.js"></script>
   </body>

@@ -21,16 +21,16 @@ function sendMail (e) {
             Password: "FCDD08D19AA12C8704AF8423CC40A3E3B8CC",
             To: "klebesonlucas@gmail.com",
             From: "klebesonlucas@gmail.com",
-            Subject: `${name} Enviando E-mail Com Javascript`,
+            Subject: `${name} Enviou uma mensagem pelo "Síte Interativo"`,
             Body: `Email: ${mail} \n \n ${message}`,
           }).then(() => {
             // Após o envio bem-sucedido, exibe um alerta informando que a mensagem foi enviada
-            alert('Mensagem enviada!');
+            alert('Mensagem enviada com Sucesso!');
             // E recarrega a página, para limpar os campos e permitir que o usuário envie mais e-mails.
             location.reload();
           });
     } else {
         // Se algum dos campos estiver em branco, exibe um alerta informando que todos os campos devem ser preenchidos.
-        alert('Preencha todos os campos!');
+        alert('Por favor preencha todos os campos abaixo!');
     }    
 }
