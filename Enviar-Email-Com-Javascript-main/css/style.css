@@ -19,7 +19,7 @@
 }
 
 body {
-  
+  overflow-x: hidden;
   background-color: var(--main-color);
   color: var(--light-color);
   display: flex;
@@ -170,11 +170,11 @@ a:hover{
 }
 
 
-/* Estilos para telas pequenas */
+/* Estilos para telas medias tabletes ( 768px ) */
 @media (max-width: 768px) {
   .form {
    
-    width: 80%;
+    width: 100%;
   }
   
   .form-fields .field-name-email {
@@ -183,6 +183,7 @@ a:hover{
   
   .form-fields .field-name-email input {
     width:700px;
+    height: 130px;
     font-size: 1.6rem;
     text-align: center;
   }
@@ -200,30 +201,83 @@ a:hover{
   }
 }
 
-/* Estilos para telas muito pequenas */
+/* Estilos para telas pequenas celulares ( 480px ) */
 @media (max-width: 480px) {
   .form {
    
-    height: 370px;
+    height: 540px;
     width: 95%;
   }
   
   .form-fields .field-name-email input {
     font-size: 1.2rem;
     margin: 15px 10px;  
-    height: 25px;
+    height: 30px;
     width: 350px;
   }
   
   .form-fields textarea {
     font-size: 1.2rem;
-    height: 180px;
+    height: 250px;
     width: 350px;
   }
   
   .form-fields .btn button {
     height:50px ;
     width: 100px;
+  }
+}
+
+/* Estilos para telas pequenas celulares ( 320px ) */
+@media (max-width: 320px) {
+  .form {
+    height: 300px;
+    width: 95%;
+  }
+  
+  .form-fields .field-name-email input {
+    font-size: 1.1rem;
+    height: 20px;
+    width: 300px;
+  }
+  
+  .form-fields textarea {
+    font-size: 1.2rem;
+    height: 140px;
+    width: 300px;
+  }
+  
+  .form-fields .btn button {
+    height:50px ;
+    width: 90px;
+  }
+}
+
+/* Estilos para telas muito pequenas smaart out ( 162px ) */
+@media (max-width: 162px) {
+  .form {
+   
+    height: 120px;
+    width: 70%;
+    font-size: .7rem;
+  }
+  
+  .form-fields .field-name-email input {
+    font-size: .7rem;
+    height: 25px;
+    width: 180px;
+  }
+  
+  .form-fields textarea {
+    font-size: .7rem;
+    height: 80px;
+    width: 180px;
+  }
+  
+  .form-fields .btn button {
+    font-size: .7rem;
+    height:50px ;
+    width: 60px;
   }
 }
 ```
