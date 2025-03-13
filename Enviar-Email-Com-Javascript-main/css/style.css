@@ -259,7 +259,7 @@ a:hover{
    
     height: 120px;
     width: 70%;
-    font-size: .7rem;
+    font-size: .6rem;
   }
   
   .form-fields .field-name-email input {
@@ -282,6 +282,7 @@ a:hover{
 }
 ```
 
+/*
 Essas alterações incluem:
 
 - Uso de unidades relativas (`%`, `vw`, `vh`) em vez de unidades absolutas (`px`)
@@ -289,4 +290,4 @@ Essas alterações incluem:
 - Uso de layouts flexíveis e grids para permitir que os elementos se adaptem a diferentes tamanhos de tela
 - Simplificação dos estilos e remoção de estilos desnecessários
 
-Espero que essas alterações ajudem a melhorar a responsividade do seu formulário!
+Espero que essas alterações ajudem a melhorar a responsividade do seu formulário! */
