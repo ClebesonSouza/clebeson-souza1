@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Contador de Pontuação Canastra</title>
+    <link rel="shortcut icon" href="favicon-cs-novo-16x16.png" type="image/x-icon">
+    <link rel="stylesheet" href="marcadorstyle.css">
+
+</head>
+<body>
+    <header>
+        <h1>Contador de Pontuação Canastra </h1>
+    </header>
+    <main>
+        <section class="container">
+            <table id="tabela-pontuacao">
+                <caption><h2>Pontuação dos Jogadores</h2></caption>
+                <thead>
+                    <tr>
+                        <th>Clebeson Souza</th>
+                        <th>Joseni Fernandes</th>
+                        <th>Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="corpo-tabela">
+                    <tr>
+                        <td><input type="number" id="pontuacao-jogador-1" placeholder="Valor"></td>
+                        <td><input type="number" id="pontuacao-jogador-2" placeholder="Valor"></td>
+                        <td><button class="excluir-linha">Excluir</button></td>
+                    </tr>
+                </tbody>
+                <tfoot>
+                    <tr>
+                        <td id="total-pontuacao-jogador-1">0</td>
+                        <td id="total-pontuacao-jogador-2">0</td>
+                    </tr>
+                </tfoot>
+            </table>
+            <button id="adicionar-linha">Adicionar Linha</button>
+            <button id="calcular-total">Calcular Total</button>
+        </section>
+    </main>
+    <script src="marcadorscript.js"></script>
+</body>
+</html>
