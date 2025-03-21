@@ -37,6 +37,7 @@
 }
 html{
     font-size: 50%;
+    overflow: hidden;
 }
 body{
     color: var(--white-color);
@@ -669,9 +670,9 @@ a:hover{
         width: 40rem;
     }
     .img-box{
-        margin-top: -160px;
-        width: 40vw;
-        height: 40vw;
+        margin-top: -152px;
+        width: 38vw;
+        height: 38vw;
         left: -100px;
         overflow: hidden;
        
