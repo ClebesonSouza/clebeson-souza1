@@ -730,6 +730,7 @@ a:hover{
         margin-top: 100px;
         padding-bottom: 30px;
         text-align: center;
+        text-shadow: 0px 3px 3px var(--third-bg-color);
     }
     .about-info h2{
         margin-bottom:10px;
