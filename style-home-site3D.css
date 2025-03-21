@@ -660,6 +660,24 @@ a:hover{
     cursor: pointer;
 }
 
+ /*  #####  Afunção de @media (max-width: 480px) é usada para dimensionar telas  ########*/
+@media (max-width: 480px) {
+
+    .nav{
+        left: 50%;
+        top: 5rem;
+        width: 40rem;
+    }
+    .img-box{
+        margin-top: -160px;
+        width: 40vw;
+        height: 40vw;
+        left: -100px;
+        overflow: hidden;
+       
+    
+    }
+}
 
 
 
