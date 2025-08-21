@@ -3,7 +3,7 @@ const quizData = [
 
 
     {
-        question: "Gabriel vamos testar seu conhecimento. Se você estudou o que te mandei clique na alternativa (b), se não estudou, escolha outra qualquer.",
+        question: "Teste de conhecimento. Se estudou o que te mandei clique na alternativa (b), caso não, escolha outra qualquer.",
         a: "a",
         b: "b",
         c: "c",
