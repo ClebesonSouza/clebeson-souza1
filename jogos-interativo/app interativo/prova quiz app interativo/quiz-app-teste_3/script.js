@@ -122,7 +122,7 @@ submitBtn.addEventListener("click", () => {
             loadQuiz();
         } else {
             quiz.innerHTML = `
-                <h2>Parabéns! Gabriel você acertou ${score}/${quizData.length} Questões.</h2>
+                <h2>Parabéns! Roziana você acertou ${score}/${quizData.length} Questões.</h2>
                 
                 <button onclick="location.reload()">Refazer o Teste</button>
             `;

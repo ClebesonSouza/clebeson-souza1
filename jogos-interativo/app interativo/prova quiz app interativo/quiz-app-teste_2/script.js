@@ -25,7 +25,7 @@ const quizData = [
         a: "Dó",
         b: "Ré",
         c: "Lá",
-        d: "Síbemol",
+        d: "Sí-bemol",
         correct: "d",
     },
 
@@ -33,7 +33,7 @@ const quizData = [
         question: "Antes da nota Lá, que nota vem?",
         a: "Lábemol",
         b: "sol",
-        c: "solbemol",
+        c: "sol-bemol",
         d: "Sí",
         correct: "a",
     },
@@ -41,7 +41,7 @@ const quizData = [
         question: "Em uma escala cromática começando em Dó, qual a quinta nota?",
         a: "sol",
         b: "Mí",
-        c: "Míbemol",
+        c: "Mí-bemol",
         d: "Sí",
         correct: "b",
     },
@@ -122,7 +122,7 @@ submitBtn.addEventListener("click", () => {
             loadQuiz();
         } else {
             quiz.innerHTML = `
-                <h2>Parabéns! Gabriel você acertou ${score}/${quizData.length} Questões.</h2>
+                <h2>Parabéns! Roziana você acertou ${score}/${quizData.length} Questões.</h2>
                 
                 <button onclick="location.reload()">Refazer o Teste</button>
             `;
