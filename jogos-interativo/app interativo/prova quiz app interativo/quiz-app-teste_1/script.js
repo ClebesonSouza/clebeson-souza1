@@ -3,7 +3,7 @@ const quizData = [
 
 
     {
-        question: "Roziana você se compromete a estudar tudo que eu te passar se sim clique na alternativa (b), caso não, escolha outra Alternativa qualquer.",
+        question: "Ola! Você se compromete a estudar tudo que eu te passar se sim clique na alternativa (b), caso não, escolha outra Alternativa qualquer.",
         a: "a",
         b: "b",
         c: "c",
@@ -122,7 +122,7 @@ submitBtn.addEventListener("click", () => {
             loadQuiz();
         } else {
             quiz.innerHTML = `
-                <h2>Parabéns! Roziana você acertou ${score}/${quizData.length} Questões.</h2>
+                <h2>Parabéns! Você acertou ${score}/${quizData.length} Questões.</h2>
                 
                 <button onclick="location.reload()">Refazer o Teste</button>
             `;
