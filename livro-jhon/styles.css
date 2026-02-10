@@ -134,8 +134,7 @@ aside img:nth-child(2) {
 }
 
 aside p {
-    font-family: cursive;
-    font-style: italic;
+    
     font-size: 2rem;
     text-align: center;
 }
