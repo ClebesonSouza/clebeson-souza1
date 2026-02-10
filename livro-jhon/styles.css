@@ -50,8 +50,7 @@ nav {
     animation: entering 0.7s ease-in-out;
 }
 nav a.back-profile{
-    font-family: cursive;
-    font-style: italic;
+ 
     font-size: 30px;
     color: rgb(30, 151, 50);
 }
