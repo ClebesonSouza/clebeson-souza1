@@ -1,53 +1,390 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
+    <title>🤖 IA Smart Multi-API Pro</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Inter', sans-serif;
+            background: linear-gradient(135deg, #0f0f23 0%, #1a1a2e 50%, #16213e 100%);
+            min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px;
+        }
+        body::before {
+            content: ''; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: radial-gradient(circle at 20% 80%, rgba(120,119,198,0.3) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255,255,255,0.1) 0%, transparent 50%);
+            animation: float 20s ease-in-out infinite; z-index: -1;
+        }
+        @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-20px)} }
 
-    <link rel="shortcut icon" href="assets/favicon-cs-novo-16x16.png" type="image/x-icon">
-    
-    <title>Livro Jhon Capitulo 41-42</title>
+        .container {
+            background: rgba(15,15,35,0.95); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.1);
+            border-radius: 24px; box-shadow: 0 25px 50px rgba(0,0,0,0.5); width: 100%; max-width: 1000px; height: 90vh;
+            display: flex; flex-direction: column; overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #10b981 0%, #059669 50%, #047857 100%); animation: gradientShift 8s ease infinite;
+            padding: 24px 32px; text-align: center; position: relative; overflow: hidden;
+        }
+        @keyframes gradientShift { 0%,100%{background-position:0% 50%} 50%{background-position:100% 50%} }
+
+        .header h1 { font-size: clamp(1.5rem,4vw,2.2rem); font-weight: 700; margin-bottom: 8px;
+            background: linear-gradient(135deg,white,#f3f4f6); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .header p { font-size: 0.95rem; color: rgba(255,255,255,0.9); font-weight: 500; }
+
+        .status-indicator {
+            position: absolute; top: 20px; right: 20px; width: 12px; height: 12px; background: #f59e0b;
+            border-radius: 50%; animation: pulse 2s infinite;
+        }
+        @keyframes pulse { 0%{box-shadow:0 0 0 0 rgba(245,158,11,0.7)} 70%{box-shadow:0 0 0 10px rgba(245,158,11,0)} 100%{box-shadow:0 0 0 0 rgba(245,158,11,0)} }
+
+        .ai-mode-selector {
+            background: rgba(16,185,129,0.2); border: 1px solid rgba(16,185,129,0.4); padding: 12px 20px;
+            border-radius: 16px; margin: 0 28px 20px 28px; display: flex; gap: 10px; align-items: center;
+        }
+        .mode-btn { padding: 8px 20px; background: rgba(255,255,255,0.1); border: 1px solid rgba(255,255,255,0.2); border-radius: 20px;
+            color: #f3f4f6; font-size: 0.9rem; cursor: pointer; transition: all 0.3s ease; font-weight: 500; }
+        .mode-btn.active { background: #10b981; border-color: #059669; transform: translateY(-2px); box-shadow: 0 8px 20px rgba(16,185,129,0.4); }
+
+        .chat-container { flex: 1; overflow-y: auto; padding: 0 28px 28px; background: rgba(20,20,40,0.5); }
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-track { background: rgba(255,255,255,0.05); border-radius: 10px; }
+        .chat-container::-webkit-scrollbar-thumb { background: rgba(16,185,129,0.4); border-radius: 10px; }
+
+        .message { margin-bottom: 20px; display: flex; gap: 12px; animation: slideIn 0.4s ease-out; }
+        @keyframes slideIn { from{opacity:0;transform:translateY(30px)} to{opacity:1;transform:translateY(0)} }
+        .message.user { justify-content: flex-end; }
+        .message.ai { justify-content: flex-start; }
+
+        .message-content { max-width: 80%; padding: 20px 24px; border-radius: 24px; line-height: 1.7; position: relative; }
+        .user .message-content { background: linear-gradient(135deg,#6366f1,#8b5cf6); color: white; box-shadow: 0 10px 30px rgba(99,102,241,0.4); }
+        .ai .message-content { background: rgba(255,255,255,0.12); backdrop-filter: blur(20px); border: 1px solid rgba(255,255,255,0.2); color: #f3f4f6; box-shadow: 0 8px 30px rgba(0,0,0,0.3); }
+
+        .ai-badge { display: inline-flex; align-items: center; gap: 6px; background: rgba(16,185,129,0.2); padding: 4px 12px; border-radius: 20px; font-size: 0.8rem; font-weight: 600; margin-bottom: 12px; }
+        .typing { display: flex; align-items: center; gap: 8px; color: #94a3b8; font-style: italic; font-size: 0.95rem; }
+        .typing span { width: 12px; height: 12px; border-radius: 50%; background: rgba(16,185,129,0.6); animation: typing 1.4s infinite ease-in-out; }
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+        @keyframes typing { 0%,60%,100%{transform:scale(1) translateY(0)} 30%{transform:scale(1.3) translateY(-8px)} }
+
+        .sources { margin-top: 16px; padding: 16px 20px; background: rgba(16,185,129,0.15); border-radius: 16px; border: 1px solid rgba(16,185,129,0.3); }
+        .sources h4 { color: #6ee7b7; font-size: 0.85rem; font-weight: 600; margin-bottom: 10px; display: flex; align-items: center; gap: 6px; }
+        .source-link { color: #d1fae5; text-decoration: none; font-weight: 500; font-size: 0.88rem; display: block; padding: 8px 12px; border-radius: 8px; transition: all 0.3s ease; }
+        .source-link::before { content: '🔗'; margin-right: 8px; }
+        .source-link:hover { background: rgba(255,255,255,0.15); transform: translateX(6px); color: white; }
+
+        .input-container { padding: 28px; background: rgba(20,20,40,0.7); border-top: 1px solid rgba(255,255,255,0.1); }
+        .input-group { display: flex; gap: 12px; align-items: center; }
+        #userInput { flex: 1; padding: 18px 28px; border: 2px solid rgba(255,255,255,0.15); border-radius: 50px; font-size: 16px; background: rgba(255,255,255,0.08); color: #f3f4f6; outline: none; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
+        #userInput:focus { border-color: #10b981; box-shadow: 0 0 0 4px rgba(16,185,129,0.2); }
+        #userInput::placeholder { color: #94a3b8; }
+        #sendBtn { padding: 18px 36px; background: linear-gradient(135deg,#10b981 0%,#059669 100%); color: white; border: none; border-radius: 50px; cursor: pointer; font-size: 16px; font-weight: 600; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); box-shadow: 0 10px 30px rgba(16,185,129,0.4); }
+        #sendBtn:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(16,185,129,0.5); }
+        #sendBtn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+        @media (max-width: 768px) { .input-group, .ai-mode-selector { flex-direction: column; } #userInput { margin-bottom: 12px; } .message-content { max-width: 95%; } }
+    </style>
 </head>
 <body>
-    <aside>
-        <p>Livro <br> <strong>Jhon Romântico e Sedutor</strong></p>
-        <img src="assets/clebesonph2.jpeg" alt="Foto do Rodrigo">
+    <div class="container">
+        <div class="header">
+            <div class="status-indicator"></div>
+            <h1>🤖 IA Smart Multi-API</h1>
+            <p>🧠 APIs se comunicam automaticamente • Melhor resultado garantido</p>
+        </div>
 
-        <p>Escritor <br> <strong>Clebeson Souza</strong></p>
+        <div class="ai-mode-selector">
+            <strong>🧠 Modo Inteligente:</strong>
+            <div class="mode-btn active" data-mode="smart">🤖 Smart (Auto)</div>
+            <div class="mode-btn" data-mode="manual">⚙️ Manual</div>
+        </div>
 
-        <span>Esse livro foi iniciado em 2016 e concluido em meados de 2020</span>
-    </aside>
-    <nav>
-        
-        </a>
-        <a href="#" target="_blank" class="memory">
-            <small>Capítulo 11</small>
-            <h1>Jhon</h1>
-            <div>
-                <img src="assets/jhon.img1.png" alt="Jornada do Zero à Primeia Vaga">
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai">
+                <div class="message-content">
+                    <div class="ai-badge">🧠 MODO SMART ATIVADO</div>
+                    <strong>🚀 Sistema de APIs Inteligentes Online!</strong><br><br>
+                    ✅ <strong>4 APIs em tempo real:</strong> DuckDuckGo + Wikipedia + Países + Mapas<br>
+                    ✅ <strong>Auto-seleção:</strong> Escolhe a melhor resposta automaticamente<br>
+                    ✅ <strong>Fusão inteligente:</strong> Combina dados das APIs mais relevantes<br>
+                    ✅ <strong>Score de qualidade:</strong> 0-100 pontos por resposta<br><br>
+                    <em>Digite qualquer pergunta e receba o MELHOR resultado! ✨</em>
+                </div>
             </div>
+        </div>
 
-            <p> Lorem ipsum dolor, sit amet consectetur adipisicing elit. Iusto nostrum exercitationem itaque incidunt eveniet quos placeat ipsam, officia repellendus esse. Dolorum nihil voluptatibus reprehenderit voluptate deserunt. Nulla voluptatem eligendi hic!</p>
-            
-        </a>
-        <a href="#" target="_blank" class="memory">
-            <small>Capítulo 12</small>
-            <h1>Lara</h1>
-            <div>
-                <img src="assets/capitulo2.png" alt="Jornada do Zero à Primeia Vaga">
+        <div class="input-container">
+            <div class="input-group">
+                <input type="text" id="userInput" placeholder="Ex: Capital do Brasil? Onde fica Chapecó? IA funciona como?" autocomplete="off">
+                <button id="sendBtn">Pesquisar Smart</button>
             </div>
+        </div>
+    </div>
 
-             <p>                 
-              Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quos mollitia delectus laudantium nihil accusantium, voluptas ab accusamus obcaecati unde quis omnis facilis nulla nisi ipsam sit asperiores quaerat reiciendis incidunt.         
-              </p>
+    <script>
+        class SmartMultiAPISearch {
+            constructor() {
+                this.apis = {
+                    duckduckgo: { weight: 1.2, url: q => `https://api.duckduckgo.com/?q=${encodeURIComponent(q)}&format=json&no_html=1&skip_disambig=1` },
+                    wikipedia: { weight: 1.5, url: q => `https://pt.wikipedia.org/w/api.php?action=query&origin=*&prop=extracts|info&exintro&inprop=url&explaintext&format=json&titles=${encodeURIComponent(q)}` },
+                    countries: { weight: 1.8, url: q => `https://restcountries.com/v3.1/name/${encodeURIComponent(q)}?fields=name,capital,population,region,cca2,flag` },
+                    nominatim: { weight: 1.0, url: q => `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(q)}&format=json&limit=3` }
+                };
+                this.currentMode = 'smart';
+            }
 
-              <a href="capitulo43-44.html" class="back-profile">
-              <p>Próximo</p>
-              <i class="bx bxs-user"></i>
-            </a>
-        </a>
-    </nav>
+            async smartSearch(query) {
+                const promises = Object.entries(this.apis).map(([name, config]) => 
+                    this.fetchAPI(name, config.url(query)).catch(() => null)
+                );
+                
+                const results = await Promise.allSettled(promises);
+                const processedResults = await Promise.all(
+                    results.map((result, i) => 
+                        result.status === 'fulfilled' ? this.processAPIResult(Object.keys(this.apis)[i], result.value) : null
+                    )
+                );
+
+                // Filtra resultados válidos e calcula score
+                const validResults = processedResults
+                    .filter(r => r && r.score > 0)
+                    .map(r => ({ ...r, score: r.score * this.apis[r.api].weight }))
+                    .sort((a, b) => b.score - a.score);
+
+                return this.fuseBestResults(query, validResults.slice(0, 3));
+            }
+
+            async fetchAPI(name, url) {
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 5000);
+                
+                const response = await fetch(url, {
+                    signal: controller.signal,
+                    headers: { 'Accept': 'application/json' }
+                });
+                clearTimeout(timeout);
+                
+                if (!response.ok) throw new Error(`${response.status}`);
+                return response.json();
+            }
+
+            processAPIResult(apiName, data) {
+                const score = this.calculateScore(apiName, data);
+                if (score === 0) return null;
+
+                switch(apiName) {
+                    case 'duckduckgo':
+                        return this.processDuckDuckGo(data, score);
+                    case 'wikipedia':
+                        return this.processWikipedia(data, score);
+                    case 'countries':
+                        return this.processCountries(data, score);
+                    case 'nominatim':
+                        return this.processNominatim(data, score);
+                }
+            }
+
+            calculateScore(apiName, data) {
+                let baseScore = 50;
+                
+                if (!data) return 0;
+                
+                // DuckDuckGo
+                if (apiName === 'duckduckgo' && (data.AbstractText || (data.RelatedTopics && data.RelatedTopics.length > 0))) 
+                    baseScore += 40;
+                
+                // Wikipedia
+                if (apiName === 'wikipedia') {
+                    const pages = data.query?.pages;
+                    if (pages && Object.values(pages)[0]?.extract) baseScore += 50;
+                }
+                
+                // Countries
+                if (apiName === 'countries' && data.length > 0) baseScore += 60;
+                
+                // Nominatim
+                if (apiName === 'nominatim' && data.length > 0) baseScore += 30;
+                
+                return Math.min(baseScore, 100);
+            }
+
+            processDuckDuckGo(data, score) {
+                if (data.AbstractText) {
+                    return {
+                        api: 'duckduckgo', score,
+                        title: data.Heading || 'Resposta Direta',
+                        content: data.AbstractText,
+                        sources: data.AbstractURL ? [{title: data.AbstractSource, url: data.AbstractURL}] : []
+                    };
+                }
+                const topic = data.RelatedTopics?.[0];
+                return topic ? {
+                    api: 'duckduckgo', score,
+                    title: topic.Name || 'Resultados',
+                    content: topic.Text,
+                    sources: topic.FirstURL ? [{title: topic.Name, url: topic.FirstURL}] : []
+                } : null;
+            }
+
+            processWikipedia(data, score) {
+                const pages = data.query?.pages;
+                const page = Object.values(pages || {})[0];
+                if (!page || page.missing) return null;
+                
+                return {
+                    api: 'wikipedia', score,
+                    title: page.title,
+                    content: page.extract?.substring(0, 400) + (page.extract?.length > 400 ? '...' : ''),
+                    sources: [{title: page.title, url: page.fullurl || `https://pt.wikipedia.org/wiki/${encodeURIComponent(page.title)}`}]
+                };
+            }
+
+            processCountries(data, score) {
+                if (!data?.[0]) return null;
+                const country = data[0];
+                return {
+                    api: 'countries', score,
+                    title: country.name?.common,
+                    content: `Capital: ${country.capital?.[0] || 'N/A'} | População: ${(country.population/1e6).toFixed(1)}M | Região: ${country.region}`,
+                    sources: [{title: 'REST Countries', url: `https://restcountries.com/v3.1/name/${country.cca2}`}]
+                };
+            }
+
+            processNominatim(data, score) {
+                if (!data?.[0]) return null;
+                const place = data[0];
+                return {
+                    api: 'nominatim', score,
+                    title: place.display_name,
+                    content: `📍 ${place.lat}, ${place.lon}`,
+                    sources: [{title: 'OpenStreetMap', url: `https://www.openstreetmap.org/search?query=${encodeURIComponent(place.display_name)}`}]
+                };
+            }
+
+            fuseBestResults(query, results) {
+                if (!results.length) {
+                    return {
+                        api: 'smart', score: 100, title: '🔍 Pesquisa Completa',
+                        content: `Analisei todas as 4 APIs mas não encontrei resultados para "${query}". Tente reformular sua pergunta!`,
+                        sources: []
+                    };
+                }
+
+                const bestResult = results[0];
+                let fusedContent = `<strong>🏆 MELHOR RESULTADO (${bestResult.score.toFixed(0)}/100 pts)</strong><br><br>${bestResult.content}`;
+
+                if (results.length > 1) {
+                    fusedContent += `<br><br><strong>💡 Resultados complementares:</strong><br>`;
+                    results.slice(1, 3).forEach(r => {
+                        fusedContent += `• <em>${r.api.toUpperCase()}: ${r.content.substring(0, 100)}...</em><br>`;
+                    });
+                }
+
+                return {
+                    api: 'smart', score: bestResult.score, title: bestResult.title,
+                    content: fusedContent, sources: bestResult.sources
+                };
+            }
+        }
+
+        class SmartAIChat {
+            constructor() {
+                this.searchEngine = new SmartMultiAPISearch();
+                this.chatContainer = document.getElementById('chatContainer');
+                this.userInput = document.getElementById('userInput');
+                this.sendBtn = document.getElementById('sendBtn');
+                this.currentMode = 'smart';
+                this.init();
+            }
+
+            init() {
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.userInput.addEventListener('keypress', e => {
+                    if (e.key === 'Enter' && !e.shiftKey) this.sendMessage();
+                });
+
+                document.querySelectorAll('.mode-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        document.querySelector('.mode-btn.active')?.classList.remove('active');
+                        btn.classList.add('active');
+                        this.currentMode = btn.dataset.mode;
+                        this.sendBtn.textContent = this.currentMode === 'smart' ? 'Pesquisar Smart' : 'Pesquisar';
+                    });
+                });
+
+                this.userInput.focus();
+            }
+
+            async sendMessage() {
+                const query = this.userInput.value.trim();
+                if (!query) return;
+
+                this.addMessage(query, 'user');
+                this.userInput.value = '';
+                this.toggleInput(false);
+                this.showTyping();
+
+                const result = await this.searchEngine.smartSearch(query);
+                this.removeTyping();
+                const response = this.generateSmartResponse(result);
+                this.addMessage(response, 'ai');
+                this.toggleInput(true);
+                this.userInput.focus();
+            }
+
+            generateSmartResponse(result) {
+                const { api, title, content, sources, score } = result;
+                return `
+                    <div class="ai-badge">🧠 ${api.toUpperCase()} • Score: ${score.toFixed(0)}/100</div>
+                    <div style="font-size:1.1em; margin-bottom:12px;">${title}</div>
+                    <div style="color:#e2e8f0; line-height:1.7;">${content}</div>
+                    ${sources.length > 0 ? `<div class="sources"><h4>🔗 Fontes Originais</h4>${sources.map(s => `<a href="${s.url}" class="source-link" target="_blank">${s.title}</a>`).join('')}</div>` : ''}
+                `;
+            }
+
+            addMessage(content, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = content;
+                messageDiv.appendChild(contentDiv);
+                this.chatContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            toggleInput(enabled) {
+                this.sendBtn.disabled = !enabled;
+                this.userInput.disabled = !enabled;
+                this.sendBtn.textContent = enabled ? (this.currentMode === 'smart' ? 'Pesquisar Smart' : 'Pesquisar') : '🧠 Analisando...';
+            }
+
+            showTyping() {
+                this.removeTyping();
+                const typingDiv = document.createElement('div');
+                typingDiv.id = 'typing';
+                typingDiv.className = 'message ai';
+                typingDiv.innerHTML = `<div class="message-content typing"><span></span><span></span><span></span>🧠 Analisando 4 APIs simultaneamente...</div>`;
+                this.chatContainer.appendChild(typingDiv);
+                this.scrollToBottom();
+            }
+
+            removeTyping() {
+                const typing = document.getElementById('typing');
+                if (typing) typing.remove();
+            }
+
+            scrollToBottom() {
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            }
+        }
+
+        new SmartAIChat();
+    </script>
 </body>
 </html>

@@ -1,53 +1,380 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
+    <title>IA Pesquisadora - Google Search AI</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
 
-    <link rel="shortcut icon" href="assets/favicon-cs-novo-16x16.png" type="image/x-icon">
-    
-    <title>Livro Jhon Capitulo 47-48</title>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            width: 90%;
+            max-width: 800px;
+            height: 80vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        .header {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            padding: 20px;
+            text-align: center;
+        }
+
+        .header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 5px;
+        }
+
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 20px;
+            background: #f8fafc;
+        }
+
+        .message {
+            margin-bottom: 15px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .message.user {
+            justify-content: flex-end;
+        }
+
+        .message.ai {
+            justify-content: flex-start;
+        }
+
+        .message-content {
+            max-width: 70%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            position: relative;
+        }
+
+        .user .message-content {
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+        }
+
+        .ai .message-content {
+            background: white;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .typing {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            color: #64748b;
+            font-style: italic;
+        }
+
+        .typing span {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: #cbd5e1;
+            animation: typing 1.4s infinite;
+        }
+
+        .typing span:nth-child(2) { animation-delay: 0.2s; }
+        .typing span:nth-child(3) { animation-delay: 0.4s; }
+
+        @keyframes typing {
+            0%, 60%, 100% { transform: scale(1); }
+            30% { transform: scale(1.3); }
+        }
+
+        .input-container {
+            padding: 20px;
+            background: white;
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .input-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        #userInput {
+            flex: 1;
+            padding: 12px 20px;
+            border: 2px solid #e2e8f0;
+            border-radius: 25px;
+            font-size: 16px;
+            outline: none;
+            transition: all 0.3s ease;
+        }
+
+        #userInput:focus {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+        }
+
+        #sendBtn {
+            padding: 12px 24px;
+            background: linear-gradient(135deg, #4f46e5, #7c3aed);
+            color: white;
+            border: none;
+            border-radius: 25px;
+            cursor: pointer;
+            font-size: 16px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+
+        #sendBtn:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(79, 70, 229, 0.3);
+        }
+
+        #sendBtn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .sources {
+            margin-top: 10px;
+            padding: 10px;
+            background: #f1f5f9;
+            border-radius: 12px;
+            font-size: 0.85rem;
+        }
+
+        .source-link {
+            color: #4f46e5;
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .source-link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 600px) {
+            .container {
+                height: 95vh;
+                width: 95%;
+                border-radius: 15px;
+            }
+            
+            .message-content {
+                max-width: 85%;
+            }
+        }
+    </style>
 </head>
 <body>
-    <aside>
-        <p>Livro <br> <strong>Jhon Romântico e Sedutor</strong></p>
-        <img src="assets/clebesonph2.jpeg" alt="Foto do Rodrigo">
-
-        <p>Escritor <br> <strong>Clebeson Souza</strong></p>
-
-        <span>Esse livro foi iniciado em 2016 e concluido em meados de 2020</span>
-    </aside>
-    <nav>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 IA Pesquisadora</h1>
+            <p>Faça qualquer pergunta - eu pesquiso no Google para você!</p>
+        </div>
         
-        </a>
-        <a href="#" target="_blank" class="memory">
-            <small>Capítulo 11</small>
-            <h1>Jhon</h1>
-            <div>
-                <img src="assets/jhon.img1.png" alt="Jornada do Zero à Primeia Vaga">
+        <div class="chat-container" id="chatContainer">
+            <div class="message ai">
+                <div class="message-content">
+                    Olá! Sou sua IA pesquisadora. Faça qualquer pergunta que eu buscarei as melhores respostas na web para você! 🚀
+                </div>
             </div>
-
-            <p> Lorem ipsum dolor, sit amet consectetur adipisicing elit. Iusto nostrum exercitationem itaque incidunt eveniet quos placeat ipsam, officia repellendus esse. Dolorum nihil voluptatibus reprehenderit voluptate deserunt. Nulla voluptatem eligendi hic!</p>
-            
-        </a>
-        <a href="#" target="_blank" class="memory">
-            <small>Capítulo 12</small>
-            <h1>Lara</h1>
-            <div>
-                <img src="assets/capitulo2.png" alt="Jornada do Zero à Primeia Vaga">
+        </div>
+        
+        <div class="input-container">
+            <div class="input-group">
+                <input type="text" id="userInput" placeholder="Digite sua pergunta..." autocomplete="off">
+                <button id="sendBtn">Enviar</button>
             </div>
+        </div>
+    </div>
 
-             <p>                 
-              Lorem ipsum dolor, sit amet consectetur adipisicing elit. Quos mollitia delectus laudantium nihil accusantium, voluptas ab accusamus obcaecati unde quis omnis facilis nulla nisi ipsam sit asperiores quaerat reiciendis incidunt.         
-              </p>
+    <script>
+        class GoogleSearchAI {
+            constructor() {
+                // SUBSTITUA pela sua chave da Google Custom Search API
+                this.apiKey = 'SUA_API_KEY_AQUI';
+                // SUBSTITUA pelo seu CX (Search Engine ID)
+                this.cx = 'SEU_CX_AQUI';
+                this.baseUrl = 'https://www.googleapis.com/customsearch/v1';
+            }
 
-              <a href="capitulo49-50.html" class="back-profile">
-              <p>Próximo</p>
-              <i class="bx bxs-user"></i>
-            </a>
-        </a>
-    </nav>
+            async search(query) {
+                try {
+                    // Simula pesquisa real - você precisará da API key do Google
+                    const response = await fetch(`${this.baseUrl}?key=${this.apiKey}&cx=${this.cx}&q=${encodeURIComponent(query)}`);
+                    
+                    if (!response.ok) {
+                        throw new Error('Erro na API do Google');
+                    }
+                    
+                    const data = await response.json();
+                    return this.processResults(data);
+                } catch (error) {
+                    console.error('Erro na pesquisa:', error);
+                    return this.getMockResponse(query);
+                }
+            }
+
+            processResults(data) {
+                const items = data.items || [];
+                return {
+                    title: items[0]?.title || 'Resultado da pesquisa',
+                    snippet: items[0]?.snippet || 'Resumo não disponível',
+                    url: items[0]?.link || '#',
+                    sources: items.slice(0, 3).map(item => ({
+                        title: item.title,
+                        url: item.link,
+                        snippet: item.snippet
+                    }))
+                };
+            }
+
+            getMockResponse(query) {
+                // Resposta simulada para demonstração (substitua pela API real)
+                return {
+                    title: `Sobre "${query}"`,
+                    snippet: `Encontrei informações relevantes sobre "${query}". Os principais resultados indicam que...`,
+                    sources: [
+                        {
+                            title: `Google - ${query}`,
+                            url: `https://www.google.com/search?q=${encodeURIComponent(query)}`,
+                            snippet: 'Pesquise no Google para mais detalhes'
+                        }
+                    ]
+                };
+            }
+        }
+
+        class ChatAI {
+            constructor() {
+                this.searchAI = new GoogleSearchAI();
+                this.chatContainer = document.getElementById('chatContainer');
+                this.userInput = document.getElementById('userInput');
+                this.sendBtn = document.getElementById('sendBtn');
+                
+                this.init();
+            }
+
+            init() {
+                this.sendBtn.addEventListener('click', () => this.sendMessage());
+                this.userInput.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') this.sendMessage();
+                });
+
+                this.userInput.focus();
+            }
+
+            async sendMessage() {
+                const message = this.userInput.value.trim();
+                if (!message) return;
+
+                // Adiciona mensagem do usuário
+                this.addMessage(message, 'user');
+                this.userInput.value = '';
+                this.sendBtn.disabled = true;
+                this.userInput.disabled = true;
+
+                // Mostra indicador de digitação
+                this.showTyping();
+
+                try {
+                    // Pesquisa no Google
+                    const searchResult = await this.searchAI.search(message);
+                    
+                    // Remove indicador de digitação
+                    this.removeTyping();
+                    
+                    // Gera resposta da IA
+                    const aiResponse = this.generateAIResponse(message, searchResult);
+                    this.addMessage(aiResponse, 'ai');
+                    
+                } catch (error) {
+                    this.removeTyping();
+                    this.addMessage('Desculpe, ocorreu um erro. Tente novamente!', 'ai');
+                } finally {
+                    this.sendBtn.disabled = false;
+                    this.userInput.disabled = false;
+                    this.userInput.focus();
+                }
+            }
+
+            generateAIResponse(query, searchResult) {
+                const { title, snippet, sources } = searchResult;
+                
+                let response = `📚 **${title}**\n\n`;
+                response += `${snippet}\n\n`;
+                response += `🔍 **Fontes:**\n`;
+                
+                sources.forEach((source, index) => {
+                    response += `${index + 1}. [${source.title}](${source.url})\n`;
+                });
+
+                return response;
+            }
+
+            addMessage(content, sender) {
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message ${sender}`;
+                
+                const contentDiv = document.createElement('div');
+                contentDiv.className = 'message-content';
+                contentDiv.innerHTML = content.replace(/\n/g, '<br>');
+                
+                messageDiv.appendChild(contentDiv);
+                this.chatContainer.appendChild(messageDiv);
+                this.scrollToBottom();
+            }
+
+            showTyping() {
+                const typingDiv = document.createElement('div');
+                typingDiv.id = 'typing';
+                typingDiv.className = 'message ai';
+                typingDiv.innerHTML = `
+                    <div class="message-content typing">
+                        <span></span><span></span><span></span>
+                        Pesquisando no Google...
+                    </div>
+                `;
+                this.chatContainer.appendChild(typingDiv);
+                this.scrollToBottom();
+            }
+
+            removeTyping() {
+                const typing = document.getElementById('typing');
+                if (typing) typing.remove();
+            }
+
+            scrollToBottom() {
+                this.chatContainer.scrollTop = this.chatContainer.scrollHeight;
+            }
+        }
+
+        // Inicializa a IA quando a página carrega
+        document.addEventListener('DOMContentLoaded', () => {
+            new ChatAI();
+        });
+    </script>
 </body>
 </html>

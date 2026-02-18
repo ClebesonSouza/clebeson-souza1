@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🤖 IA Smart Multi-API Pro</title>
+    <title>🤖 IAsouza</title>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
         
@@ -78,6 +78,28 @@
         .source-link::before { content: '🔗'; margin-right: 8px; }
         .source-link:hover { background: rgba(255,255,255,0.15); transform: translateX(6px); color: white; }
 
+        /* NOVO: Estilos do Botão de Voz */
+        .voice-btn {
+            width: 52px; height: 52px; border-radius: 50%; border: none; cursor: pointer;
+            background: linear-gradient(135deg, rgba(16,185,129,0.3), rgba(16,185,129,0.1));
+            backdrop-filter: blur(10px); border: 2px solid rgba(16,185,129,0.4);
+            display: flex; align-items: center; justify-content: center; font-size: 20px;
+            transition: all 0.3s cubic-bezier(0.4,0,0.2,1); position: relative; flex-shrink: 0;
+        }
+        .voice-btn:hover:not(.listening) { 
+            background: linear-gradient(135deg, rgba(16,185,129,0.5), rgba(16,185,129,0.2));
+            transform: translateY(-2px) scale(1.05); box-shadow: 0 12px 30px rgba(16,185,129,0.3);
+        }
+        .voice-btn.listening {
+            background: linear-gradient(135deg, #ef4444, #dc2626); border-color: #dc2626;
+            animation: pulse-mic 1.5s infinite; box-shadow: 0 0 30px rgba(239,68,68,0.6);
+        }
+        .voice-btn.listening::after {
+            content: '🎤'; position: absolute; font-size: 24px; animation: bounce 0.6s infinite alternate;
+        }
+        @keyframes pulse-mic { 0%{box-shadow:0 0 0 0 rgba(239,68,68,0.7)} 70%{box-shadow:0 0 0 20px rgba(239,68,68,0)} 100%{box-shadow:0 0 0 0 rgba(239,68,68,0)} }
+        @keyframes bounce { 0%{transform: scale(1)} 100%{transform: scale(1.2)} }
+
         .input-container { padding: 28px; background: rgba(20,20,40,0.7); border-top: 1px solid rgba(255,255,255,0.1); }
         .input-group { display: flex; gap: 12px; align-items: center; }
         #userInput { flex: 1; padding: 18px 28px; border: 2px solid rgba(255,255,255,0.15); border-radius: 50px; font-size: 16px; background: rgba(255,255,255,0.08); color: #f3f4f6; outline: none; transition: all 0.3s cubic-bezier(0.4,0,0.2,1); }
@@ -87,21 +109,26 @@
         #sendBtn:hover:not(:disabled) { transform: translateY(-4px); box-shadow: 0 20px 40px rgba(16,185,129,0.5); }
         #sendBtn:disabled { opacity: 0.6; cursor: not-allowed; }
 
-        @media (max-width: 768px) { .input-group, .ai-mode-selector { flex-direction: column; } #userInput { margin-bottom: 12px; } .message-content { max-width: 95%; } }
+        @media (max-width: 768px) { 
+            .input-group { flex-direction: column; } 
+            #userInput { margin-bottom: 12px; }
+            .voice-btn { width: 48px; height: 48px; font-size: 18px; }
+            .message-content { max-width: 95%; } 
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="header">
             <div class="status-indicator"></div>
-            <h1>🤖 IA Smart Multi-API</h1>
-            <p>🧠 APIs se comunicam automaticamente • Melhor resultado garantido</p>
+            <h1>🤖 IAsouza</h1>
+            <p>🧠 APIs Desenvolvido por <strong>Clebeson Souza</strong></p>
         </div>
 
         <div class="ai-mode-selector">
-            <strong>🧠 Modo Inteligente:</strong>
-            <div class="mode-btn active" data-mode="smart">🤖 Smart (Auto)</div>
-            <div class="mode-btn" data-mode="manual">⚙️ Manual</div>
+            <strong>🧠 Inteligência Artificial Integrada:</strong>
+            <div class="mode-btn active" data-mode="smart">🤖APIs Automatizados</div>
+            <div class="mode-btn" data-mode="manual">⚙️APIs Secudarios Manual</div>
         </div>
 
         <div class="chat-container" id="chatContainer">
@@ -113,20 +140,79 @@
                     ✅ <strong>Auto-seleção:</strong> Escolhe a melhor resposta automaticamente<br>
                     ✅ <strong>Fusão inteligente:</strong> Combina dados das APIs mais relevantes<br>
                     ✅ <strong>Score de qualidade:</strong> 0-100 pontos por resposta<br><br>
-                    <em>Digite qualquer pergunta e receba o MELHOR resultado! ✨</em>
+                    <em>Digite qualquer pergunta e receba o MELHOR resultado! ✨<br>
+                    <strong>🎤 NOVO:</strong> Clique no microfone para pesquisar por voz!</em>
                 </div>
             </div>
         </div>
 
         <div class="input-container">
             <div class="input-group">
-                <input type="text" id="userInput" placeholder="Ex: Capital do Brasil? Onde fica Chapecó? IA funciona como?" autocomplete="off">
-                <button id="sendBtn">Pesquisar Smart</button>
+                <input type="text" id="userInput" placeholder="🎤 Fale sua pergunta ou digite aqui..." autocomplete="off">
+                <button class="voice-btn" id="voiceBtn" title="Pesquisar por Voz">🎤</button>
+                <button id="sendBtn">Pesquisar</button>
             </div>
         </div>
     </div>
 
     <script>
+        // FUNÇÃO DE VOZ INTEGRADA (nova)
+        class VoiceSearch {
+            constructor(chatInstance) {
+                this.chat = chatInstance;
+                this.userInput = document.getElementById('userInput');
+                this.voiceBtn = document.getElementById('voiceBtn');
+                this.recognition = null;
+                this.init();
+            }
+
+            init() {
+                if ('webkitSpeechRecognition' in window || 'SpeechRecognition' in window) {
+                    this.recognition = new (window.SpeechRecognition || window.webkitSpeechRecognition)();
+                    this.recognition.lang = 'pt-BR';
+                    this.recognition.interimResults = false;
+                    this.recognition.maxAlternatives = 1;
+
+                    this.voiceBtn.addEventListener('click', () => this.startListening());
+
+                    this.recognition.onresult = (event) => {
+                        const transcript = event.results[0][0].transcript;
+                        this.userInput.value = transcript;
+                        this.voiceBtn.classList.remove('listening');
+                        this.voiceBtn.title = 'Pesquisar por Voz';
+                        this.chat.sendMessage(); // Envia automaticamente
+                    };
+
+                    this.recognition.onerror = () => {
+                        this.stopListening();
+                        this.userInput.placeholder = 'Erro na voz. Tente novamente.';
+                        setTimeout(() => {
+                            this.userInput.placeholder = '🎤 Fale sua pergunta ou digite aqui...';
+                        }, 2000);
+                    };
+
+                    this.recognition.onend = () => this.stopListening();
+                } else {
+                    this.voiceBtn.style.opacity = '0.5';
+                    this.voiceBtn.title = 'Voz não suportada neste navegador';
+                }
+            }
+
+            startListening() {
+                this.recognition.start();
+                this.voiceBtn.classList.add('listening');
+                this.voiceBtn.title = 'Escutando...';
+                this.userInput.placeholder = '🗣️ Escutando, fale agora...';
+            }
+
+            stopListening() {
+                this.voiceBtn.classList.remove('listening');
+                this.voiceBtn.title = 'Pesquisar por Voz';
+                this.userInput.placeholder = '🎤 Fale sua pergunta ou digite aqui...';
+            }
+        }
+
+        // Seu código original (SmartMultiAPISearch - sem alterações)
         class SmartMultiAPISearch {
             constructor() {
                 this.apis = {
@@ -150,7 +236,6 @@
                     )
                 );
 
-                // Filtra resultados válidos e calcula score
                 const validResults = processedResults
                     .filter(r => r && r.score > 0)
                     .map(r => ({ ...r, score: r.score * this.apis[r.api].weight }))
@@ -178,14 +263,10 @@
                 if (score === 0) return null;
 
                 switch(apiName) {
-                    case 'duckduckgo':
-                        return this.processDuckDuckGo(data, score);
-                    case 'wikipedia':
-                        return this.processWikipedia(data, score);
-                    case 'countries':
-                        return this.processCountries(data, score);
-                    case 'nominatim':
-                        return this.processNominatim(data, score);
+                    case 'duckduckgo': return this.processDuckDuckGo(data, score);
+                    case 'wikipedia': return this.processWikipedia(data, score);
+                    case 'countries': return this.processCountries(data, score);
+                    case 'nominatim': return this.processNominatim(data, score);
                 }
             }
 
@@ -194,20 +275,16 @@
                 
                 if (!data) return 0;
                 
-                // DuckDuckGo
                 if (apiName === 'duckduckgo' && (data.AbstractText || (data.RelatedTopics && data.RelatedTopics.length > 0))) 
                     baseScore += 40;
                 
-                // Wikipedia
                 if (apiName === 'wikipedia') {
                     const pages = data.query?.pages;
                     if (pages && Object.values(pages)[0]?.extract) baseScore += 50;
                 }
                 
-                // Countries
                 if (apiName === 'countries' && data.length > 0) baseScore += 60;
                 
-                // Nominatim
                 if (apiName === 'nominatim' && data.length > 0) baseScore += 30;
                 
                 return Math.min(baseScore, 100);
@@ -292,6 +369,7 @@
             }
         }
 
+        // Chat principal atualizado com suporte à voz
         class SmartAIChat {
             constructor() {
                 this.searchEngine = new SmartMultiAPISearch();
@@ -303,6 +381,9 @@
             }
 
             init() {
+                // Inicializa pesquisa por voz
+                this.voiceSearch = new VoiceSearch(this);
+
                 this.sendBtn.addEventListener('click', () => this.sendMessage());
                 this.userInput.addEventListener('keypress', e => {
                     if (e.key === 'Enter' && !e.shiftKey) this.sendMessage();
