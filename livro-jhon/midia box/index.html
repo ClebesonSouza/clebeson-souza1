@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Site Interativo</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { 
+            background: linear-gradient(135deg, #000741, #004e92); 
+            color: white; font-family: Arial, sans-serif; 
+            height: 100vh; overflow: hidden; 
+        }
+        .status-bar { 
+            color: rgb(214, 206, 204);
+            font-size: 38px; font-weight: bold;
+            font-family:Verdana, Geneva, Tahoma, sans-serif;
+            display: flex; justify-content: space-between; padding: 6px 15px; 
+             background: linear-gradient(135deg, 002361,002361); 
+        }
+        .grid { 
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 20px; padding: 40px 20px; height: calc(100vh - 140px); overflow-y: auto; 
+        }
+        .app-icon { 
+            text-align: center; cursor: pointer; transition: transform 0.3s; 
+            border-radius: 15px; padding: 20px; background: rgba(255,255,255,0.1); 
+        }
+        .app-icon:hover { transform: scale(1.1); }
+        .app-icon img { width: 120px; height: 120px; border-radius: 20px; margin-bottom: 10px; }
+        .app-icon p { font-size: 16px; font-weight: bold; }
+        .player { 
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%; 
+            background: rgba(0,0,0,0.95); display: none; z-index: 1000; 
+            justify-content: center; align-items: center; flex-direction: column; 
+        }
+        .player iframe { width: 90%; height: 60%; border: none; border-radius: 15px; }
+        .close-player { background: #ff4444; color: white; padding: 15px 30px; border: none; 
+                        border-radius: 10px; font-size: 20px; cursor: pointer; margin-top: 20px; }
+        .footer { 
+            position: fixed; bottom: 0; width: 100%; 
+            display: flex; justify-content: space-around; padding: 10px; 
+            background: rgba(0,0,0,0.8); font-size: 14px; 
+        }
+    </style>
+</head>
+<body>
+    <div class="status-bar">
+        <span></span>
+        <span>Menu</span>
+        <span></span>
+    </div>
+
+    <div class="grid">
+       
+       
+         <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/portfolio.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">📘</div>
+            <p>Livros</p>
+        </div>
+         <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/resume.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🎵</div>
+            <p>Músicas</p>
+        </div>
+        <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/jogos-interativo/jogos-interativo.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🎮</div>
+            <p>Jogos</p>
+        </div>
+
+        
+         <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/iasouza/AIsouzav1.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🤖</div>
+            <p>IAsouza</p>
+        </div>
+        <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/iasouza/AIsouzav1.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🤖</div>
+            <p>IAsouza</p>
+        </div>
+        <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/iasouza/AIsouzav1.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🤖</div>
+            <p>IAsouza</p>
+        </div>
+         <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/iasouza/AIsouzav1.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92)border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🤖</div>
+            <p>IAsouza</p>
+        </div>
+        <div class="app-icon" onclick="window.open('https://clebesonsouza.github.io/clebeson-souza1/iasouza/AIsouzav1.html')">
+            <div style="background: linear-gradient(135deg, #000741, #004e92) border-radius: 20px; display: flex; align-items: center; justify-content: center; font-size: 50px;">🤖</div>
+            <p>IAsouza</p>
+        </div>
+    </div>
+
+    <div class="footer">
+        <span></span>
+        <span></span>
+        <span></span>
+        <span></span>
+    </div>
+
+    <div class="player" id="player">
+        <iframe id="playerFrame" src="" frameborder="0" allowfullscreen></iframe>
+        <button class="close-player" onclick="fecharPlayer()">Fechar Player</button>
+    </div>
+
+    <script>
+        function abrirPlayer(url) {
+            document.getElementById('playerFrame').src = url;
+            document.getElementById('player').style.display = 'flex';
+        }
+        function fecharPlayer() {
+            document.getElementById('player').style.display = 'none';
+            document.getElementById('playerFrame').src = '';
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') fecharPlayer();
+        });
+    </script>
+</body>
+</html>

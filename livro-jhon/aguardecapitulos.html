@@ -1,42 +1,216 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <link rel="stylesheet" href="styles.css">
-
-    <link rel="shortcut icon" href="assets/favicon-cs-novo-16x16.png" type="image/x-icon">
-    
-    <title>Livro Jhon aguardando novos capitulos </title>
+    <title>🫀 BP Monitor v2.6 - Timer + Resultado</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; background: linear-gradient(135deg, #0f2027, #203a43, #2c5364); color: white; margin: 0; padding: 20px; min-height: 100vh; }
+        #video { width: 300px; height: 400px; border-radius: 20px; box-shadow: 0 10px 30px rgba(0,188,212,0.5); }
+        #canvas { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); pointer-events: none; border: 3px solid lime; border-radius: 10px; }
+        button { background: linear-gradient(45deg, #00b4d8, #0077b6); color: white; border: none; padding: 15px 30px; font-size: 18px; border-radius: 50px; cursor: pointer; margin: 10px; box-shadow: 0 6px 12px rgba(0,188,212,0.4); transition: all 0.3s; }
+        button:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 8px 16px rgba(0,188,212,0.5); }
+        button:disabled { background: #b2dfdb; cursor: not-allowed; transform: none; }
+        #status { font-size: 24px; margin: 20px; }
+        #timer { font-size: 48px; color: #00ff88; font-weight: bold; }
+        #resultScreen { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.95); z-index: 100; justify-content: center; align-items: center; flex-direction: column; }
+        #finalBPM { font-size: 72px; color: #00ff88; margin: 20px; }
+        #history { margin-top: 25px; max-height: 220px; overflow-y: auto; background: rgba(255,255,255,0.1); padding: 20px; border-radius: 20px; text-align: left; display: none; backdrop-filter: blur(10px); }
+        .entry { padding: 10px; margin: 5px 0; background: rgba(255,255,255,0.2); border-radius: 10px; display: flex; justify-content: space-between; }
+    </style>
 </head>
 <body>
-    <aside>
-        <p>Livro <br> <strong>Jhon Romântico e Sedutor</strong></p>
-        <img src="assets/clebesonph2.jpeg" alt="Foto do Rodrigo">
+    <h1>🫀 BP Monitor v2.6</h1>
+    <video id="video" autoplay playsinline></video>
+    <canvas id="canvas" width="100" height="100"></canvas>
+    <div id="status">Clique Iniciar 👆</div>
+    <div id="timer">00:00</div>
+    <div id="bpmLive">--- BPM</div>
+    <button id="startBtn">🚀 Iniciar Medição (60s)</button>
+    <button id="historyBtn">📋 Histórico</button>
+    <button id="clearBtn">🗑️ Limpar</button>
+    <div id="history"></div>
 
-        <p>Escritor <br> <strong>Clebeson Souza</strong></p>
+    <!-- Tela Resultado Final -->
+    <div id="resultScreen">
+        <h2>✅ Resultado Final</h2>
+        <div id="finalBPM">--- BPM</div>
+        <div id="finalQual">Qualidade: --%</div>
+        <div id="finalStats">Média: -- | Desvio: --</div>
+        <button id="newMeasureBtn">🔄 Nova Medição</button>
+        <button id="shareBtn">📤 Compartilhar</button>
+    </div>
 
-        <span>Esse livro foi iniciado em 2016 e concluido em meados de 2020</span>
-    </aside>
-    <nav>
-        <a href="#" target="_blank" class="memory">
-            <small>Lívro</small>
-            <h1>Jhon Romântico e Sedutor</h1>
-            <div>
-                <img src="assets/" alt="Jornada do Zero à Primeia Vaga">
-            </div>
-            <p><br>&emsp;AGUARDANDO NOVOS CAPITULOS...
-</p>
+    <script>
+        const video = document.getElementById('video');
+        const canvas = document.getElementById('canvas');
+        const ctx = canvas.getContext('2d');
+        const statusEl = document.getElementById('status');
+        const timerEl = document.getElementById('timer');
+        const bpmLiveEl = document.getElementById('bpmLive');
+        const startBtn = document.getElementById('startBtn');
+        const historyBtn = document.getElementById('historyBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const resultScreen = document.getElementById('resultScreen');
+        const finalBPMEl = document.getElementById('finalBPM');
+        const finalQualEl = document.getElementById('finalQual');
+        const finalStatsEl = document.getElementById('finalStats');
+        const newMeasureBtn = document.getElementById('newMeasureBtn');
+        const shareBtn = document.getElementById('shareBtn');
+        const historyDiv = document.getElementById('history');
 
+        let stream, animationId, isMeasuring = false, isCounting = false, samples = [], history = JSON.parse(localStorage.getItem('bpHistory')) || [], startTime;
+        let motionData = { x: 0, y: 0, z: 0 };
 
-       <a href="sinopses.html" class="back-profile">
-              <p>Próximo</p>
-              <i class="bx bxs-user"></i>
-            </a>
+        const log = msg => { console.log(`[BP v2.6] ${msg}`); statusEl.innerHTML = msg; };
 
+        function saveHistory(bpm, qual) {
+            const entry = { date: new Date().toLocaleString('pt-BR'), bpm, qual };
+            history.unshift(entry);
+            history = history.slice(0, 50);
+            localStorage.setItem('bpHistory', JSON.stringify(history));
+        }
 
-        </a>
-    </nav>
+        function showHistory() {
+            historyDiv.innerHTML = history.map(h => `<div class="entry">${h.date}: ${Math.round(h.bpm)} BPM <span>(${Math.round(h.qual)}%)</span></div>`).join('') || '<div>Vazio</div>';
+            historyDiv.style.display = historyDiv.style.display === 'block' ? 'none' : 'block';
+        }
+
+        window.addEventListener('devicemotion', e => {
+            motionData = { x: Math.abs(e.acceleration.x), y: Math.abs(e.acceleration.y), z: Math.abs(e.acceleration.z) };
+        });
+
+        async function initCamera() {
+            try {
+                stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: 'environment', width: { ideal: 640 }, height: { ideal: 480 } } });
+                video.srcObject = stream;
+                log('✅ Câmera ativa');
+            } catch (e) {
+                log(`❌ Câmera: ${e.message}`);
+            }
+        }
+
+        function detectPeaks(signal) {
+            const len = signal.length;
+            const detrend = signal.map((v, i) => v - signal.slice(Math.max(0, i-20), i+1).reduce((a,b)=>a+b)/Math.min(21, i+1));
+            const mean = detrend.reduce((a,b)=>a+b)/len;
+            const std = Math.sqrt(detrend.reduce((a,b)=>a+(b-mean)**2)/len);
+            const thresh = mean + 0.1 * std;
+            const peaks = [];
+            for (let i = 20; i < len - 20; i++) {
+                if (detrend[i] > thresh && detrend[i] > detrend[i-1] && detrend[i] > detrend[i+1]) peaks.push(i);
+            }
+            return peaks.filter((p, i) => i === 0 || p - peaks[i-1] > 30);
+        }
+
+        function drawROI() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            ctx.strokeStyle = isCounting ? 'lime' : 'red';
+            ctx.lineWidth = 3;
+            ctx.strokeRect(0, 0, 100, 100);
+        }
+
+        function updateTimer() {
+            if (!startTime) return;
+            const elapsed = Math.floor((Date.now() - startTime) / 1000);
+            if (elapsed >= 60) {
+                stopMeasurement(true);
+                return;
+            }
+            const mins = Math.floor(elapsed / 60).toString().padStart(2, '0');
+            const secs = (elapsed % 60).toString().padStart(2, '0');
+            timerEl.textContent = `${mins}:${secs}`;
+        }
+
+        function measureLoop() {
+            if (!isMeasuring || !video.videoWidth) return;
+            ctx.drawImage(video, 220, 140, 200, 200, 0, 0, 100, 100);
+            const imageData = ctx.getImageData(0, 0, 100, 100);
+            let greenSum = 0;
+            for (let i = 1; i < imageData.data.length; i += 4) greenSum += imageData.data[i];
+            samples.push(greenSum / (imageData.data.length / 4));
+
+            if (samples.length > 1800) samples.shift(); // Manter últimos 60s
+
+            const peaks = detectPeaks(samples.slice(-300)); // Últimos 10s preview
+            if (peaks.length > 3) {
+                const rr = peaks.slice(1).map((p,i) => p - peaks[i]);
+                const bpm = 60000 / (rr.reduce((a,b)=>a+b)/rr.length * 1000/30);
+                bpmLiveEl.textContent = `${Math.round(bpm)} BPM (live)`;
+            }
+
+            animationId = requestAnimationFrame(measureLoop);
+            drawROI();
+            if (isCounting) updateTimer();
+        }
+
+        function showResult(bpmAvg, qual) {
+            finalBPMEl.textContent = `${Math.round(bpmAvg)} BPM`;
+            finalQualEl.textContent = `Qualidade: ${Math.round(qual)}%`;
+            const mean = bpmAvg;
+            const variance = samples.reduce((a, v) => a + (v - mean)**2, 0) / samples.length;
+            finalStatsEl.textContent = `Média: ${Math.round(mean)} | Desvio: ${Math.round(Math.sqrt(variance))}`;
+            saveHistory(bpmAvg, qual);
+            resultScreen.style.display = 'flex';
+        }
+
+        function stopMeasurement(final = false) {
+            isMeasuring = false;
+            isCounting = false;
+            cancelAnimationFrame(animationId);
+            startBtn.textContent = '🚀 Iniciar (60s)';
+            timerEl.textContent = '00:00';
+            bpmLiveEl.textContent = '--- BPM';
+
+            if (final && samples.length > 100) {
+                const peaks = detectPeaks(samples);
+                if (peaks.length > 10) {
+                    const rr = peaks.slice(1).map((p,i) => p - peaks[i]);
+                    const bpmAvg = 60000 / (rr.reduce((a,b)=>a+b)/rr.length * 1000/30);
+                    const qual = Math.min(100, (peaks.length / (samples.length / 60)) * 100); // Peaks por min
+                    if (motionData.z < 1.5 && bpmAvg > 50 && bpmAvg < 120 && qual > 60) {
+                        showResult(bpmAvg, qual);
+                    } else {
+                        log('❌ Qualidade baixa/movimento');
+                    }
+                }
+            }
+            log(final ? '✅ Medição completa!' : '⏹️ Parada manual');
+        }
+
+        startBtn.onclick = () => {
+            if (!isMeasuring) {
+                isMeasuring = true;
+                isCounting = true;
+                startTime = Date.now();
+                log('🚀 Iniciando contador 60s... Fique imóvel!');
+                startBtn.textContent = '⏹️ Parar Manual';
+                startBtn.disabled = true;
+                measureLoop();
+            } else {
+                stopMeasurement(false);
+            }
+        };
+
+        newMeasureBtn.onclick = shareBtn.onclick = () => {
+            resultScreen.style.display = 'none';
+            samples = [];
+            startBtn.disabled = false;
+            startBtn.textContent = '🚀 Iniciar (60s)';
+            log('Pronto para nova!');
+        };
+
+        historyBtn.onclick = showHistory;
+        clearBtn.onclick = () => { history = []; localStorage.removeItem('bpHistory'); showHistory(); log('🗑️ Limpo'); };
+
+        shareBtn.onclick = () => {
+            const text = `Meu BP: ${finalBPMEl.textContent} (${finalQualEl.textContent})`;
+            if (navigator.share) navigator.share({ title: 'BP Monitor', text });
+            else navigator.clipboard.writeText(text);
+        };
+
+        log('v2.6 pronto com timer + resultado!');
+        initCamera();
+    </script>
 </body>
 </html>
