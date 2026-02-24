@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>EmoScan v4.4</title>
+<script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#0d0d1a;color:#fff;font-family:'Segoe UI',sans-serif;
+     display:flex;flex-direction:column;align-items:center;padding:12px;min-height:100vh}
+h1{font-size:1.4rem;margin:10px 0 3px}
+.sub{font-size:.75rem;color:#aaa;margin-bottom:10px}
+
+#st{width:100%;max-width:420px;border-radius:10px;padding:10px 13px;
+    font-size:.82rem;margin-bottom:8px;border:1px solid #5599ff;
+    color:#5599ff;line-height:1.4}
+#st.ok{border-color:#00c896;color:#00c896}
+#st.err{border-color:#ff4c4c;color:#ff4c4c}
+
+/* loading steps */
+#steps{width:100%;max-width:420px;margin-bottom:10px;display:none}
+.step{display:flex;align-items:center;gap:8px;padding:5px 10px;
+      font-size:.78rem;color:#aaa}
+.step.done{color:#00c896}.step.fail{color:#ff4c4c}.step.run{color:#ffd700}
+.step-ic{width:18px;text-align:center}
+
+/* câmera */
+.wrap{position:relative;width:100%;max-width:420px}
+video{width:100%;border-radius:14px;display:block;background:#111;min-height:200px}
+#ov{position:absolute;top:0;left:0;width:100%;height:100%;
+    border-radius:14px;pointer-events:none}
+#ring{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+      width:52%;aspect-ratio:1;border:3px solid rgba(255,255,255,.18);
+      border-radius:50%;pointer-events:none;transition:.3s}
+#ring.on{border-color:#00c896;box-shadow:0 0 18px #00c896aa}
+#cd{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);
+    font-size:3rem;font-weight:900;text-shadow:0 0 10px #000;display:none}
+
+/* botões */
+.row{display:flex;gap:10px;width:100%;max-width:420px;margin-top:12px}
+button{flex:1;padding:12px 0;background:#5599ff;color:#fff;border:none;
+       border-radius:50px;font-size:.92rem;cursor:pointer}
+button:disabled{background:#2a2a3a;color:#555}
+#btnTest{background:#8844ee}
+
+/* barra de progresso */
+#prog{width:100%;max-width:420px;background:#222;border-radius:6px;
+      height:7px;margin-top:10px;overflow:hidden;display:none}
+#pf{height:100%;background:#5599ff;width:0%;transition:width .2s}
+#ftxt{font-size:.74rem;color:#aaa;text-align:center;margin-top:5px;min-height:18px}
+
+/* resultado */
+#res{width:100%;max-width:420px;margin-top:14px;background:#1a1a2e;
+     border-radius:14px;padding:15px;display:none}
+#res h2{font-size:1rem;margin-bottom:11px}
+.er{display:flex;align-items:center;gap:8px;margin:6px 0}
+.en{width:105px;font-size:.88rem}
+.ebg{flex:1;height:9px;background:#2a2a3a;border-radius:5px;overflow:hidden}
+.ef{height:100%;border-radius:5px;background:linear-gradient(90deg,#5599ff,#00c896);transition:width .7s}
+.ep{width:40px;text-align:right;font-size:.82rem;color:#ccc}
+
+/* histórico */
+#hbox{width:100%;max-width:420px;margin-top:12px;background:#1a1a2e;
+      border-radius:14px;padding:14px;display:none}
+#hbox h3{font-size:.9rem;margin-bottom:7px}
+#hl{font-size:.8rem;line-height:2;color:#ccc;max-height:120px;overflow-y:auto}
+#btnClr{background:#bb2222;margin-top:8px;padding:8px 0;font-size:.82rem}
+</style>
+</head>
+<body>
+<h1>🧠 EmoScan v4.4</h1>
+<p class="sub">Detecção de emoção com IA real</p>
+
+<div id="st">⏳ Iniciando…</div>
+
+<!-- passos de carregamento visíveis -->
+<div id="steps">
+  <div class="step" id="s1"><span class="step-ic">⏳</span> Biblioteca face-api.js</div>
+  <div class="step" id="s2"><span class="step-ic">⏳</span> Modelo detector de rosto</div>
+  <div class="step" id="s3"><span class="step-ic">⏳</span> Modelo de expressões</div>
+  <div class="step" id="s4"><span class="step-ic">⏳</span> Câmera</div>
+  <div class="step" id="s5"><span class="step-ic">⏳</span> Teste de detecção</div>
+</div>
+
+<div class="wrap">
+  <video id="vid" autoplay muted playsinline></video>
+  <canvas id="ov"></canvas>
+  <div id="ring"></div>
+  <div id="cd"></div>
+</div>
+
+<div id="prog"><div id="pf"></div></div>
+<p id="ftxt"></p>
+
+<div class="row">
+  <button id="btnTest" disabled>🔬 Testar</button>
+  <button id="btnScan" disabled>📷 Scan 10s</button>
+</div>
+
+<div id="res">
+  <h2>🏆 Resultado</h2>
+  <div id="ebars"></div>
+  <p id="finfo" style="font-size:.72rem;color:#888;margin-top:7px"></p>
+</div>
+
+<div id="hbox">
+  <h3>📋 Histórico</h3>
+  <div id="hl"></div>
+  <button id="btnClr">🗑 Limpar</button>
+</div>
+
+<script>
+/* ── Constantes ─────────────────────────────────────────── */
+const MODEL_URLS = [
+  'https://cdn.jsdelivr.net/gh/justadudewhohacks/face-api.js@0.22.2/weights',
+  'https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights',
+  'https://unpkg.com/face-api.js@0.22.2/weights'
+];
+const SCAN_MS  = 10000;
+const FRAME_MS = 120;
+
+const EMJ={happy:'😄',sad:'😢',angry:'😠',fearful:'😨',
+           disgusted:'🤢',surprised:'😲',neutral:'😐'};
+const PT ={happy:'Feliz',sad:'Triste',angry:'Bravo',fearful:'Assustado',
+           disgusted:'Nojo',surprised:'Surpreso',neutral:'Neutro'};
+
+/* ── DOM ───────────────────────────────────────────────── */
+const $st=g('st'),$vid=g('vid'),$ov=g('ov'),$ring=g('ring'),$cd=g('cd');
+const $prog=g('prog'),$pf=g('pf'),$ftxt=g('ftxt');
+const $res=g('res'),$eb=g('ebars'),$fi=g('finfo');
+const $hbox=g('hbox'),$hl=g('hl');
+const btnTest=g('btnTest'),btnScan=g('btnScan');
+function g(x){return document.getElementById(x)}
+
+/* canvas oculto — captura frame do vídeo para detecção (fix mobile) */
+const snap   = document.createElement('canvas');
+const snapCtx= snap.getContext('2d');
+snap.width   = 320;
+snap.height  = 240;
+
+let liveRAF=null, scanning=false;
+
+/* ── Passos de loading ──────────────────────────────────── */
+function stepRun(id){const e=g(id);e.className='step run';e.querySelector('.step-ic').textContent='🔄'}
+function stepOK (id){const e=g(id);e.className='step done';e.querySelector('.step-ic').textContent='✅'}
+function stepErr(id,msg){const e=g(id);e.className='step fail';e.querySelector('.step-ic').textContent='❌';if(msg)e.childNodes[1].textContent=' '+msg}
+function setOK(m){$st.className='ok';$st.textContent=m}
+function setErr(m){$st.className='err';$st.textContent=m}
+function setInfo(m){$st.className='';$st.textContent=m}
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
+/* ── Inicialização ──────────────────────────────────────── */
+async function init(){
+  g('steps').style.display='block';
+
+  /* 1. Aguarda face-api.js */
+  stepRun('s1');
+  let t=0;
+  while(typeof faceapi==='undefined'&&t<60){await sleep(200);t++}
+  if(typeof faceapi==='undefined'){stepErr('s1','não carregou');setErr('❌ face-api.js não carregou. Verifique internet.');return}
+  stepOK('s1');
+
+  /* 2 & 3. Modelos (tenta 3 CDNs) */
+  let loaded=false;
+  for(let i=0;i<MODEL_URLS.length;i++){
+    const url=MODEL_URLS[i];
+    try{
+      stepRun('s2');
+      setInfo(`⏳ Modelos CDN ${i+1}/3…`);
+      await faceapi.nets.tinyFaceDetector.loadFromUri(url);
+      stepOK('s2');
+
+      stepRun('s3');
+      await faceapi.nets.faceExpressionNet.loadFromUri(url);
+      stepOK('s3');
+      loaded=true;
+      break;
+    }catch(e){
+      stepErr('s2',`CDN ${i+1} falhou`);
+      if(i===MODEL_URLS.length-1){setErr('❌ Todos os CDNs falharam. Sem internet?');return}
+    }
+  }
+
+  /* 4. Câmera */
+  stepRun('s4');
+  try{
+    const stream=await navigator.mediaDevices.getUserMedia(
+      {video:{facingMode:'user',width:{ideal:640},height:{ideal:480}}});
+    $vid.srcObject=stream;
+    await new Promise(r=>{$vid.onloadedmetadata=r});
+    await sleep(800); // deixa câmera estabilizar
+    $ov.width =$vid.videoWidth ||320;
+    $ov.height=$vid.videoHeight||240;
+    snap.width =$ov.width;
+    snap.height=$ov.height;
+    stepOK('s4');
+  }catch(e){
+    stepErr('s4',e.message);
+    setErr('❌ Câmera bloqueada: '+e.message);
+    return;
+  }
+
+  /* 5. Teste automático de detecção */
+  stepRun('s5');
+  setInfo('🔬 Testando detecção…');
+  const testResult=await detectFrame();
+  if(testResult!==null){
+    stepOK('s5');
+    setOK('✅ Tudo funcionando! Posicione o rosto e use os botões.');
+  }else{
+    // falhou, mas pode ser falta de rosto na cena
+    stepErr('s5','sem rosto no teste (tudo bem, tente com rosto na câmera)');
+    setOK('✅ Modelos OK. Posicione o rosto na câmera.');
+  }
+
+  btnTest.disabled=false;
+  btnScan.disabled=false;
+  startLive();
+}
+
+/* ── Captura frame → canvas → detecta ─────────────────── */
+/*  CORREÇÃO PRINCIPAL: detectar sobre canvas, não sobre <video>
+    Resolve problema de compatibilidade em muitos Android/Chrome  */
+async function detectFrame(inputSize=224, threshold=0.15){
+  if($vid.readyState<2)return null;
+  // desenha frame atual do vídeo no canvas oculto
+  snapCtx.drawImage($vid, 0, 0, snap.width, snap.height);
+  const opts=new faceapi.TinyFaceDetectorOptions({inputSize,scoreThreshold:threshold});
+  try{
+    const r=await faceapi.detectSingleFace(snap,opts).withFaceExpressions();
+    return r||null;
+  }catch(e){
+    return null;
+  }
+}
+
+/* ── Prévia ao vivo ─────────────────────────────────────── */
+function startLive(){
+  const ctx=$ov.getContext('2d');
+  async function tick(){
+    if(scanning){liveRAF=requestAnimationFrame(tick);return}
+    ctx.clearRect(0,0,$ov.width,$ov.height);
+    const r=await detectFrame(160,0.15);
+    if(r){
+      $ring.className='on';
+      $ftxt.textContent='✅ Rosto detectado — pronto!';
+      // bounding box escalada para o elemento visual
+      const sx=$ov.offsetWidth/$ov.width, sy=$ov.offsetHeight/$ov.height;
+      const b=r.detection.box;
+      ctx.strokeStyle='#00c896';ctx.lineWidth=2;
+      ctx.strokeRect(b.x*sx,b.y*sy,b.width*sx,b.height*sy);
+    }else{
+      $ring.className='';
+      $ftxt.textContent='⚠️ Rosto não detectado — melhore a iluminação';
+    }
+    liveRAF=requestAnimationFrame(tick);
+  }
+  tick();
+}
+
+/* ── Botão Testar 1 frame ───────────────────────────────── */
+btnTest.addEventListener('click',async()=>{
+  cancelAnimationFrame(liveRAF);liveRAF=null;
+  btnTest.disabled=true;btnScan.disabled=true;
+  setInfo('🔬 Testando…');
+  await sleep(200);
+
+  // tenta 3 configurações diferentes
+  const configs=[[128,0.1],[160,0.12],[224,0.15]];
+  let found=null;
+  for(const[sz,thr] of configs){
+    const r=await detectFrame(sz,thr);
+    if(r){found=r;break}
+  }
+
+  if(found){
+    setOK('✅ Detecção funcionando!');
+    const sorted=Object.entries(found.expressions).sort((a,b)=>b[1]-a[1]);
+    showResult(sorted,1,1);
+    saveHist(sorted[0]);
+  }else{
+    setErr('❌ Rosto não detectado. Verifique iluminação e posição.');
+  }
+  btnTest.disabled=false;btnScan.disabled=false;
+  startLive();
+});
+
+/* ── Botão Scan 10s ─────────────────────────────────────── */
+btnScan.addEventListener('click',async()=>{
+  if(scanning)return;
+  scanning=true;
+  cancelAnimationFrame(liveRAF);liveRAF=null;
+  btnTest.disabled=true;btnScan.disabled=true;
+  $res.style.display='none';
+  $prog.style.display='block';$pf.style.width='0%';
+  $cd.style.display='block';$cd.style.color='#fff';
+
+  const acc={};let frames=0,detected=0;
+  const t0=Date.now();
+
+  const timer=setInterval(()=>{
+    const rem=Math.ceil((SCAN_MS-(Date.now()-t0))/1000);
+    $cd.textContent=rem>0?rem:'';
+    if(rem<=3)$cd.style.color='#ff4c4c';
+    $pf.style.width=Math.min((Date.now()-t0)/SCAN_MS*100,100)+'%';
+  },150);
+
+  while(Date.now()-t0<SCAN_MS){
+    const tf=Date.now();
+    const r=await detectFrame(224,0.12);
+    frames++;
+    if(r&&r.expressions){
+      detected++;
+      for(const[k,v] of Object.entries(r.expressions)) acc[k]=(acc[k]||0)+v;
+    }
+    $ftxt.textContent=`📸 ${frames} frames · ${detected} detectados`;
+    const el=Date.now()-tf;
+    if(el<FRAME_MS)await sleep(FRAME_MS-el);
+  }
+
+  clearInterval(timer);
+  $cd.style.display='none';
+  $pf.style.width='100%';
+  scanning=false;
+
+  if(detected===0){
+    setErr('❌ Nenhum rosto detectado durante o scan. Use 🔬 Testar primeiro.');
+    btnTest.disabled=false;btnScan.disabled=false;
+    $prog.style.display='none';
+    startLive();return;
+  }
+
+  const sorted=Object.entries(acc)
+    .map(([k,v])=>[k,v/detected])
+    .sort((a,b)=>b[1]-a[1]);
+
+  showResult(sorted,frames,detected);
+  saveHist(sorted[0]);
+  setOK('✅ Scan concluído com sucesso!');
+  btnTest.disabled=false;btnScan.disabled=false;
+  startLive();
+});
+
+/* ── Exibe resultado ────────────────────────────────────── */
+function showResult(sorted,tot,det){
+  $res.style.display='block';$eb.innerHTML='';
+  sorted.forEach(([k,v])=>{
+    const p=Math.round(v*100);
+    $eb.innerHTML+=`
+      <div class="er">
+        <span class="en">${EMJ[k]||'❓'} ${PT[k]||k}</span>
+        <div class="ebg"><div class="ef" style="width:${p}%"></div></div>
+        <span class="ep">${p}%</span>
+      </div>`;
+  });
+  $fi.textContent=`📊 ${tot} frames · ${det} com rosto`;
+}
+
+/* ── Histórico ──────────────────────────────────────────── */
+function saveHist([k,v]){
+  const h=JSON.parse(localStorage.getItem('es44')||'[]');
+  h.unshift({t:new Date().toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}),
+             e:PT[k]||k,em:EMJ[k]||'❓',p:Math.round(v*100)});
+  if(h.length>20)h.pop();
+  localStorage.setItem('es44',JSON.stringify(h));
+  renderHist();
+}
+function renderHist(){
+  const h=JSON.parse(localStorage.getItem('es44')||'[]');
+  if(!h.length)return;
+  $hbox.style.display='block';
+  $hl.innerHTML=h.map(x=>`<div>${x.t} — ${x.em} <b>${x.e}</b> (${x.p}%)</div>`).join('');
+}
+g('btnClr').onclick=()=>{localStorage.removeItem('es44');$hbox.style.display='none'};
+
+/* ── Inicia ─────────────────────────────────────────────── */
+renderHist();
+window.addEventListener('load',init);
+</script>
+</body>
+</html>

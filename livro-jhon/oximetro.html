@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpO2 Monitor PRO 10/10</title>
+    <link rel="manifest" href="data:application/manifest+json;base64,eyJuYW1lIjoiU3BPMiBNb25pdG9yIFBSTyIsInNob3J0X25hbWUiOiJTcE8yIFBSTyIsInN0YXJ0X3VybCI6Ii8iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGEwYTJlIiwidGhlbWVfY29sb3IiOiIjZmY0NDQ0IiwiaWNvbnMiOlt7InNyYyI6ImRhdGE6aW1hZ2Uvc3ZnK3htbDtiYXNlNjQsUEhOMllYQWdkbVZ5YzJsdmJqMGlNUzR3SWlCbGJtTnZaR2x1WnowaVlYVjBhRzl5YVhwbFlYSWlQangwWlhoMElIZzlJakl3TUNJZ2VUMGlNakF3SWlCa1BTSkRPVFl3UmpZd0lpQm1hV3hzUFNKdWIyNWxJaUI0YkdsdVp6MGlNQ0lnZVcxa1BTSXdJaUJrWVhsemFXOXVQU0l4SWlCbFppMXlaV3hsSUhSb1pYa05NUzR3TURBeU1DQXdJRE13TERNd0xqQXdNakFnTURJd01ESTB3N2oySW1admJuUXRZbUZ6Wlc0OUlqWndaSFlpUGp4d1lYUm9JSGc5SWpFd01DSWNJSGS5SWpFd01DSWVJR1F3SWpRd0lpQmpZWEF0YzJsbmJtRjBkWEpsUFNJeU1DSWdjM1J5YjJ0bFBTSXhNalV3TWlJZ2RHVjRkQzFoYm1Ob2IzSTlJakUzTURFM01DSWdabWxzYkMxd2NXOXVQU0kyTURBd01DSWVJQ0k2WTJFaVBqeHdZWFJvSUhnOUlqRXdNQ0k2SUhrOUlqRXdNQ0kzSWlCa1BTSXlNREFpSUdOaGNDMXpaV2xuYm1GMGR4UWlMeUkvUGp4aklIaHNhVzVuUFNJd0lpQjRQU0kxTUNJZ2VUMGlOVEFpSWc0OFkyOHZQand2ZEdWNGRENDhMM04yWno0PSIsInNpemVzIjoiMTkyeDE5MiIsInR5cGUiOiJpbWFnZS9zdmcreG1sIn1dfQ==">
+    <meta name="theme-color" content="#ff4444">
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box;}
+        body{font-family:Arial,sans-serif;background:linear-gradient(135deg,#0a0a2e 0%,#1a1a4e 100%);color:white;min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:20px;text-align:center;}
+        h1{font-size:clamp(20px,6vw,32px);margin-bottom:10px;}
+        .tabs{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap;justify-content:center;}
+        .tab{padding:10px 18px;border-radius:25px;cursor:pointer;background:rgba(255,255,255,0.1);font-size:clamp(12px,3.5vw,15px);border:2px solid transparent;transition:all 0.3s;font-weight:bold;}
+        .tab.active{background:linear-gradient(45deg,#ff4444,#cc0000);border-color:#ff6666;}
+        .page{display:none;width:100%;max-width:460px;flex-direction:column;align-items:center;}
+        .page.active{display:flex;}
+        #videoView{width:90vw;max-width:340px;height:220px;border-radius:20px;box-shadow:0 20px 40px rgba(255,50,50,0.4);border:4px solid rgba(255,100,100,0.5);display:none;margin-bottom:10px;}
+        #chart{width:90vw;max-width:420px;height:clamp(90px,20vw,150px);border-radius:15px;margin:8px auto;background:rgba(255,255,255,0.05);box-shadow:inset 0 0 20px rgba(0,0,0,0.5);display:block;}
+        #timer{font-size:clamp(26px,8vw,50px);font-weight:900;margin:8px 0;}
+        .metrics-row{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:8px 0;}
+        .metric-box{background:rgba(255,255,255,0.1);border-radius:18px;padding:12px 22px;min-width:130px;backdrop-filter:blur(10px);}
+        .metric-label{font-size:14px;opacity:0.8;margin-bottom:4px;}
+        .metric-value{font-size:clamp(32px,9vw,54px);font-weight:900;}
+        #quality-bar-wrap{width:90vw;max-width:420px;background:rgba(255,255,255,0.1);border-radius:10px;height:22px;margin:8px auto;overflow:hidden;position:relative;}
+        #quality-bar{height:100%;width:0%;background:linear-gradient(90deg,#ff4444,#ffaa00,#00ff88);border-radius:10px;transition:width 0.5s;}
+        #quality-label{position:absolute;top:0;left:0;right:0;bottom:0;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:bold;text-shadow:0 1px 2px #000;}
+        #status{font-size:clamp(12px,3.5vw,17px);padding:10px 18px;border-radius:15px;margin:6px 0;background:rgba(255,255,255,0.1);max-width:420px;width:90vw;}
+        #flashAlert,#arrhythmiaAlert,#invalidAlert{display:none;border-radius:15px;padding:12px 18px;margin:8px 0;max-width:420px;width:90vw;font-size:clamp(12px,3.5vw,16px);}
+        #flashAlert{background:rgba(255,170,0,0.25);border:2px solid #ffaa00;}
+        #arrhythmiaAlert{background:rgba(255,68,68,0.25);border:2px solid #ff4444;}
+        #invalidAlert{background:rgba(255,68,68,0.2);border:2px solid #ff4444;}
+        button{background:linear-gradient(45deg,#ff4444,#cc0000);border:none;color:white;padding:16px 30px;font-size:clamp(14px,4.5vw,19px);font-weight:bold;border-radius:50px;cursor:pointer;margin:8px 5px;box-shadow:0 12px 28px rgba(255,68,68,0.5);transition:all 0.3s;min-height:56px;min-width:200px;}
+        button:hover:not(:disabled){transform:scale(1.05);}
+        button:disabled{opacity:0.5;cursor:not-allowed;transform:none;}
+        #btnNew{background:linear-gradient(45deg,#00ff88,#00cc6a);color:black;}
+        #btnShare{background:linear-gradient(45deg,#007bff,#0056b3);}
+        #btnPDF{background:linear-gradient(45deg,#9b59b6,#6c3483);}
+        #btnInstall{background:linear-gradient(45deg,#f39c12,#d68910);display:none;}
+        #results{display:none;padding:22px;background:rgba(0,0,0,0.9);border-radius:25px;max-width:95vw;width:440px;backdrop-filter:blur(20px);margin-top:12px;}
+        .stat{font-size:clamp(13px,3.8vw,18px);margin:9px 0;padding:13px;background:rgba(255,68,68,0.15);border-radius:12px;display:flex;justify-content:space-between;align-items:center;}
+        .good{color:#00ff88;font-weight:bold;}.alert{color:#ffaa00;font-weight:bold;}.warn{color:#ff4444;font-weight:bold;}.gray{color:#aaa;font-style:italic;}
+        #historyList{width:100%;max-width:460px;}
+        .hist-item{background:rgba(255,255,255,0.07);border-radius:15px;padding:14px 18px;margin:8px 0;display:flex;flex-direction:column;gap:5px;border-left:4px solid #ff4444;}
+        .hist-item.valid{border-left-color:#00ff88;}.hist-item.invalid{border-left-color:#ffaa00;}.hist-item.arrhy{border-left-color:#ff4444;}
+        .hist-top{display:flex;justify-content:space-between;font-weight:bold;font-size:clamp(14px,4vw,17px);}
+        .hist-bot{font-size:clamp(11px,3vw,14px);opacity:0.7;}
+        .hist-del{background:rgba(255,68,68,0.3);border:none;color:white;padding:5px 11px;border-radius:18px;cursor:pointer;font-size:12px;min-width:auto;min-height:auto;margin:0;box-shadow:none;}
+        #btnClearHist{background:rgba(255,68,68,0.3);min-width:170px;min-height:48px;font-size:15px;margin-top:12px;}
+        #btnExportCSV{background:linear-gradient(45deg,#00b894,#00897b);min-width:170px;min-height:48px;font-size:15px;margin-top:12px;}
+        #emptyHist{opacity:0.5;font-size:17px;margin:25px 0;}
+        .calib-box{background:rgba(255,255,255,0.07);border-radius:20px;padding:22px;margin:12px 0;width:90vw;max-width:420px;}
+        .calib-box h3{margin-bottom:12px;font-size:clamp(15px,4vw,19px);}
+        .calib-input{width:100%;padding:14px;border-radius:12px;background:rgba(255,255,255,0.15);border:2px solid rgba(255,255,255,0.2);color:white;font-size:17px;text-align:center;margin:7px 0;}
+        .calib-input:focus{outline:none;border-color:#00ff88;}
+        #btnCalib{background:linear-gradient(45deg,#00ff88,#00cc6a);color:black;min-width:170px;}
+        .calib-result{background:rgba(0,255,136,0.1);border:2px solid #00ff88;border-radius:12px;padding:11px;margin-top:11px;display:none;}
+        #arrhyBox{background:rgba(255,68,68,0.15);border:2px solid #ff4444;border-radius:15px;padding:14px;margin:8px 0;max-width:420px;width:90vw;display:none;}
+        #modeSwitch{background:rgba(255,255,255,0.1);border:2px solid rgba(255,255,255,0.3);min-width:160px;min-height:46px;font-size:14px;margin:5px;}
+    </style>
+</head>
+<body>
+<h1>🩸 SpO2 Monitor PRO</h1>
+<div class="tabs">
+    <div class="tab active" onclick="showPage('measure',this)">❤️ Medir</div>
+    <div class="tab" onclick="showPage('history',this)">📋 Histórico</div>
+    <div class="tab" onclick="showPage('calib',this)">🔧 Calibrar</div>
+    <div class="tab" onclick="showPage('about',this)">ℹ️ Info</div>
+</div>
+
+<div class="page active" id="page-measure">
+    <div id="flashAlert">💡 <strong>Ligue o FLASH do celular!</strong><br>Sem flash o SpO2 fica impreciso.</div>
+    <div id="arrhythmiaAlert">⚠️ <strong>Arritmia detectada!</strong> Batimentos irregulares. Consulte médico.</div>
+    <video id="videoView" autoplay playsinline muted></video>
+    <canvas id="chart"></canvas>
+    <div id="timer">60s</div>
+    <div class="metrics-row">
+        <div class="metric-box"><div class="metric-label">🩸 SpO2</div><div class="metric-value" id="spo2" style="color:#ff4444">--%</div></div>
+        <div class="metric-box"><div class="metric-label">❤️ BPM</div><div class="metric-value" id="bpm" style="color:#00ff88">--</div></div>
+        <div class="metric-box"><div class="metric-label">💓 HRV</div><div class="metric-value" id="hrv" style="color:#a29bfe;font-size:clamp(24px,6vw,36px)">--ms</div></div>
+    </div>
+    <div id="quality-bar-wrap"><div id="quality-bar"></div><div id="quality-label">Qualidade: 0%</div></div>
+    <div id="arrhyBox">💓 <strong>HRV alto – possível arritmia:</strong> <span id="hrvVal">--</span>ms</div>
+    <div id="status">Toque em Iniciar e coloque o dedo na câmera.</div>
+    <button id="modeSwitch" onclick="toggleMode()">📱 Câmera Traseira</button>
+    <button id="btnStart">❤️ Iniciar Medição 60s</button>
+    <div id="invalidAlert">⛔ <strong>Resultado inválido!</strong><br>Qualidade <span id="qualPct">0%</span> (mínimo: 70%)<br><small>🔦 Flash + pressione dedo + HTTPS</small></div>
+    <div id="results">
+        <h2 style="font-size:clamp(18px,5.5vw,26px);margin-bottom:18px;">📊 Relatório Completo</h2>
+        <div class="stat"><span>🩸 SpO2 Médio</span><span id="rSpo2">--</span></div>
+        <div class="stat"><span>❤️ BPM Médio</span><span id="rBpm">--</span></div>
+        <div class="stat"><span>💓 HRV</span><span id="rHrv">--</span></div>
+        <div class="stat"><span>📈 Desvio SpO2</span><span id="rStd">--</span></div>
+        <div class="stat"><span>⭐ Qualidade</span><span id="rQuality">--</span></div>
+        <div class="stat"><span>💓 Arritmia</span><span id="rArrhy">--</span></div>
+        <div class="stat"><span>⚠️ Status</span><span id="rStatus">--</span></div>
+        <div class="stat"><span>💡 Diagnóstico</span><span id="rDiag">--</span></div>
+        <div class="stat"><span>🔧 Calibração</span><span id="rCalib">--</span></div>
+        <button id="btnShare">📱 Compartilhar</button>
+        <button id="btnPDF">📄 Exportar PDF</button>
+        <button id="btnNew">🔄 Nova Medição</button>
+    </div>
+</div>
+
+<div class="page" id="page-history">
+    <h2 style="margin-bottom:12px;font-size:clamp(18px,5vw,26px);">📋 Histórico de Medições</h2>
+    <div id="emptyHist">📭 Nenhuma medição salva ainda.</div>
+    <div id="historyList"></div>
+    <button id="btnExportCSV" onclick="exportCSV()">📊 Exportar CSV</button>
+    <button id="btnClearHist" onclick="clearHistory()">🗑️ Limpar Histórico</button>
+</div>
+
+<div class="page" id="page-calib">
+    <div class="calib-box">
+        <h3>🔧 Calibrar com G.TECH ou Oxímetro Real</h3>
+        <p style="font-size:13px;opacity:0.8;margin-bottom:12px">Meça com seu aparelho físico e insira abaixo.</p>
+        <input class="calib-input" type="number" id="calibSpo2" min="80" max="100" placeholder="SpO2 real (ex: 97)">
+        <input class="calib-input" type="number" id="calibBpm" min="40" max="200" placeholder="BPM real (ex: 72)">
+        <button id="btnCalib" onclick="saveCalibration()">✅ Salvar Calibração</button>
+        <div class="calib-result" id="calibResult">✅ Calibração salva!<br><span id="calibText"></span></div>
+    </div>
+    <div class="calib-box">
+        <h3>📊 Calibração Atual</h3>
+        <div id="calibStatus" style="font-size:15px;opacity:0.8">Nenhuma calibração salva.</div>
+    </div>
+</div>
+
+<div class="page" id="page-about">
+    <div class="calib-box">
+        <h3>ℹ️ Sobre o App</h3>
+        <p style="font-size:14px;line-height:1.7;opacity:0.9">
+            🩸 <strong>SpO2 Monitor PRO</strong> usa a câmera do celular para medir:<br><br>
+            ❤️ <strong>BPM</strong> – Batimentos por minuto (PPG canal verde)<br>
+            🩸 <strong>SpO2</strong> – Saturação de oxigênio (Beer-Lambert R/G)<br>
+            💓 <strong>HRV</strong> – Variabilidade cardíaca (RMSSD clínico)<br>
+            ⚠️ <strong>Arritmia</strong> – Detecta batimento irregular<br><br>
+            ⚠️ <strong>Aviso:</strong> Apenas educacional. Não substitui equipamentos médicos.
+        </p>
+    </div>
+    <div class="calib-box">
+        <h3>📲 Instalar como App</h3>
+        <button id="btnInstall" onclick="installPWA()">📲 Instalar App</button>
+        <p style="font-size:13px;opacity:0.6;margin-top:10px">Chrome → Menu (⋮) → "Adicionar à tela inicial"</p>
+    </div>
+</div>
+
+<script>
+function showPage(name,el){
+    document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+    document.querySelectorAll(".tab").forEach(t=>t.classList.remove("active"));
+    document.getElementById("page-"+name).classList.add("active");
+    if(el) el.classList.add("active");
+    if(name==="history") renderHistory();
+    if(name==="calib")   renderCalibStatus();
+}
+const videoView=document.getElementById("videoView"),chart=document.getElementById("chart"),
+      cCtx=chart.getContext("2d"),timerEl=document.getElementById("timer"),
+      spo2El=document.getElementById("spo2"),bpmEl=document.getElementById("bpm"),
+      hrvEl=document.getElementById("hrv"),statusEl=document.getElementById("status"),
+      btnStart=document.getElementById("btnStart"),resultsEl=document.getElementById("results"),
+      qualBar=document.getElementById("quality-bar"),qualLabel=document.getElementById("quality-label"),
+      flashAlert=document.getElementById("flashAlert"),invalidAl=document.getElementById("invalidAlert"),
+      arrhyAlert=document.getElementById("arrhythmiaAlert"),arrhyBox=document.getElementById("arrhyBox");
+let stream=null,animId=null,timerInt=null,timeLeft=60;
+const FPS=30;
+let redBuf=[],greenBuf=[],spo2Buf=[],hrBuf=[],qualBuf=[];
+let facingMode="environment",lastResults={};
+async function initCamera(){
+    try{
+        if(stream) stream.getTracks().forEach(t=>t.stop());
+        stream=await navigator.mediaDevices.getUserMedia({
+            video:{facingMode:facingMode,width:{ideal:640},height:{ideal:480},frameRate:{ideal:FPS}}
+        });
+        videoView.srcObject=stream; await videoView.play();
+        videoView.style.display="block";
+        flashAlert.style.display=facingMode==="environment"?"block":"none";
+        chart.width=chart.offsetWidth||380; chart.height=chart.offsetHeight||135;
+        return true;
+    }catch(e){alert("Erro câmera: "+e.message+"\nUse HTTPS + permita câmera!");return false;}
+}
+function toggleMode(){
+    facingMode=facingMode==="environment"?"user":"environment";
+    document.getElementById("modeSwitch").textContent=
+        facingMode==="environment"?"📱 Câmera Traseira":"💻 Câmera Frontal";
+}
+function extractRGB(){
+    const tmp=document.createElement("canvas"); tmp.width=640; tmp.height=480;
+    const tc=tmp.getContext("2d"); tc.drawImage(videoView,0,0,640,480);
+    const roi=tc.getImageData(160,120,320,240).data;
+    let r=0,g=0,n=0;
+    for(let i=0;i<roi.length;i+=4){r+=roi[i];g+=roi[i+1];n++;}
+    return{r:r/n,g:g/n};
+}
+function calcSpO2(){
+    if(redBuf.length<FPS*4) return 0;
+    const R=redBuf.slice(-120),G=greenBuf.slice(-120);
+    const acR=Math.max(...R)-Math.min(...R),dcR=R.reduce((a,b)=>a+b)/R.length;
+    const acG=Math.max(...G)-Math.min(...G),dcG=G.reduce((a,b)=>a+b)/G.length;
+    if(!dcR||!dcG||!acG) return 0;
+    const RR=(acR/dcR)/(acG/dcG);
+    let spo2=Math.min(100,Math.max(70,110-25*RR));
+    const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+    if(calib&&calib.offset) spo2=Math.min(100,Math.max(70,spo2+calib.offset));
+    return spo2;
+}
+function calcBPMandHRV(){
+    if(greenBuf.length<60) return{bpm:0,hrv:0,arrhy:false};
+    const sig=greenBuf.slice(-120),filt=[];
+    for(let i=2;i<sig.length;i++) filt.push(sig[i]-0.98*sig[i-1]+0.02*sig[i-2]);
+    const peaks=[];
+    for(let i=5;i<filt.length-5;i++){
+        if(filt[i]>filt[i-1]*1.015&&filt[i]>filt[i+1]*1.015&&
+           (peaks.length===0||i-peaks[peaks.length-1]>20)) peaks.push(i);
+    }
+    if(peaks.length<3) return{bpm:0,hrv:0,arrhy:false};
+    const intervals=[];
+    for(let i=1;i<peaks.length;i++) intervals.push((peaks[i]-peaks[i-1])/FPS*1000);
+    const avgInt=intervals.reduce((a,b)=>a+b)/intervals.length;
+    const bpm=Math.min(200,Math.max(40,Math.round(60000/avgInt)));
+    let sumSqDiff=0;
+    for(let i=1;i<intervals.length;i++) sumSqDiff+=Math.pow(intervals[i]-intervals[i-1],2);
+    const hrv=Math.round(Math.sqrt(sumSqDiff/intervals.length)||0);
+    const arrhy=hrv>80&&intervals.length>=4;
+    return{bpm,hrv,arrhy};
+}
+function calcQuality(){
+    if(redBuf.length<30) return 0;
+    const R=redBuf.slice(-60);
+    const amp=Math.max(...R)-Math.min(...R),mean=R.reduce((a,b)=>a+b)/R.length;
+    return Math.min(100,Math.max(0,(amp/mean)*1500));
+}
+function getDiag(spo2){
+    if(spo2>=95) return{label:"Normal ✅",cls:"good"};
+    if(spo2>=90) return{label:"Atenção ⚠️",cls:"alert"};
+    if(spo2>=85) return{label:"Hipoxemia Leve 🔶",cls:"alert"};
+    return{label:"Hipoxemia Grave 🚨",cls:"warn"};
+}
+function drawChart(){
+    cCtx.clearRect(0,0,chart.width,chart.height);
+    const sig=redBuf.slice(-200); if(sig.length<5) return;
+    const minV=Math.min(...sig),maxV=Math.max(...sig); if(maxV===minV) return;
+    cCtx.strokeStyle="#ff4444"; cCtx.lineWidth=3; cCtx.lineCap="round"; cCtx.lineJoin="round";
+    cCtx.beginPath();
+    for(let i=0;i<sig.length;i++){
+        const x=(i/sig.length)*chart.width;
+        const y=chart.height-((sig[i]-minV)/(maxV-minV))*chart.height;
+        i===0?cCtx.moveTo(x,y):cCtx.lineTo(x,y);
+    }
+    cCtx.stroke();
+}
+function processFrame(){
+    const{r,g}=extractRGB();
+    redBuf.push(r); greenBuf.push(g);
+    if(redBuf.length>FPS*60){redBuf.shift();greenBuf.shift();}
+    const spo2=calcSpO2();
+    const{bpm,hrv,arrhy}=calcBPMandHRV();
+    const qual=calcQuality();
+    if(spo2>0){spo2Buf.push(spo2);if(spo2Buf.length>100)spo2Buf.shift();}
+    if(bpm>0){hrBuf.push(bpm);if(hrBuf.length>100)hrBuf.shift();}
+    qualBuf.push(qual); if(qualBuf.length>30)qualBuf.shift();
+    const avgSpo2=spo2Buf.length?spo2Buf.reduce((a,b)=>a+b)/spo2Buf.length:0;
+    const avgBpm=hrBuf.length?hrBuf.reduce((a,b)=>a+b)/hrBuf.length:0;
+    const avgQual=qualBuf.reduce((a,b)=>a+b)/qualBuf.length;
+    spo2El.textContent=avgSpo2>0?avgSpo2.toFixed(1)+"%":"--%";
+    spo2El.style.color=avgSpo2>=95?"#00ff88":avgSpo2>=90?"#ffaa00":"#ff4444";
+    bpmEl.textContent=avgBpm>0?Math.round(avgBpm):"--";
+    hrvEl.textContent=hrv>0?hrv+"ms":"--ms";
+    qualBar.style.width=Math.round(avgQual)+"%";
+    qualLabel.textContent="Qualidade: "+Math.round(avgQual)+"%";
+    if(arrhy){arrhyAlert.style.display="block";arrhyBox.style.display="block";document.getElementById("hrvVal").textContent=hrv;}
+    else{arrhyAlert.style.display="none";arrhyBox.style.display="none";}
+    statusEl.textContent=avgQual>70?"✅ Sinal bom! Mantenha dedo imóvel.":
+        avgQual>40?"⚠️ Sinal médio – pressione mais o dedo.":
+        "❌ Sinal fraco – ligue flash + pressione dedo.";
+    timerEl.textContent=timeLeft+"s";
+    drawChart();
+    lastResults={avgSpo2,avgBpm,avgQual,hrv,arrhy};
+}
+btnStart.onclick=async()=>{
+    btnStart.disabled=true; btnStart.textContent="📹 Iniciando câmera...";
+    invalidAl.style.display="none"; resultsEl.style.display="none";
+    arrhyAlert.style.display="none"; arrhyBox.style.display="none";
+    redBuf=[]; greenBuf=[]; spo2Buf=[]; hrBuf=[]; qualBuf=[];
+    if(!await initCamera()){btnStart.disabled=false;btnStart.textContent="❤️ Iniciar Medição 60s";return;}
+    btnStart.textContent="Medindo 60s..."; timeLeft=60;
+    timerInt=setInterval(()=>{timeLeft--;if(timeLeft<=0){clearInterval(timerInt);endMeasurement();}},1000);
+    animId=setInterval(processFrame,1000/FPS);
+};
+function endMeasurement(){
+    clearInterval(animId);
+    if(stream) stream.getTracks().forEach(t=>t.stop());
+    flashAlert.style.display="none"; videoView.style.display="none";
+    const{avgSpo2,avgBpm,avgQual,hrv,arrhy}=lastResults;
+    const std=Math.sqrt(spo2Buf.length>1?spo2Buf.reduce((s,v)=>s+(v-avgSpo2)**2,0)/spo2Buf.length:0);
+    const diag=getDiag(avgSpo2);
+    const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+    const isValid=avgQual>=70;
+    if(!isValid){
+        document.getElementById("qualPct").textContent=Math.round(avgQual||0)+"%";
+        invalidAl.style.display="block";
+        saveHistory({date:new Date().toLocaleString("pt-BR"),spo2:"--",bpm:Math.round(avgBpm||0),hrv:hrv||0,quality:Math.round(avgQual||0),arrhy:false,valid:false});
+        btnStart.disabled=false; btnStart.textContent="❤️ Tentar Novamente"; return;
+    }
+    document.getElementById("rSpo2").textContent=avgSpo2.toFixed(1)+"%";
+    document.getElementById("rBpm").textContent=Math.round(avgBpm);
+    document.getElementById("rHrv").textContent=hrv+"ms";
+    document.getElementById("rStd").textContent="±"+std.toFixed(1)+"%";
+    document.getElementById("rQuality").textContent=Math.round(avgQual)+"%";
+    document.getElementById("rArrhy").innerHTML=arrhy?'<span class="warn">⚠️ Detectada!</span>':'<span class="good">✅ Normal</span>';
+    document.getElementById("rStatus").innerHTML=`<span class="${diag.cls}">${diag.label}</span>`;
+    document.getElementById("rDiag").innerHTML=
+        avgSpo2>=95?'<span class="good">Oxigenação normal ✅</span>':
+        avgSpo2>=90?'<span class="alert">Monitorar de perto ⚠️</span>':
+        '<span class="warn">Procure médico! 🚨</span>';
+    document.getElementById("rCalib").innerHTML=
+        calib?`<span class="good">Ativa (${calib.spo2ref}% ref)</span>`:'<span class="gray">Não calibrado</span>';
+    resultsEl.style.display="block"; resultsEl.scrollIntoView({behavior:"smooth"});
+    saveHistory({date:new Date().toLocaleString("pt-BR"),spo2:avgSpo2.toFixed(1),bpm:Math.round(avgBpm),hrv,quality:Math.round(avgQual),arrhy,valid:true});
+    btnStart.disabled=false; btnStart.textContent="❤️ Nova Medição";
+}
+function saveHistory(item){
+    const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+    h.unshift(item); if(h.length>100)h.pop();
+    localStorage.setItem("spo2History",JSON.stringify(h));
+}
+function renderHistory(){
+    const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+    const el=document.getElementById("historyList"),empty=document.getElementById("emptyHist");
+    el.innerHTML="";
+    if(!h.length){empty.style.display="block";return;}
+    empty.style.display="none";
+    h.forEach((item,i)=>{
+        const cls=!item.valid?"invalid":item.arrhy?"arrhy":"valid";
+        el.innerHTML+=`<div class="hist-item ${cls}">
+            <div class="hist-top">
+                <span>${item.valid?"🩸 "+item.spo2+"% ❤️ "+item.bpm+" BPM":"⛔ Inválido"}</span>
+                <button class="hist-del" onclick="deleteHistory(${i})">🗑️</button>
+            </div>
+            <div class="hist-bot">📅 ${item.date} | ⭐ ${item.quality}% | 💓 HRV: ${item.hrv}ms ${item.arrhy?"| ⚠️ Arritmia":""}</div>
+        </div>`;
+    });
+}
+function deleteHistory(i){
+    const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+    h.splice(i,1); localStorage.setItem("spo2History",JSON.stringify(h)); renderHistory();
+}
+function clearHistory(){
+    if(confirm("Apagar todo o histórico?")){ localStorage.removeItem("spo2History"); renderHistory(); }
+}
+function exportCSV(){
+    const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+    if(!h.length){alert("Histórico vazio!");return;}
+    let csv="Data,SpO2 (%),BPM,HRV (ms),Qualidade (%),Arritmia,Valido\n";
+    h.forEach(item=>{
+        csv+=`"${item.date}",${item.spo2},${item.bpm},${item.hrv||0},${item.quality},${item.arrhy?"Sim":"Nao"},${item.valid?"Sim":"Nao"}\n`;
+    });
+    const blob=new Blob([csv],{type:"text/csv"});
+    const a=document.createElement("a");
+    a.href=URL.createObjectURL(blob);
+    a.download="spo2-historico-"+new Date().toISOString().slice(0,10)+".csv";
+    a.click();
+}
+document.getElementById("btnPDF").onclick=()=>{
+    const{avgSpo2,avgBpm,avgQual,hrv,arrhy}=lastResults;
+    const win=window.open("","_blank");
+    win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Relatorio SpO2</title>
+    <style>body{font-family:Arial;padding:30px;max-width:600px;margin:0 auto;}
+    h1{color:#cc0000;border-bottom:3px solid #cc0000;padding-bottom:10px;}
+    .row{display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #eee;font-size:16px;}
+    .val{font-weight:bold;} .warn{color:#cc0000;} .good{color:#00aa55;}
+    .footer{margin-top:30px;font-size:12px;color:#999;text-align:center;}</style></head><body>
+    <h1>Relatorio SpO2 Monitor PRO</h1>
+    <p><strong>Data:</strong> ${new Date().toLocaleString("pt-BR")}</p><br>
+    <div class="row"><span>SpO2 Medio</span><span class="val ${avgSpo2>=95?"good":"warn"}">${avgSpo2.toFixed(1)}%</span></div>
+    <div class="row"><span>BPM Medio</span><span class="val">${Math.round(avgBpm)}</span></div>
+    <div class="row"><span>HRV</span><span class="val">${hrv}ms</span></div>
+    <div class="row"><span>Qualidade</span><span class="val">${Math.round(avgQual)}%</span></div>
+    <div class="row"><span>Arritmia</span><span class="val ${arrhy?"warn":"good"}">${arrhy?"Detectada":"Normal"}</span></div>
+    <div class="row"><span>Diagnostico</span><span class="val ${avgSpo2>=95?"good":"warn"}">${avgSpo2>=95?"Oxigenacao normal":avgSpo2>=90?"Monitorar de perto":"Procure medico!"}</span></div>
+    <div class="footer">SpO2 Monitor PRO - Apenas uso educacional. Nao substitui diagnostico medico.</div>
+    <script>window.print();<\/script></body></html>`);
+    win.document.close();
+};
+function saveCalibration(){
+    const spo2ref=parseFloat(document.getElementById("calibSpo2").value);
+    const bpmref=parseFloat(document.getElementById("calibBpm").value);
+    if(!spo2ref||spo2ref<80||spo2ref>100){alert("SpO2 invalido! Use 80-100.");return;}
+    const offset=spo2ref-88;
+    localStorage.setItem("spo2Calib",JSON.stringify({spo2ref,bpmref,offset,date:new Date().toLocaleString("pt-BR")}));
+    document.getElementById("calibText").textContent=`SpO2 ref: ${spo2ref}% | BPM: ${bpmref||"--"} | Offset: +${offset.toFixed(1)}%`;
+    document.getElementById("calibResult").style.display="block";
+    renderCalibStatus();
+}
+function renderCalibStatus(){
+    const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+    const el=document.getElementById("calibStatus");
+    if(!calib){el.innerHTML='<span style="opacity:0.5">Nenhuma calibracao salva.</span>';return;}
+    el.innerHTML=`Calibracao ativa<br>SpO2: <span class="good">${calib.spo2ref}%</span> | BPM: <span class="good">${calib.bpmref||"--"}</span> | Offset: <span class="good">+${calib.offset.toFixed(1)}%</span><br>
+        <small style="opacity:0.6">Salvo em: ${calib.date}</small><br>
+        <button style="margin-top:10px;min-width:140px;min-height:38px;font-size:13px;background:rgba(255,68,68,0.4);"
+            onclick="localStorage.removeItem('spo2Calib');renderCalibStatus();">Remover</button>`;
+}
+let deferredPrompt=null;
+window.addEventListener("beforeinstallprompt",e=>{
+    e.preventDefault(); deferredPrompt=e;
+    document.getElementById("btnInstall").style.display="inline-block";
+});
+function installPWA(){
+    if(deferredPrompt){deferredPrompt.prompt();deferredPrompt.userChoice.then(()=>{deferredPrompt=null;});}
+    else alert("Chrome -> Menu -> Adicionar a tela inicial");
+}
+document.getElementById("btnShare").onclick=()=>{
+    const{avgSpo2,avgBpm,hrv,arrhy}=lastResults;
+    const txt=`SpO2: ${avgSpo2.toFixed(1)}% | BPM: ${Math.round(avgBpm)} | HRV: ${hrv}ms | ${arrhy?"Arritmia detectada":"Ritmo normal"} - SpO2 Monitor PRO`;
+    if(navigator.share) navigator.share({title:"Meu SpO2",text:txt});
+    else navigator.clipboard.writeText(txt).then(()=>alert("Copiado!"));
+};
+document.getElementById("btnNew").onclick=()=>location.reload();
+</script>
+</body>
+</html>

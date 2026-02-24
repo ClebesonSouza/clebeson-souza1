@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SpO2 Monitor PRO v2</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg,#0a0a2e 0%,#1a1a4e 100%);
+            color: white; min-height:100vh;
+            display:flex; flex-direction:column;
+            align-items:center; padding:20px; text-align:center;
+        }
+        h1 { font-size:clamp(22px,6vw,34px); margin-bottom:10px; }
+        .tabs { display:flex; gap:10px; margin:15px 0; }
+        .tab {
+            padding:12px 25px; border-radius:30px; cursor:pointer;
+            background:rgba(255,255,255,0.1); font-size:clamp(13px,3.5vw,16px);
+            border:2px solid transparent; transition:all 0.3s; font-weight:bold;
+        }
+        .tab.active { background:linear-gradient(45deg,#ff4444,#cc0000); border-color:#ff6666; }
+        .page { display:none; width:100%; max-width:450px; }
+        .page.active { display:flex; flex-direction:column; align-items:center; }
+        #videoView {
+            width:90vw; max-width:350px; height:230px; border-radius:20px;
+            box-shadow:0 20px 40px rgba(255,50,50,0.4);
+            border:4px solid rgba(255,100,100,0.5); display:none; margin-bottom:10px;
+        }
+        #chart {
+            width:90vw; max-width:420px; height:clamp(100px,22vw,155px);
+            border-radius:15px; margin:10px auto;
+            background:rgba(255,255,255,0.05);
+            box-shadow:inset 0 0 20px rgba(0,0,0,0.5); display:block;
+        }
+        #timer { font-size:clamp(28px,8vw,52px); font-weight:900; margin:10px 0; }
+        .metrics-row { display:flex; gap:15px; justify-content:center; flex-wrap:wrap; margin:10px 0; }
+        .metric-box {
+            background:rgba(255,255,255,0.1); border-radius:18px;
+            padding:15px 25px; min-width:140px; backdrop-filter:blur(10px);
+        }
+        .metric-label { font-size:15px; opacity:0.8; margin-bottom:5px; }
+        .metric-value { font-size:clamp(36px,10vw,58px); font-weight:900; }
+        #quality-bar-wrap {
+            width:90vw; max-width:420px; background:rgba(255,255,255,0.1);
+            border-radius:10px; height:22px; margin:8px auto; overflow:hidden; position:relative;
+        }
+        #quality-bar {
+            height:100%; width:0%;
+            background:linear-gradient(90deg,#ff4444,#ffaa00,#00ff88);
+            border-radius:10px; transition:width 0.5s;
+        }
+        #quality-label {
+            position:absolute; top:0; left:0; right:0; bottom:0;
+            display:flex; align-items:center; justify-content:center;
+            font-size:13px; font-weight:bold; color:white; text-shadow:0 1px 2px #000;
+        }
+        #status {
+            font-size:clamp(13px,3.5vw,18px); padding:12px 20px;
+            border-radius:15px; margin:8px 0;
+            background:rgba(255,255,255,0.1); max-width:420px; width:90vw;
+        }
+        #flashAlert {
+            display:none; background:rgba(255,170,0,0.25);
+            border:2px solid #ffaa00; border-radius:15px;
+            padding:12px 20px; margin:8px 0; max-width:420px; width:90vw;
+            font-size:clamp(13px,3.5vw,17px);
+        }
+        #invalidAlert {
+            display:none; background:rgba(255,68,68,0.2);
+            border:2px solid #ff4444; border-radius:15px;
+            padding:15px 20px; margin:10px 0; max-width:420px; width:90vw;
+            font-size:clamp(14px,4vw,18px);
+        }
+        button {
+            background:linear-gradient(45deg,#ff4444,#cc0000);
+            border:none; color:white; padding:18px 35px;
+            font-size:clamp(15px,5vw,20px); font-weight:bold;
+            border-radius:50px; cursor:pointer; margin:10px 5px;
+            box-shadow:0 12px 30px rgba(255,68,68,0.5);
+            transition:all 0.3s; min-height:60px; min-width:220px;
+        }
+        button:hover:not(:disabled) { transform:scale(1.05); }
+        button:disabled { opacity:0.5; cursor:not-allowed; transform:none; }
+        #btnNew  { background:linear-gradient(45deg,#00ff88,#00cc6a); color:black; }
+        #btnShare{ background:linear-gradient(45deg,#007bff,#0056b3); }
+        #results {
+            display:none; padding:25px;
+            background:rgba(0,0,0,0.9); border-radius:25px;
+            max-width:95vw; width:430px;
+            backdrop-filter:blur(20px); margin-top:15px;
+        }
+        .stat {
+            font-size:clamp(14px,4vw,19px); margin:10px 0; padding:14px;
+            background:rgba(255,68,68,0.15); border-radius:12px;
+            display:flex; justify-content:space-between; align-items:center;
+        }
+        .good  { color:#00ff88; font-weight:bold; }
+        .alert { color:#ffaa00; font-weight:bold; }
+        .warn  { color:#ff4444; font-weight:bold; }
+        .gray  { color:#aaaaaa; font-style:italic; }
+        #historyList { width:100%; max-width:450px; }
+        .hist-item {
+            background:rgba(255,255,255,0.08); border-radius:15px;
+            padding:15px 20px; margin:10px 0;
+            display:flex; flex-direction:column; gap:5px;
+            border-left:4px solid #ff4444;
+        }
+        .hist-item.valid   { border-left-color:#00ff88; }
+        .hist-item.invalid { border-left-color:#ffaa00; }
+        .hist-top { display:flex; justify-content:space-between; font-weight:bold; font-size:clamp(15px,4vw,18px); }
+        .hist-bot { font-size:clamp(12px,3vw,15px); opacity:0.7; }
+        .hist-del {
+            background:rgba(255,68,68,0.3); border:none; color:white;
+            padding:5px 12px; border-radius:20px; cursor:pointer;
+            font-size:13px; min-width:auto; min-height:auto; margin:0; box-shadow:none;
+        }
+        #btnClearHistory { background:rgba(255,68,68,0.3); min-width:180px; min-height:50px; font-size:16px; margin-top:15px; }
+        #emptyHistory { opacity:0.5; font-size:18px; margin:30px 0; }
+        .calib-box { background:rgba(255,255,255,0.08); border-radius:20px; padding:25px; margin:15px 0; width:90vw; max-width:420px; }
+        .calib-box h3 { margin-bottom:15px; font-size:clamp(16px,4vw,20px); }
+        .calib-input {
+            width:100%; padding:15px; border-radius:12px;
+            background:rgba(255,255,255,0.15); border:2px solid rgba(255,255,255,0.2);
+            color:white; font-size:18px; text-align:center; margin:8px 0;
+        }
+        .calib-input:focus { outline:none; border-color:#00ff88; }
+        #btnCalib { background:linear-gradient(45deg,#00ff88,#00cc6a); color:black; min-width:180px; }
+        .calib-result { background:rgba(0,255,136,0.1); border:2px solid #00ff88; border-radius:12px; padding:12px; margin-top:12px; display:none; }
+    </style>
+</head>
+<body>
+
+<h1>🩸 SpO2 Monitor PRO</h1>
+
+<div class="tabs">
+    <div class="tab active" onclick="showPage('measure')">❤️ Medir</div>
+    <div class="tab" onclick="showPage('history')">📋 Histórico</div>
+    <div class="tab" onclick="showPage('calib')">🔧 Calibrar</div>
+</div>
+
+<div class="page active" id="page-measure">
+    <div id="flashAlert">
+        💡 <strong>Ligue o FLASH do celular!</strong><br>
+        Sem flash o SpO2 fica impreciso.<br>
+        <small>Configurações → Lanterna → Ativar</small>
+    </div>
+    <video id="videoView" autoplay playsinline muted></video>
+    <canvas id="chart"></canvas>
+    <div id="timer">60s</div>
+    <div class="metrics-row">
+        <div class="metric-box">
+            <div class="metric-label">🩸 SpO2</div>
+            <div class="metric-value" id="spo2" style="color:#ff4444;">--%</div>
+        </div>
+        <div class="metric-box">
+            <div class="metric-label">❤️ BPM</div>
+            <div class="metric-value" id="bpm" style="color:#00ff88;">--</div>
+        </div>
+    </div>
+    <div id="quality-bar-wrap">
+        <div id="quality-bar"></div>
+        <div id="quality-label">Qualidade: 0%</div>
+    </div>
+    <div id="status">Toque em Iniciar e coloque o dedo na câmera.</div>
+    <button id="btnStart">❤️ Iniciar Medição 60s</button>
+    <div id="invalidAlert">
+        ⛔ <strong>Resultado inválido!</strong><br>
+        Qualidade <span id="qualPct">0%</span> (mínimo: 70%)<br>
+        <small>🔦 Ligue flash + pressione dedo + use HTTPS</small>
+    </div>
+    <div id="results">
+        <h2 style="font-size:clamp(20px,6vw,28px); margin-bottom:20px;">📊 Relatório SpO2</h2>
+        <div class="stat"><span>🩸 SpO2 Médio</span><span id="rSpo2">--</span></div>
+        <div class="stat"><span>❤️ BPM Médio</span><span id="rBpm">--</span></div>
+        <div class="stat"><span>📈 Desvio SpO2</span><span id="rStd">--</span></div>
+        <div class="stat"><span>⭐ Qualidade</span><span id="rQuality">--</span></div>
+        <div class="stat"><span>⚠️ Status</span><span id="rStatus">--</span></div>
+        <div class="stat"><span>💡 Diagnóstico</span><span id="rDiag">--</span></div>
+        <div class="stat"><span>🔧 Calibração</span><span id="rCalib">--</span></div>
+        <button id="btnShare">📱 Compartilhar</button>
+        <button id="btnNew">🔄 Nova Medição</button>
+    </div>
+</div>
+
+<div class="page" id="page-history">
+    <h2 style="margin-bottom:15px; font-size:clamp(20px,5vw,28px);">📋 Histórico de Medições</h2>
+    <div id="emptyHistory">📭 Nenhuma medição salva ainda.</div>
+    <div id="historyList"></div>
+    <button id="btnClearHistory" onclick="clearHistory()">🗑️ Limpar Histórico</button>
+</div>
+
+<div class="page" id="page-calib">
+    <div class="calib-box">
+        <h3>🔧 Calibrar com G.TECH ou Oxímetro Real</h3>
+        <p style="font-size:14px; opacity:0.8; margin-bottom:15px;">
+            Meça com seu aparelho físico e insira abaixo para calibrar o app.
+        </p>
+        <input class="calib-input" type="number" id="calibSpo2" min="80" max="100" placeholder="SpO2 real (ex: 97)">
+        <input class="calib-input" type="number" id="calibBpm" min="40" max="200" placeholder="BPM real (ex: 72)">
+        <button id="btnCalib" onclick="saveCalibration()">✅ Salvar Calibração</button>
+        <div class="calib-result" id="calibResult">
+            ✅ Calibração salva!<br>
+            <span id="calibText"></span>
+        </div>
+    </div>
+    <div class="calib-box">
+        <h3>📊 Calibração Atual</h3>
+        <div id="calibStatus" style="font-size:16px; opacity:0.8;">Nenhuma calibração salva.</div>
+    </div>
+</div>
+
+<script>
+    function showPage(name) {
+        document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+        document.querySelectorAll(".tab").forEach(t => t.classList.remove("active"));
+        document.getElementById("page-"+name).classList.add("active");
+        event.target.classList.add("active");
+        if(name==="history") renderHistory();
+        if(name==="calib")   renderCalibStatus();
+    }
+
+    const videoView=document.getElementById("videoView"),chart=document.getElementById("chart"),
+          cCtx=chart.getContext("2d"),timerEl=document.getElementById("timer"),
+          spo2El=document.getElementById("spo2"),bpmEl=document.getElementById("bpm"),
+          statusEl=document.getElementById("status"),btnStart=document.getElementById("btnStart"),
+          resultsEl=document.getElementById("results"),qualBar=document.getElementById("quality-bar"),
+          qualLabel=document.getElementById("quality-label"),flashAlert=document.getElementById("flashAlert"),
+          invalidAl=document.getElementById("invalidAlert");
+
+    let stream=null,animId=null,timerInt=null,timeLeft=60;
+    const FPS=30;
+    let redBuf=[],greenBuf=[],spo2Buf=[],hrBuf=[],qualBuf=[];
+
+    async function initCamera(){
+        try{
+            stream=await navigator.mediaDevices.getUserMedia({
+                video:{facingMode:"environment",width:{ideal:640},height:{ideal:480},frameRate:{ideal:FPS}}
+            });
+            videoView.srcObject=stream; await videoView.play();
+            videoView.style.display="block";
+            flashAlert.style.display="block";
+            chart.width=chart.offsetWidth||380; chart.height=chart.offsetHeight||140;
+            return true;
+        }catch(e){ alert("Erro câmera: "+e.message+"\nUse HTTPS + permita câmera!"); return false; }
+    }
+
+    function extractRGB(){
+        const tmp=document.createElement("canvas"); tmp.width=640; tmp.height=480;
+        const tc=tmp.getContext("2d"); tc.drawImage(videoView,0,0,640,480);
+        const roi=tc.getImageData(160,120,320,240).data;
+        let r=0,g=0,n=0;
+        for(let i=0;i<roi.length;i+=4){r+=roi[i];g+=roi[i+1];n++;}
+        return{r:r/n,g:g/n};
+    }
+
+    function calcSpO2(){
+        if(redBuf.length<FPS*4) return 0;
+        const R=redBuf.slice(-120),G=greenBuf.slice(-120);
+        const acR=Math.max(...R)-Math.min(...R),dcR=R.reduce((a,b)=>a+b)/R.length;
+        const acG=Math.max(...G)-Math.min(...G),dcG=G.reduce((a,b)=>a+b)/G.length;
+        if(!dcR||!dcG||!acG) return 0;
+        const RR=(acR/dcR)/(acG/dcG);
+        let spo2=Math.min(100,Math.max(70,110-25*RR));
+        const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+        if(calib&&calib.offset) spo2=Math.min(100,Math.max(70,spo2+calib.offset));
+        return spo2;
+    }
+
+    function calcBPM(){
+        if(greenBuf.length<60) return 0;
+        const sig=greenBuf.slice(-120),filt=[];
+        for(let i=2;i<sig.length;i++) filt.push(sig[i]-0.98*sig[i-1]+0.02*sig[i-2]);
+        const peaks=[];
+        for(let i=5;i<filt.length-5;i++){
+            if(filt[i]>filt[i-1]*1.015&&filt[i]>filt[i+1]*1.015&&
+               (peaks.length===0||i-peaks[peaks.length-1]>20)) peaks.push(i);
+        }
+        if(peaks.length<3) return 0;
+        const avg=(peaks[peaks.length-1]-peaks[0])/(peaks.length-1);
+        return Math.min(200,Math.max(40,Math.round(60*FPS/avg)));
+    }
+
+    function calcQuality(){
+        if(redBuf.length<30) return 0;
+        const R=redBuf.slice(-60);
+        const amp=Math.max(...R)-Math.min(...R),mean=R.reduce((a,b)=>a+b)/R.length;
+        return Math.min(100,Math.max(0,(amp/mean)*1500));
+    }
+
+    function getDiag(spo2){
+        if(spo2>=95) return{label:"Normal ✅",cls:"good"};
+        if(spo2>=90) return{label:"Atenção ⚠️",cls:"alert"};
+        if(spo2>=85) return{label:"Hipoxemia Leve 🔶",cls:"alert"};
+        return{label:"Hipoxemia Grave 🚨",cls:"warn"};
+    }
+
+    function drawChart(){
+        cCtx.clearRect(0,0,chart.width,chart.height);
+        const sig=redBuf.slice(-200); if(sig.length<5) return;
+        const minV=Math.min(...sig),maxV=Math.max(...sig); if(maxV===minV) return;
+        cCtx.strokeStyle="#ff4444"; cCtx.lineWidth=3; cCtx.lineCap="round"; cCtx.lineJoin="round";
+        cCtx.beginPath();
+        for(let i=0;i<sig.length;i++){
+            const x=(i/sig.length)*chart.width;
+            const y=chart.height-((sig[i]-minV)/(maxV-minV))*chart.height;
+            i===0?cCtx.moveTo(x,y):cCtx.lineTo(x,y);
+        }
+        cCtx.stroke();
+    }
+
+    function processFrame(){
+        const{r,g}=extractRGB();
+        redBuf.push(r); greenBuf.push(g);
+        if(redBuf.length>FPS*60){redBuf.shift();greenBuf.shift();}
+        const spo2=calcSpO2(),bpm=calcBPM(),qual=calcQuality();
+        if(spo2>0){spo2Buf.push(spo2);if(spo2Buf.length>100)spo2Buf.shift();}
+        if(bpm>0){hrBuf.push(bpm);if(hrBuf.length>100)hrBuf.shift();}
+        qualBuf.push(qual); if(qualBuf.length>30)qualBuf.shift();
+        const avgSpo2=spo2Buf.length?spo2Buf.reduce((a,b)=>a+b)/spo2Buf.length:0;
+        const avgBpm=hrBuf.length?hrBuf.reduce((a,b)=>a+b)/hrBuf.length:0;
+        const avgQual=qualBuf.reduce((a,b)=>a+b)/qualBuf.length;
+        spo2El.textContent=avgSpo2>0?avgSpo2.toFixed(1)+"%":"--%";
+        spo2El.style.color=avgSpo2>=95?"#00ff88":avgSpo2>=90?"#ffaa00":"#ff4444";
+        bpmEl.textContent=avgBpm>0?Math.round(avgBpm):"--";
+        qualBar.style.width=Math.round(avgQual)+"%";
+        qualLabel.textContent="Qualidade: "+Math.round(avgQual)+"%";
+        statusEl.textContent=avgQual>70?"✅ Sinal bom! Mantenha dedo imóvel.":
+            avgQual>40?"⚠️ Sinal médio – pressione mais o dedo.":
+            "❌ Sinal fraco – ligue o flash + pressione dedo.";
+        timerEl.textContent=timeLeft+"s";
+        drawChart();
+    }
+
+    btnStart.onclick=async()=>{
+        btnStart.disabled=true; btnStart.textContent="📹 Iniciando câmera...";
+        invalidAl.style.display="none"; resultsEl.style.display="none";
+        if(!await initCamera()){btnStart.disabled=false;btnStart.textContent="❤️ Iniciar Medição 60s";return;}
+        btnStart.textContent="Medindo 60s..."; timeLeft=60;
+        timerInt=setInterval(()=>{timeLeft--;if(timeLeft<=0){clearInterval(timerInt);endMeasurement();}},1000);
+        animId=setInterval(processFrame,1000/FPS);
+    };
+
+    function endMeasurement(){
+        clearInterval(animId);
+        if(stream) stream.getTracks().forEach(t=>t.stop());
+        flashAlert.style.display="none"; videoView.style.display="none";
+        const avgSpo2=spo2Buf.length?spo2Buf.reduce((a,b)=>a+b)/spo2Buf.length:0;
+        const avgBpm=hrBuf.length?hrBuf.reduce((a,b)=>a+b)/hrBuf.length:0;
+        const avgQual=qualBuf.reduce((a,b)=>a+b)/qualBuf.length;
+        const std=Math.sqrt(spo2Buf.length>1?spo2Buf.reduce((s,v)=>s+(v-avgSpo2)**2,0)/spo2Buf.length:0);
+        const diag=getDiag(avgSpo2);
+        const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+        const isValid=avgQual>=70;
+        if(!isValid){
+            document.getElementById("qualPct").textContent=Math.round(avgQual)+"%";
+            invalidAl.style.display="block";
+            saveHistory({date:new Date().toLocaleString("pt-BR"),spo2:"--",bpm:Math.round(avgBpm),quality:Math.round(avgQual),valid:false});
+            btnStart.disabled=false; btnStart.textContent="❤️ Tentar Novamente"; return;
+        }
+        document.getElementById("rSpo2").textContent=avgSpo2.toFixed(1)+"%";
+        document.getElementById("rBpm").textContent=Math.round(avgBpm);
+        document.getElementById("rStd").textContent="±"+std.toFixed(1)+"%";
+        document.getElementById("rQuality").textContent=Math.round(avgQual)+"%";
+        document.getElementById("rStatus").innerHTML=`<span class="${diag.cls}">${diag.label}</span>`;
+        document.getElementById("rDiag").innerHTML=
+            avgSpo2>=95?'<span class="good">Oxigenação normal ✅</span>':
+            avgSpo2>=90?'<span class="alert">Monitorar de perto ⚠️</span>':
+            '<span class="warn">Procure médico! 🚨</span>';
+        document.getElementById("rCalib").innerHTML=
+            calib?`<span class="good">Ativa (${calib.spo2ref}% ref)</span>`:'<span class="gray">Não calibrado</span>';
+        resultsEl.style.display="block"; resultsEl.scrollIntoView({behavior:"smooth"});
+        saveHistory({date:new Date().toLocaleString("pt-BR"),spo2:avgSpo2.toFixed(1),bpm:Math.round(avgBpm),quality:Math.round(avgQual),valid:true});
+        btnStart.disabled=false; btnStart.textContent="❤️ Nova Medição";
+    }
+
+    function saveHistory(item){
+        const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+        h.unshift(item); if(h.length>50)h.pop();
+        localStorage.setItem("spo2History",JSON.stringify(h));
+    }
+
+    function renderHistory(){
+        const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+        const el=document.getElementById("historyList"),empty=document.getElementById("emptyHistory");
+        el.innerHTML="";
+        if(!h.length){empty.style.display="block";return;}
+        empty.style.display="none";
+        h.forEach((item,i)=>{
+            const cls=!item.valid?"invalid":item.spo2>=95?"valid":"";
+            el.innerHTML+=`<div class="hist-item ${cls}">
+                <div class="hist-top">
+                    <span>${item.valid?"🩸 "+item.spo2+"%":"⛔ Inválido"} &nbsp; ❤️ ${item.bpm} BPM</span>
+                    <button class="hist-del" onclick="deleteHistory(${i})">🗑️</button>
+                </div>
+                <div class="hist-bot">📅 ${item.date} &nbsp;|&nbsp; ⭐ Qualidade: ${item.quality}%</div>
+            </div>`;
+        });
+    }
+
+    function deleteHistory(i){
+        const h=JSON.parse(localStorage.getItem("spo2History")||"[]");
+        h.splice(i,1); localStorage.setItem("spo2History",JSON.stringify(h)); renderHistory();
+    }
+
+    function clearHistory(){
+        if(confirm("Apagar todo o histórico?")){ localStorage.removeItem("spo2History"); renderHistory(); }
+    }
+
+    function saveCalibration(){
+        const spo2ref=parseFloat(document.getElementById("calibSpo2").value);
+        const bpmref=parseFloat(document.getElementById("calibBpm").value);
+        if(!spo2ref||spo2ref<80||spo2ref>100){alert("SpO2 inválido! Use 80-100.");return;}
+        const offset=spo2ref-88;
+        localStorage.setItem("spo2Calib",JSON.stringify({spo2ref,bpmref,offset,date:new Date().toLocaleString("pt-BR")}));
+        document.getElementById("calibText").textContent=
+            `SpO2 ref: ${spo2ref}% | BPM ref: ${bpmref||"--"} | Offset: +${offset.toFixed(1)}%`;
+        document.getElementById("calibResult").style.display="block";
+        renderCalibStatus();
+    }
+
+    function renderCalibStatus(){
+        const calib=JSON.parse(localStorage.getItem("spo2Calib")||"null");
+        const el=document.getElementById("calibStatus");
+        if(!calib){el.innerHTML='<span style="opacity:0.5">Nenhuma calibração salva.</span>';return;}
+        el.innerHTML=`✅ <strong>Calibração ativa</strong><br>
+            SpO2 referência: <span class="good">${calib.spo2ref}%</span><br>
+            BPM referência: <span class="good">${calib.bpmref||"--"}</span><br>
+            Offset aplicado: <span class="good">+${calib.offset.toFixed(1)}%</span><br>
+            <small style="opacity:0.6">Salvo em: ${calib.date}</small><br>
+            <button style="margin-top:10px;min-width:150px;min-height:40px;font-size:14px;background:rgba(255,68,68,0.4);"
+                onclick="localStorage.removeItem('spo2Calib');renderCalibStatus();">
+                🗑️ Remover Calibração
+            </button>`;
+    }
+
+    document.getElementById("btnShare").onclick=()=>{
+        const txt=`🩸 SpO2: ${document.getElementById("rSpo2").textContent} | ❤️ BPM: ${document.getElementById("rBpm").textContent} | ${document.getElementById("rDiag").innerText} - SpO2 Monitor PRO`;
+        if(navigator.share) navigator.share({title:"Meu SpO2",text:txt});
+        else navigator.clipboard.writeText(txt).then(()=>alert("Copiado!"));
+    };
+    document.getElementById("btnNew").onclick=()=>location.reload();
+</script>
+</body>
+</html>
