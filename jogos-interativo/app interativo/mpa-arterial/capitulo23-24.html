@@ -1,372 +1,1561 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SpO2 Monitor - Oximetro via Camera</title>
-    <style>
-        * { margin: 0; padding: 0; box-sizing: border-box; }
-        body {
-            font-family: Arial, sans-serif;
-            background: linear-gradient(135deg, #0a0a2e 0%, #1a1a4e 100%);
-            color: white;
-            min-height: 100vh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: flex-start;
-            padding: 20px;
-            text-align: center;
-        }
-        h1 { font-size: clamp(22px,6vw,34px); margin-bottom: 10px; }
-        .instruction {
-            background: rgba(255,255,255,0.1);
-            padding: 12px 20px;
-            border-radius: 15px;
-            font-size: clamp(13px,3.5vw,17px);
-            margin-bottom: 15px;
-            max-width: 400px;
-        }
-        #videoView {
-            width: 90vw; max-width: 350px; height: 230px;
-            border-radius: 20px;
-            box-shadow: 0 20px 40px rgba(255,50,50,0.4);
-            border: 4px solid rgba(255,100,100,0.5);
-            display: none;
-            margin-bottom: 10px;
-        }
-        #chart {
-            width: 90vw; max-width: 400px;
-            height: clamp(100px,22vw,160px);
-            border-radius: 15px;
-            margin: 10px auto;
-            background: rgba(255,255,255,0.05);
-            box-shadow: inset 0 0 20px rgba(0,0,0,0.5);
-            display: block;
-        }
-        #timer { font-size: clamp(28px,8vw,52px); font-weight: 900; margin: 10px 0; }
-        .metrics-row {
-            display: flex; gap: 15px;
-            justify-content: center;
-            flex-wrap: wrap;
-            margin: 10px 0;
-        }
-        .metric-box {
-            background: rgba(255,255,255,0.1);
-            border-radius: 18px;
-            padding: 15px 25px;
-            min-width: 140px;
-            backdrop-filter: blur(10px);
-        }
-        .metric-label { font-size: 15px; opacity: 0.8; margin-bottom: 5px; }
-        .metric-value { font-size: clamp(36px,10vw,58px); font-weight: 900; }
-        #quality-bar-wrap {
-            width: 90vw; max-width: 400px;
-            background: rgba(255,255,255,0.1);
-            border-radius: 10px;
-            height: 18px;
-            margin: 8px auto;
-            overflow: hidden;
-        }
-        #quality-bar {
-            height: 100%;
-            width: 0%;
-            background: linear-gradient(90deg, #ff4444, #ffaa00, #00ff88);
-            border-radius: 10px;
-            transition: width 0.5s;
-        }
-        #status {
-            font-size: clamp(14px,4vw,20px);
-            padding: 12px 20px;
-            border-radius: 15px;
-            margin: 8px 0;
-            background: rgba(255,255,255,0.1);
-            max-width: 400px;
-        }
-        button {
-            background: linear-gradient(45deg, #ff4444, #cc0000);
-            border: none; color: white;
-            padding: 18px 35px;
-            font-size: clamp(15px,5vw,20px);
-            font-weight: bold;
-            border-radius: 50px;
-            cursor: pointer;
-            margin: 10px 5px;
-            box-shadow: 0 12px 30px rgba(255,68,68,0.5);
-            transition: all 0.3s;
-            min-height: 60px; min-width: 220px;
-        }
-        button:hover:not(:disabled) { transform: scale(1.05); }
-        button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
-        #btnNew { background: linear-gradient(45deg,#00ff88,#00cc6a); color: black; }
-        #btnShare { background: linear-gradient(45deg,#007bff,#0056b3); }
-        #results {
-            display: none;
-            padding: 25px;
-            background: rgba(0,0,0,0.9);
-            border-radius: 25px;
-            max-width: 95vw;
-            width: 400px;
-            backdrop-filter: blur(20px);
-            margin-top: 15px;
-        }
-        .stat {
-            font-size: clamp(15px,4vw,20px);
-            margin: 12px 0; padding: 15px;
-            background: rgba(255,68,68,0.15);
-            border-radius: 12px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-        .good { color: #00ff88; font-weight: bold; }
-        .alert { color: #ffaa00; font-weight: bold; }
-        .warn { color: #ff4444; font-weight: bold; }
-    </style>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>ExtremeCenter (Web)</title>
+  <style>
+    :root{
+      --bg0:#070A12;
+      --bg1:#0B1330;
+      --card: rgba(255,255,255,.06);
+      --card2: rgba(255,255,255,.09);
+      --border: rgba(255,255,255,.10);
+      --text:#EAF0FF;
+      --muted: rgba(234,240,255,.68);
+      --brand:#7C5CFF;
+      --brand2:#2ED3FF;
+      --ok:#33D69F;
+      --warn:#FFB020;
+      --bad:#FF4D6D;
+      --shadow: 0 12px 40px rgba(0,0,0,.45);
+      --radius: 18px;
+      --radius2: 14px;
+      --focus: 0 0 0 3px rgba(46,211,255,.25), 0 0 0 1px rgba(46,211,255,.55);
+    }
+
+    *{ box-sizing:border-box; }
+    html,body{ height:100%; }
+    body{
+      margin:0;
+      color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, "Noto Sans", "Helvetica Neue", sans-serif;
+      background:
+        radial-gradient(900px 600px at 14% 18%, rgba(124,92,255,.26), transparent 62%),
+        radial-gradient(900px 600px at 78% 20%, rgba(46,211,255,.18), transparent 62%),
+        linear-gradient(180deg, var(--bg0), var(--bg1));
+      overflow:hidden;
+    }
+
+    .app{
+      height:100%;
+      display:grid;
+      grid-template-rows: 68px 1fr;
+    }
+
+    header{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+      backdrop-filter: blur(10px);
+    }
+
+    .brand{
+      display:flex; gap:10px; align-items:center;
+      min-width: 220px;
+    }
+    .logo{
+      width:38px; height:38px; border-radius: 12px;
+      background: linear-gradient(135deg, var(--brand), var(--brand2));
+      box-shadow: 0 10px 25px rgba(124,92,255,.22);
+    }
+    .brand h1{
+      font-size:16px; margin:0; letter-spacing:.4px;
+    }
+    .brand small{
+      display:block; margin-top:2px; color:var(--muted); font-size:12px;
+    }
+
+    .nav{
+      display:flex; gap:10px; align-items:center;
+      flex-wrap:wrap;
+      justify-content:center;
+    }
+    .tab{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      min-width: 110px;
+      text-align:center;
+      user-select:none;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .tab:hover{ background: rgba(255,255,255,.06); }
+    .tab:active{ transform: scale(.99); }
+    .tab.active{
+      background: linear-gradient(135deg, rgba(124,92,255,.22), rgba(46,211,255,.10));
+      border-color: rgba(124,92,255,.55);
+    }
+
+    .right{
+      display:flex; gap:10px; align-items:center;
+      min-width: 220px; justify-content:flex-end;
+    }
+    .pill{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      padding: 8px 10px;
+      border-radius: 999px;
+      color: var(--muted);
+      font-size: 12px;
+      max-width: 220px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .btn{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.05);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 14px;
+      cursor:pointer;
+      transition: background .12s ease, transform .08s ease, border-color .12s ease;
+    }
+    .btn:hover{ background: rgba(255,255,255,.07); }
+    .btn.primary{
+      border-color: rgba(124,92,255,.6);
+      background: linear-gradient(135deg, rgba(124,92,255,.35), rgba(46,211,255,.10));
+    }
+    .btn.danger{ border-color: rgba(255,77,109,.5); }
+    .btn:active{ transform: scale(.99); }
+
+    :focus-visible{
+      outline:none;
+      box-shadow: var(--focus);
+      border-color: rgba(46,211,255,.65) !important;
+    }
+
+    main{
+      height:100%;
+      overflow:hidden;
+      display:grid;
+      grid-template-columns: 1fr;
+    }
+
+    .view{
+      height:100%;
+      overflow:auto;
+      padding: 18px;
+    }
+
+    .grid{
+      display:grid;
+      grid-template-columns: 320px 1fr;
+      gap: 14px;
+      height: calc(100vh - 110px);
+      align-items:stretch;
+    }
+
+    .panel{
+      border:1px solid var(--border);
+      background: var(--card);
+      border-radius: var(--radius);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:flex;
+      flex-direction:column;
+      min-height: 0;
+    }
+    .panel .hd{
+      padding: 14px 14px 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.14);
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+    }
+    .panel .hd h2{
+      margin:0; font-size: 14px; letter-spacing:.25px;
+    }
+    .panel .bd{
+      padding: 12px 14px;
+      overflow:auto;
+      min-height: 0;
+    }
+
+    .search{
+      width: 100%;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+    .muted{ color: var(--muted); }
+
+    .list{
+      display:flex; flex-direction:column; gap:8px;
+    }
+    .item{
+      display:flex; gap:10px; align-items:center;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      border-radius: 14px;
+      padding: 10px 10px;
+      cursor:pointer;
+      transition: background .12s ease, border-color .12s ease, transform .08s ease;
+    }
+    .item:hover{ background: rgba(255,255,255,.05); }
+    .item:active{ transform: scale(.995); }
+    .item .thumb{
+      width: 42px; height: 42px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      flex: 0 0 auto;
+      overflow:hidden;
+      display:grid; place-items:center;
+      border:1px solid rgba(255,255,255,.08);
+    }
+    .item .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .item .meta{ min-width:0; flex:1; }
+    .item .meta b{
+      display:block;
+      font-size: 13px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .item .meta small{
+      display:block;
+      color: var(--muted);
+      font-size: 12px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+      margin-top:2px;
+    }
+    .item .actions{
+      display:flex; gap:8px; align-items:center;
+      flex: 0 0 auto;
+    }
+    .chip{
+      font-size: 11px;
+      color: var(--muted);
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      padding: 6px 8px;
+      border-radius: 999px;
+    }
+    .iconbtn{
+      width: 38px; height: 38px;
+      border-radius: 12px;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      cursor:pointer;
+      display:grid; place-items:center;
+    }
+    .iconbtn.fav.on{
+      border-color: rgba(255,176,32,.75);
+      background: rgba(255,176,32,.10);
+    }
+
+    .row{
+      display:flex; gap:12px; align-items:center; flex-wrap:wrap;
+    }
+
+    .form{
+      display:grid;
+      grid-template-columns: 1fr;
+      gap: 12px;
+    }
+    .field label{
+      display:block; font-size: 12px; color: var(--muted);
+      margin-bottom: 6px;
+    }
+    .field input, .field textarea{
+      width:100%;
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.04);
+      color: var(--text);
+      padding: 11px 12px;
+      border-radius: 14px;
+      font-size: 14px;
+    }
+    .field textarea{ min-height: 96px; resize: vertical; }
+
+    .status{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      border-radius: 14px;
+      padding: 10px 12px;
+      color: var(--muted);
+      font-size: 12px;
+      line-height: 1.35;
+    }
+    .status.ok{ border-color: rgba(51,214,159,.55); background: rgba(51,214,159,.08); color: rgba(234,240,255,.85); }
+    .status.bad{ border-color: rgba(255,77,109,.55); background: rgba(255,77,109,.08); color: rgba(234,240,255,.85); }
+    .status.warn{ border-color: rgba(255,176,32,.55); background: rgba(255,176,32,.08); color: rgba(234,240,255,.85); }
+
+    /* Player overlay */
+    .overlay{
+      position:fixed;
+      inset:0;
+      background: rgba(0,0,0,.70);
+      backdrop-filter: blur(10px);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      padding: 18px;
+      z-index: 50;
+    }
+    .overlay.on{ display:flex; }
+
+    .playerCard{
+      width: min(1200px, 100%);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(10,12,22,.72);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+      display:grid;
+      grid-template-rows: auto 1fr auto;
+    }
+    .playerHd{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(0,0,0,.18);
+    }
+    .playerHd .title{
+      min-width:0;
+    }
+    .playerHd b{
+      display:block;
+      font-size: 14px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .playerHd small{
+      display:block;
+      margin-top:2px;
+      color: var(--muted);
+      font-size: 12px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    video{
+      width:100%;
+      height: min(66vh, 640px);
+      background: #000;
+    }
+    .playerFt{
+      display:flex; align-items:center; justify-content:space-between; gap:10px;
+      padding: 12px 14px;
+      border-top: 1px solid var(--border);
+      background: rgba(0,0,0,.16);
+      flex-wrap:wrap;
+    }
+    .kbdHint{
+      color: var(--muted);
+      font-size: 12px;
+    }
+
+    /* VOD grid */
+    .vodGrid{
+      display:grid;
+      grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+      gap: 12px;
+    }
+    .vodCard{
+      border:1px solid var(--border);
+      background: rgba(255,255,255,.03);
+      border-radius: 16px;
+      overflow:hidden;
+      cursor:pointer;
+      transition: transform .08s ease, background .12s ease, border-color .12s ease;
+    }
+    .vodCard:hover{ background: rgba(255,255,255,.05); }
+    .vodCard:active{ transform: scale(.995); }
+    .vodPoster{
+      width:100%; aspect-ratio: 2/3;
+      background: rgba(255,255,255,.06);
+      display:block;
+    }
+    .vodPoster img{ width:100%; height:100%; object-fit:cover; display:block; }
+    .vodInfo{ padding: 10px 10px 12px 10px; }
+    .vodInfo b{
+      display:block; font-size: 13px;
+      white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    }
+    .vodInfo small{ display:block; margin-top:3px; color:var(--muted); font-size:12px; }
+
+    /* Modal unlock */
+    .modal{
+      position:fixed; inset:0;
+      display:none; align-items:center; justify-content:center;
+      background: rgba(0,0,0,.65);
+      z-index: 80;
+      padding: 18px;
+    }
+    .modal.on{ display:flex; }
+    .modalCard{
+      width: min(520px, 100%);
+      border:1px solid var(--border);
+      border-radius: var(--radius);
+      background: rgba(12,14,26,.8);
+      box-shadow: var(--shadow);
+      overflow:hidden;
+    }
+    .modalCard .hd{ padding:14px; border-bottom:1px solid var(--border); }
+    .modalCard .bd{ padding:14px; display:grid; gap:12px; }
+  </style>
 </head>
+
 <body>
-
-    <h1>🩸 SpO2 Monitor</h1>
-    <p class="instruction">
-        Coloque o <strong>dedo na câmera traseira + flash</strong>.<br>
-        Fique <strong>imóvel</strong> durante 60 segundos.
-    </p>
-    
-
-    <video id="videoView" autoplay playsinline muted></video>
-    <canvas id="chart"></canvas>
-
-    <div id="timer">60s</div>
-
-    <div class="metrics-row">
-        <div class="metric-box">
-            <div class="metric-label">🩸 SpO2</div>
-            <div class="metric-value" id="spo2" style="color:#ff4444;">--%</div>
+  <div class="app">
+    <header>
+      <div class="brand">
+        <div class="logo" aria-hidden="true"></div>
+        <div>
+          <h1>ExtremeCenter</h1>
+          <small>IPTV Android • M3U + XMLTV • Favoritos/Recentes</small>
         </div>
-        <div class="metric-box">
-            <div class="metric-label">❤️ BPM</div>
-            <div class="metric-value" id="bpm" style="color:#00ff88;">--</div>
+      </div>
+
+      <nav class="nav" aria-label="Navegação">
+        <button class="tab active" data-view="live">Ao vivo</button>
+        <button class="tab" data-view="favorites">Favoritos</button>
+        <button class="tab" data-view="recents">Recentes</button>
+        <button class="tab" data-view="vod">VOD (JSON)</button>
+        <button class="tab" data-view="settings">Config</button>
+      </nav>
+
+      <div class="right">
+        <div class="pill" id="pillStatus">Pronto</div>
+        <button class="btn" id="btnSync">Sincronizar</button>
+        <button class="btn danger" id="btnReset">Reset</button>
+      </div>
+    </header>
+
+    <main>
+      <!-- LIVE -->
+      <section class="view" id="view-live">
+        <div class="grid">
+          <div class="panel">
+            <div class="hd">
+              <h2>Grupos</h2>
+              <span class="chip" id="groupsCount">0</span>
+            </div>
+            <div class="bd">
+              <input class="search" id="groupSearch" placeholder="Buscar grupo..." />
+              <div style="height:10px"></div>
+              <div class="list" id="groupsList"></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="hd">
+              <h2>Canais</h2>
+              <div class="row">
+                <span class="chip" id="channelsCount">0</span>
+                <span class="chip" id="epgHint">EPG: —</span>
+              </div>
+            </div>
+            <div class="bd">
+              <input class="search" id="channelSearch" placeholder="Buscar canal..." />
+              <div style="height:10px"></div>
+              <div class="list" id="channelsList"></div>
+            </div>
+          </div>
         </div>
+      </section>
+
+      <!-- FAVORITES -->
+      <section class="view" id="view-favorites" style="display:none;">
+        <div class="panel" style="height: calc(100vh - 110px);">
+          <div class="hd">
+            <h2>Favoritos</h2>
+            <span class="chip" id="favoritesCount">0</span>
+          </div>
+          <div class="bd">
+            <div class="list" id="favoritesList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- RECENTS -->
+      <section class="view" id="view-recents" style="display:none;">
+        <div class="panel" style="height: calc(100vh - 110px);">
+          <div class="hd">
+            <h2>Recentes</h2>
+            <span class="chip" id="recentsCount">0</span>
+          </div>
+          <div class="bd">
+            <div class="list" id="recentsList"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- VOD -->
+      <section class="view" id="view-vod" style="display:none;">
+        <div class="grid" style="grid-template-columns: 360px 1fr;">
+          <div class="panel">
+            <div class="hd">
+              <h2>Fonte VOD (opcional)</h2>
+              <span class="chip">JSON</span>
+            </div>
+            <div class="bd">
+              <div class="status warn">
+                VOD aqui é opcional e só funciona se você fornecer uma URL JSON própria (legal), no formato simples:
+                <br><br>
+                <code>[{"id":"1","title":"...","type":"movie","poster":"...","streamUrl":"..."}]</code>
+              </div>
+              <div style="height:12px"></div>
+              <button class="btn primary" id="btnSyncVod">Sincronizar VOD</button>
+              <button class="btn" id="btnClearVod" style="margin-left:8px;">Limpar cache VOD</button>
+              <div style="height:12px"></div>
+              <div class="status" id="vodStatus">—</div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="hd">
+              <h2>Catálogo</h2>
+              <span class="chip" id="vodCount">0</span>
+            </div>
+            <div class="bd">
+              <div class="vodGrid" id="vodGrid"></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="view" id="view-settings" style="display:none;">
+        <div class="grid" style="grid-template-columns: 420px 1fr;">
+          <div class="panel">
+            <div class="hd">
+              <h2>Configurações</h2>
+              <span class="chip">localStorage + IndexedDB</span>
+            </div>
+            <div class="bd">
+              <div class="form">
+                <div class="field">
+                  <label>URL da Playlist (M3U)</label>
+                  <input id="inpM3U" placeholder="https://exemplo.com/lista.m3u" />
+                </div>
+                <div class="field">
+                  <label>URL do EPG (XMLTV)</label>
+                  <input id="inpEPG" placeholder="https://exemplo.com/epg.xml" />
+                </div>
+                <div class="field">
+                  <label>URL VOD (JSON opcional)</label>
+                  <input id="inpVOD" placeholder="https://exemplo.com/vod.json" />
+                </div>
+
+                <div class="panel" style="box-shadow:none; background: rgba(255,255,255,.03); border-radius: 16px;">
+                  <div class="hd">
+                    <h2>Autenticação (opcional)</h2>
+                    <span class="chip">AES‑GCM</span>
+                  </div>
+                  <div class="bd">
+                    <div class="status warn">
+                      Token será armazenado criptografado no navegador; para máxima segurança, use backend/proxy e evite expor tokens no cliente.
+                    </div>
+                    <div style="height:10px"></div>
+                    <div class="field">
+                      <label>Token (Bearer / API key)</label>
+                      <input id="inpToken" placeholder="Cole o token aqui (será criptografado ao salvar)" />
+                    </div>
+                    <div class="field">
+                      <label>PIN local (para criptografar/descriptografar)</label>
+                      <input id="inpPin" type="password" placeholder="Ex.: 1234" />
+                    </div>
+                    <div class="row">
+                      <button class="btn primary" id="btnSaveToken">Salvar token</button>
+                      <button class="btn" id="btnLock">Bloquear (limpar da memória)</button>
+                      <button class="btn danger" id="btnClearToken">Apagar token</button>
+                    </div>
+                    <div style="height:10px"></div>
+                    <div class="status" id="authStatus">Token: —</div>
+                  </div>
+                </div>
+
+                <div class="row">
+                  <button class="btn primary" id="btnSaveSettings">Salvar</button>
+                  <button class="btn" id="btnTestUrls">Testar</button>
+                </div>
+
+                <div class="status" id="settingsStatus">—</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="hd">
+              <h2>Diagnóstico</h2>
+              <span class="chip" id="diagChip">—</span>
+            </div>
+            <div class="bd">
+              <div class="status" id="diagBox">Cole suas URLs e clique em “Testar”.</div>
+              <div style="height:12px"></div>
+              <div class="status">
+                Dicas:
+                <br>• Se der erro de CORS no navegador, você vai precisar hospedar este app em um servidor (mesma origem) ou usar uma API que permita CORS.
+                <br>• Alguns streams precisam de headers/autenticação e podem falhar em WebView/navegador.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <!-- PLAYER OVERLAY -->
+  <div class="overlay" id="overlay">
+    <div class="playerCard">
+      <div class="playerHd">
+        <div class="title">
+          <b id="playTitle">—</b>
+          <small id="playSub">—</small>
+        </div>
+        <div class="row">
+          <button class="btn" id="btnToggleFav">Favoritar</button>
+          <button class="btn danger" id="btnClosePlayer">Fechar</button>
+        </div>
+      </div>
+      <video id="video" controls playsinline></video>
+      <div class="playerFt">
+        <div class="kbdHint">
+          Teclas: Enter = abrir • F = favoritar • Esc = fechar
+        </div>
+        <div class="row">
+          <span class="chip" id="nowChip">Agora: —</span>
+          <span class="chip" id="nextChip">Próximo: —</span>
+        </div>
+      </div>
     </div>
+  </div>
 
-    <div id="quality-bar-wrap"><div id="quality-bar"></div></div>
-    <div id="status">Toque em Iniciar e coloque o dedo na câmera.</div>
-
-    <button id="btnStart">❤️ Iniciar Medição 60s</button>
-    <h1><p>Desenvolvedor</p> <strong>Clebeson Souza</strong></h1>
-
-    <div id="results">
-        <h2 style="font-size:clamp(20px,6vw,28px); margin-bottom:20px;">📊 Relatório SpO2</h2>
-        <div class="stat"><span>🩸 SpO2 Médio</span><span id="rSpo2">--</span></div>
-        <div class="stat"><span>❤️ BPM Médio</span><span id="rBpm">--</span></div>
-        <div class="stat"><span>📈 Desvio SpO2</span><span id="rStd">--</span></div>
-        <div class="stat"><span>⭐ Qualidade</span><span id="rQuality">--</span></div>
-        <div class="stat"><span>⚠️ Status</span><span id="rStatus">--</span></div>
-        <div class="stat"><span>💡 Diagnóstico</span><span id="rDiag">--</span></div>
-        <button id="btnShare">📱 Compartilhar</button>
-        <button id="btnNew">🔄 Nova Medição</button>
+  <!-- UNLOCK MODAL -->
+  <div class="modal" id="unlockModal">
+    <div class="modalCard">
+      <div class="hd">
+        <b>Desbloquear token</b>
+        <div class="muted" style="font-size:12px; margin-top:4px;">Informe o PIN local para usar headers autenticados nesta sessão.</div>
+      </div>
+      <div class="bd">
+        <div class="field">
+          <label>PIN</label>
+          <input id="unlockPin" type="password" placeholder="Digite seu PIN" />
+        </div>
+        <div class="row">
+          <button class="btn primary" id="btnUnlock">Desbloquear</button>
+          <button class="btn" id="btnUnlockSkip">Agora não</button>
+        </div>
+        <div class="status" id="unlockStatus">—</div>
+      </div>
     </div>
+  </div>
 
-    <script>
-        const videoView = document.getElementById("videoView");
-        const chart     = document.getElementById("chart");
-        const cCtx      = chart.getContext("2d");
-        const timerEl   = document.getElementById("timer");
-        const spo2El    = document.getElementById("spo2");
-        const bpmEl     = document.getElementById("bpm");
-        const statusEl  = document.getElementById("status");
-        const btnStart  = document.getElementById("btnStart");
-        const resultsEl = document.getElementById("results");
-        const qualBar   = document.getElementById("quality-bar");
+  <!-- Optional: hls.js (descomente se precisar de HLS via MSE) -->
+  <!-- <script src="https://cdn.jsdelivr.net/npm/hls.js@1"></script> -->
 
-        let stream = null, animId = null, timerInt = null, timeLeft = 60;
-        const FPS = 30;
-        let redBuf = [], greenBuf = [], spo2Buf = [], hrBuf = [], qualBuf = [];
+  <script>
+    /***********************
+     * EXTREMECENTER WEB
+     * - Settings: localStorage (DataStore-like)
+     * - Cache: IndexedDB (Room-like)
+     * - Token: WebCrypto AES-GCM + PBKDF2 (best-effort client-side)
+     ************************/
 
-        async function initCamera() {
-            try {
-                stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: "environment", width:{ideal:640}, height:{ideal:480}, frameRate:{ideal:FPS} }
-                });
-                videoView.srcObject = stream;
-                await videoView.play();
-                videoView.style.display = "block";
-                chart.width  = chart.offsetWidth  || 360;
-                chart.height = chart.offsetHeight || 140;
-                return true;
-            } catch (e) {
-                alert("Erro câmera: " + e.message + "\nHabilite HTTPS + permita câmera!");
-                return false;
-            }
-        }
+    const APP = {
+      settingsKey: "ec_settings_v2",
+      legacyKeys: { m3u: "playlist_url", epg: "epg_url", vod: "vod_url" },
+      secureTokenKey: "ec_secure_token_v1",   // {salt, iv, ct, iters}
+      sessionToken: null, // decrypted token kept only in memory
+      db: null,
+      state: {
+        view: "live",
+        settings: { m3uUrl:"", epgUrl:"", vodUrl:"" },
+        channels: [],
+        groups: [],
+        groupSelected: "Todos",
+        epgByChannel: new Map(), // channelId -> programs (today-ish)
+        vodItems: [],
+        playing: null, // current item
+      }
+    };
 
-        function extractRGB() {
-            const tmp = document.createElement("canvas");
-            tmp.width = 640; tmp.height = 480;
-            const tc = tmp.getContext("2d");
-            tc.drawImage(videoView, 0, 0, 640, 480);
-            const roi = tc.getImageData(160, 120, 320, 240).data;
-            let r = 0, g = 0, b = 0, n = 0;
-            for (let i = 0; i < roi.length; i += 4) { r+=roi[i]; g+=roi[i+1]; b+=roi[i+2]; n++; }
-            return { r:r/n, g:g/n, b:b/n };
-        }
+    /***************
+     * Utilities
+     ***************/
+    const $ = (sel) => document.querySelector(sel);
+    const $$ = (sel) => Array.from(document.querySelectorAll(sel));
+    const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-        function calcSpO2() {
-            if (redBuf.length < FPS * 4) return 0;
-            const R = redBuf.slice(-120), G = greenBuf.slice(-120);
-            const acR = Math.max(...R) - Math.min(...R);
-            const dcR = R.reduce((a,b)=>a+b) / R.length;
-            const acG = Math.max(...G) - Math.min(...G);
-            const dcG = G.reduce((a,b)=>a+b) / G.length;
-            if (!dcR || !dcG || !acG) return 0;
-            const RR = (acR/dcR) / (acG/dcG);
-            return Math.min(100, Math.max(70, 110 - 25 * RR));
-        }
+    function setPill(text, tone="") {
+      const el = $("#pillStatus");
+      el.textContent = text;
+      el.style.borderColor = "var(--border)";
+      el.style.background = "rgba(255,255,255,.04)";
+      if (tone === "ok") { el.style.borderColor = "rgba(51,214,159,.55)"; el.style.background = "rgba(51,214,159,.08)"; }
+      if (tone === "bad"){ el.style.borderColor = "rgba(255,77,109,.55)"; el.style.background = "rgba(255,77,109,.08)"; }
+      if (tone === "warn"){ el.style.borderColor = "rgba(255,176,32,.55)"; el.style.background = "rgba(255,176,32,.08)"; }
+    }
 
-        function calcBPM() {
-            if (greenBuf.length < 60) return 0;
-            const sig = greenBuf.slice(-120);
-            const filt = [];
-            for (let i = 2; i < sig.length; i++)
-                filt.push(sig[i] - 0.98*sig[i-1] + 0.02*sig[i-2]);
-            const peaks = [];
-            for (let i = 5; i < filt.length - 5; i++) {
-                if (filt[i] > filt[i-1]*1.015 && filt[i] > filt[i+1]*1.015 &&
-                    (peaks.length === 0 || i - peaks[peaks.length-1] > 20))
-                    peaks.push(i);
-            }
-            if (peaks.length < 3) return 0;
-            const avg = (peaks[peaks.length-1] - peaks[0]) / (peaks.length - 1);
-            return Math.min(200, Math.max(40, Math.round(60 * FPS / avg)));
-        }
+    function escHtml(s="") {
+      return String(s).replace(/[&<>"']/g, m => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;" }[m]));
+    }
 
-        function calcQuality() {
-            if (redBuf.length < 30) return 0;
-            const R = redBuf.slice(-60);
-            const amp  = Math.max(...R) - Math.min(...R);
-            const mean = R.reduce((a,b)=>a+b) / R.length;
-            return Math.min(100, Math.max(0, (amp/mean)*1500));
-        }
+    function normalizeId(str) {
+      return (str || "").trim().toLowerCase().replace(/\s+/g, " ").slice(0, 160);
+    }
 
-        function getDiag(spo2) {
-            if (spo2 >= 95) return { label:"Normal ✅", cls:"good" };
-            if (spo2 >= 90) return { label:"Atenção ⚠️", cls:"alert" };
-            if (spo2 >= 85) return { label:"Hipoxemia Leve 🔶", cls:"alert" };
-            return { label:"Hipoxemia Grave 🚨", cls:"warn" };
-        }
+    function nowMs(){ return Date.now(); }
+    function fmtTime(ms){
+      const d = new Date(ms);
+      const hh = String(d.getHours()).padStart(2,"0");
+      const mm = String(d.getMinutes()).padStart(2,"0");
+      return `${hh}:${mm}`;
+    }
 
-        function drawChart() {
-            cCtx.clearRect(0, 0, chart.width, chart.height);
-            const sig = redBuf.slice(-200);
-            if (sig.length < 5) return;
-            const minV = Math.min(...sig), maxV = Math.max(...sig);
-            if (maxV === minV) return;
-            cCtx.strokeStyle = "#ff4444";
-            cCtx.lineWidth = 3;
-            cCtx.lineCap = "round";
-            cCtx.lineJoin = "round";
-            cCtx.beginPath();
-            for (let i = 0; i < sig.length; i++) {
-                const x = (i / sig.length) * chart.width;
-                const y = chart.height - ((sig[i]-minV)/(maxV-minV)) * chart.height;
-                i === 0 ? cCtx.moveTo(x,y) : cCtx.lineTo(x,y);
-            }
-            cCtx.stroke();
-        }
+    /***************
+     * Storage (DataStore-like)
+     ***************/
+    function migrateLegacySettings() {
+      // Local migration: old localStorage keys -> new JSON blob
+      const legacyM3U = localStorage.getItem(APP.legacyKeys.m3u);
+      const legacyEPG = localStorage.getItem(APP.legacyKeys.epg);
+      const legacyVOD = localStorage.getItem(APP.legacyKeys.vod);
 
-        function processFrame() {
-            const { r, g } = extractRGB();
-            redBuf.push(r); greenBuf.push(g);
-            if (redBuf.length > FPS*60) { redBuf.shift(); greenBuf.shift(); }
+      const hasLegacy = legacyM3U || legacyEPG || legacyVOD;
+      if (!hasLegacy) return;
 
-            const spo2 = calcSpO2();
-            const bpm  = calcBPM();
-            const qual = calcQuality();
+      const current = loadSettings();
+      const merged = {
+        ...current,
+        m3uUrl: current.m3uUrl || (legacyM3U || ""),
+        epgUrl: current.epgUrl || (legacyEPG || ""),
+        vodUrl: current.vodUrl || (legacyVOD || "")
+      };
 
-            if (spo2 > 0) { spo2Buf.push(spo2); if (spo2Buf.length > 100) spo2Buf.shift(); }
-            if (bpm  > 0) { hrBuf.push(bpm);    if (hrBuf.length   > 100) hrBuf.shift();   }
-            qualBuf.push(qual); if (qualBuf.length > 30) qualBuf.shift();
+      saveSettings(merged);
 
-            const avgSpo2 = spo2Buf.length ? spo2Buf.reduce((a,b)=>a+b)/spo2Buf.length : 0;
-            const avgBpm  = hrBuf.length   ? hrBuf.reduce((a,b)=>a+b)/hrBuf.length     : 0;
-            const avgQual = qualBuf.reduce((a,b)=>a+b)/qualBuf.length;
+      // Optionally remove legacy keys
+      localStorage.removeItem(APP.legacyKeys.m3u);
+      localStorage.removeItem(APP.legacyKeys.epg);
+      localStorage.removeItem(APP.legacyKeys.vod);
+    }
 
-            spo2El.textContent = avgSpo2 > 0 ? avgSpo2.toFixed(1)+"%" : "--%";
-            spo2El.style.color = avgSpo2 >= 95 ? "#00ff88" : avgSpo2 >= 90 ? "#ffaa00" : "#ff4444";
-            bpmEl.textContent  = avgBpm > 0 ? Math.round(avgBpm) : "--";
+    function loadSettings() {
+      try {
+        const raw = localStorage.getItem(APP.settingsKey);
+        if (!raw) return { m3uUrl:"", epgUrl:"", vodUrl:"" };
+        const obj = JSON.parse(raw);
+        return { m3uUrl: obj.m3uUrl || "", epgUrl: obj.epgUrl || "", vodUrl: obj.vodUrl || "" };
+      } catch {
+        return { m3uUrl:"", epgUrl:"", vodUrl:"" };
+      }
+    }
 
-            qualBar.style.width = Math.round(avgQual)+"%";
-            statusEl.textContent = avgQual > 70
-                ? "✅ Sinal bom! Mantenha dedo imóvel."
-                : avgQual > 40
-                    ? "⚠️ Sinal médio – pressione mais o dedo."
-                    : "❌ Sinal fraco – use flash + ambiente escuro.";
+    function saveSettings(s) {
+      localStorage.setItem(APP.settingsKey, JSON.stringify({
+        m3uUrl: (s.m3uUrl||"").trim(),
+        epgUrl: (s.epgUrl||"").trim(),
+        vodUrl: (s.vodUrl||"").trim(),
+        savedAt: nowMs()
+      }));
+    }
 
-            timerEl.textContent = timeLeft + "s";
-            drawChart();
-        }
-
-        btnStart.onclick = async () => {
-            btnStart.disabled = true;
-            btnStart.textContent = "📹 Iniciando câmera...";
-            if (!await initCamera()) {
-                btnStart.disabled = false;
-                btnStart.textContent = "❤️ Iniciar Medição 60s";
-                return;
-            }
-            btnStart.textContent = "Medindo 60s...";
-            timeLeft = 60;
-            timerInt = setInterval(() => {
-                timeLeft--;
-                if (timeLeft <= 0) { clearInterval(timerInt); endMeasurement(); }
-            }, 1000);
-            animId = setInterval(processFrame, 1000/FPS);
+    /***************
+     * IndexedDB (Room-like)
+     ***************/
+    function openDb() {
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open("ExtremeCenterDB", 1);
+        req.onupgradeneeded = (e) => {
+          const db = req.result;
+          db.createObjectStore("channels", { keyPath: "id" });
+          db.createObjectStore("epg", { keyPath: "key" }); // key = channelId|YYYYMMDD
+          db.createObjectStore("favorites", { keyPath: "id" }); // id = channelId
+          db.createObjectStore("recents", { keyPath: "id" });   // id = channelId
+          db.createObjectStore("vod", { keyPath: "id" });
+          db.createObjectStore("meta", { keyPath: "key" });
         };
+        req.onsuccess = () => resolve(req.result);
+        req.onerror = () => reject(req.error);
+      });
+    }
 
-        function endMeasurement() {
-            clearInterval(animId);
-            if (stream) stream.getTracks().forEach(t => t.stop());
+    function tx(storeName, mode="readonly") {
+      const t = APP.db.transaction(storeName, mode);
+      return { store: t.objectStore(storeName), done: new Promise((res, rej) => { t.oncomplete=res; t.onerror=()=>rej(t.error); }) };
+    }
 
-            const avgSpo2 = spo2Buf.length ? spo2Buf.reduce((a,b)=>a+b)/spo2Buf.length : 0;
-            const avgBpm  = hrBuf.length   ? hrBuf.reduce((a,b)=>a+b)/hrBuf.length     : 0;
-            const avgQual = qualBuf.reduce((a,b)=>a+b)/qualBuf.length;
-            const variance = spo2Buf.length > 1
-                ? spo2Buf.reduce((s,v) => s+(v-avgSpo2)**2, 0)/spo2Buf.length : 0;
-            const std = Math.sqrt(variance);
-            const diag = getDiag(avgSpo2);
+    async function putMany(storeName, items) {
+      const { store, done } = tx(storeName, "readwrite");
+      items.forEach(it => store.put(it));
+      await done;
+    }
+    async function getAll(storeName) {
+      const { store, done } = tx(storeName, "readonly");
+      const req = store.getAll();
+      const out = await new Promise((res, rej) => {
+        req.onsuccess = () => res(req.result || []);
+        req.onerror = () => rej(req.error);
+      });
+      await done;
+      return out;
+    }
+    async function getOne(storeName, key) {
+      const { store, done } = tx(storeName, "readonly");
+      const req = store.get(key);
+      const out = await new Promise((res, rej) => {
+        req.onsuccess = () => res(req.result || null);
+        req.onerror = () => rej(req.error);
+      });
+      await done;
+      return out;
+    }
+    async function delOne(storeName, key) {
+      const { store, done } = tx(storeName, "readwrite");
+      store.delete(key);
+      await done;
+    }
+    async function clearStore(storeName) {
+      const { store, done } = tx(storeName, "readwrite");
+      store.clear();
+      await done;
+    }
 
-            document.getElementById("rSpo2").textContent    = avgSpo2.toFixed(1)+"%";
-            document.getElementById("rBpm").textContent     = Math.round(avgBpm);
-            document.getElementById("rStd").textContent     = "±"+std.toFixed(1)+"%";
-            document.getElementById("rQuality").textContent = Math.round(avgQual)+"%";
-            document.getElementById("rStatus").innerHTML    = `<span class="${diag.cls}">${diag.label}</span>`;
-            document.getElementById("rDiag").innerHTML      =
-                avgSpo2 >= 95
-                    ? '<span class="good">Oxigenação normal ✅</span>'
-                    : avgSpo2 >= 90
-                        ? '<span class="alert">Monitorar de perto ⚠️</span>'
-                        : '<span class="warn">Procure médico! 🚨</span>';
+    /***************
+     * Crypto token store (best-effort)
+     ***************/
+    function b64(buf) {
+      const bytes = new Uint8Array(buf);
+      let s = "";
+      for (const b of bytes) s += String.fromCharCode(b);
+      return btoa(s);
+    }
+    function unb64(s) {
+      const bin = atob(s);
+      const bytes = new Uint8Array(bin.length);
+      for (let i=0;i<bin.length;i++) bytes[i] = bin.charCodeAt(i);
+      return bytes.buffer;
+    }
+    async function deriveKeyFromPin(pin, saltBuf, iters=120000) {
+      const enc = new TextEncoder();
+      const baseKey = await crypto.subtle.importKey("raw", enc.encode(pin), "PBKDF2", false, ["deriveKey"]);
+      return crypto.subtle.deriveKey(
+        { name:"PBKDF2", salt: new Uint8Array(saltBuf), iterations: iters, hash:"SHA-256" },
+        baseKey,
+        { name:"AES-GCM", length: 256 },
+        false,
+        ["encrypt","decrypt"]
+      );
+    }
 
-            const history = JSON.parse(localStorage.getItem("spo2History") || "[]");
-            history.push({
-                date: new Date().toLocaleString("pt-BR"),
-                spo2: avgSpo2.toFixed(1),
-                bpm: Math.round(avgBpm),
-                quality: Math.round(avgQual)
-            });
-            localStorage.setItem("spo2History", JSON.stringify(history));
+    async function encryptToken(token, pin) {
+      const salt = crypto.getRandomValues(new Uint8Array(16)).buffer;
+      const iv = crypto.getRandomValues(new Uint8Array(12)).buffer;
+      const iters = 120000;
+      const key = await deriveKeyFromPin(pin, salt, iters);
+      const enc = new TextEncoder();
+      const ct = await crypto.subtle.encrypt({ name:"AES-GCM", iv: new Uint8Array(iv) }, key, enc.encode(token));
+      return { salt: b64(salt), iv: b64(iv), ct: b64(ct), iters };
+    }
 
-            resultsEl.style.display = "block";
-            resultsEl.scrollIntoView({ behavior:"smooth" });
+    async function decryptToken(blob, pin) {
+      const salt = unb64(blob.salt);
+      const iv = unb64(blob.iv);
+      const ct = unb64(blob.ct);
+      const iters = blob.iters || 120000;
+      const key = await deriveKeyFromPin(pin, salt, iters);
+      const pt = await crypto.subtle.decrypt({ name:"AES-GCM", iv: new Uint8Array(iv) }, key, ct);
+      return new TextDecoder().decode(pt);
+    }
+
+    function hasEncryptedToken() {
+      return !!localStorage.getItem(APP.secureTokenKey);
+    }
+
+    function readEncryptedTokenBlob() {
+      try { return JSON.parse(localStorage.getItem(APP.secureTokenKey) || "null"); }
+      catch { return null; }
+    }
+
+    function setEncryptedTokenBlob(blob) {
+      localStorage.setItem(APP.secureTokenKey, JSON.stringify(blob));
+    }
+
+    function clearEncryptedToken() {
+      localStorage.removeItem(APP.secureTokenKey);
+      APP.sessionToken = null;
+    }
+
+    /***************
+     * Networking
+     ***************/
+    function authHeaders() {
+      const token = APP.sessionToken;
+      if (!token) return {};
+      // Minimal: Bearer token. Ajuste se sua API exigir outro header.
+      return { "Authorization": `Bearer ${token}` };
+    }
+
+    async function fetchText(url) {
+      const res = await fetch(url, { headers: { ...authHeaders() } });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ao baixar: ${url}`);
+      return res.text();
+    }
+
+    async function fetchJson(url) {
+      const res = await fetch(url, { headers: { ...authHeaders() } });
+      if (!res.ok) throw new Error(`HTTP ${res.status} ao baixar: ${url}`);
+      return res.json();
+    }
+
+    /***************
+     * Parsing: M3U
+     * Common attrs: tvg-id, tvg-name, tvg-logo, group-title [web:243]
+     ***************/
+    function parseExtinfAttrs(line) {
+      // line like: #EXTINF:-1 tvg-id="x" tvg-logo="y" group-title="News",Channel Name
+      const attrs = {};
+      const m = line.match(/#EXTINF:[^,]*\s*(.*?),/);
+      const left = m ? m[1] : "";
+      const name = line.includes(",") ? line.split(",").slice(1).join(",").trim() : "";
+      attrs._display = name;
+
+      const re = /([a-zA-Z0-9_-]+)="([^"]*)"/g;
+      let mm;
+      while ((mm = re.exec(left)) !== null) {
+        attrs[mm[1]] = mm[2];
+      }
+      // Sometimes group is after comma via #EXTGRP; ignore for now
+      return attrs;
+    }
+
+    function parseM3U(text) {
+      const lines = text.replace(/\r/g,"").split("\n").map(l => l.trim()).filter(Boolean);
+      const channels = [];
+      let pending = null;
+
+      for (const line of lines) {
+        if (line.startsWith("#EXTINF:")) {
+          const a = parseExtinfAttrs(line);
+          pending = a;
+          continue;
+        }
+        if (line.startsWith("#")) continue; // skip tags
+        // stream/url line
+        if (pending) {
+          const tvgId = (pending["tvg-id"] || pending["tvg-name"] || pending._display || "").trim();
+          const name = (pending._display || pending["tvg-name"] || tvgId || "Canal").trim();
+          const group = (pending["group-title"] || "Sem grupo").trim();
+          const logo = (pending["tvg-logo"] || "").trim();
+          const url = line.trim();
+
+          const id = normalizeId(tvgId) || normalizeId(name) || normalizeId(url);
+          channels.push({
+            id, name, group, logo, url,
+            tvgId: (pending["tvg-id"] || "").trim(),
+            tvgName: (pending["tvg-name"] || "").trim(),
+          });
+          pending = null;
+        }
+      }
+      return channels;
+    }
+
+    /***************
+     * Parsing: XMLTV
+     * - channel id attribute, programme elements with channel/start/stop are typical [web:246]
+     ***************/
+    function parseXmltvDate(s) {
+      // XMLTV often uses YYYYMMDDhhmmss +/-ZZZZ
+      // We'll parse first 14 digits as local time (best-effort).
+      if (!s) return null;
+      const core = s.slice(0,14);
+      if (!/^\d{14}$/.test(core)) return null;
+      const y = +core.slice(0,4), mo = +core.slice(4,6)-1, d = +core.slice(6,8);
+      const h = +core.slice(8,10), mi = +core.slice(10,12), se = +core.slice(12,14);
+      return new Date(y, mo, d, h, mi, se).getTime();
+    }
+
+    function parseXMLTV(xmlText) {
+      const doc = new DOMParser().parseFromString(xmlText, "text/xml");
+      const parseError = doc.querySelector("parsererror");
+      if (parseError) throw new Error("XML inválido (XMLTV)");
+
+      const programsByChannel = new Map();
+      const progs = Array.from(doc.querySelectorAll("programme"));
+      for (const p of progs) {
+        const ch = p.getAttribute("channel") || "";
+        const start = parseXmltvDate(p.getAttribute("start"));
+        const stop = parseXmltvDate(p.getAttribute("stop"));
+        const title = (p.querySelector("title")?.textContent || "").trim();
+        const desc = (p.querySelector("desc")?.textContent || "").trim();
+        const cat = (p.querySelector("category")?.textContent || "").trim();
+
+        if (!ch || !start) continue;
+        const item = { start, stop, title, desc, cat };
+
+        if (!programsByChannel.has(ch)) programsByChannel.set(ch, []);
+        programsByChannel.get(ch).push(item);
+      }
+
+      // sort by start
+      for (const [k, arr] of programsByChannel.entries()) {
+        arr.sort((a,b)=>a.start-b.start);
+      }
+      return programsByChannel;
+    }
+
+    function epgNowNext(channelId) {
+      const arr = APP.state.epgByChannel.get(channelId) || [];
+      const t = nowMs();
+      let nowItem = null, nextItem = null;
+      for (let i=0;i<arr.length;i++){
+        const it = arr[i];
+        const end = it.stop || (it.start + 30*60*1000);
+        if (t >= it.start && t < end) {
+          nowItem = it;
+          nextItem = arr[i+1] || null;
+          break;
+        }
+        if (it.start > t) { nextItem = it; break; }
+      }
+      return { nowItem, nextItem };
+    }
+
+    /***************
+     * UI rendering
+     ***************/
+    function setView(view) {
+      APP.state.view = view;
+      $$(".tab").forEach(b => b.classList.toggle("active", b.dataset.view === view));
+      ["live","favorites","recents","vod","settings"].forEach(v => {
+        $("#view-"+v).style.display = (v===view) ? "" : "none";
+      });
+      if (view === "favorites") renderFavorites();
+      if (view === "recents") renderRecents();
+      if (view === "vod") renderVod();
+      if (view === "settings") renderSettings();
+    }
+
+    function renderGroups() {
+      const list = $("#groupsList");
+      const q = ($("#groupSearch").value || "").trim().toLowerCase();
+      const groups = ["Todos", ...APP.state.groups].filter(g => g.toLowerCase().includes(q));
+      $("#groupsCount").textContent = String(groups.length);
+
+      list.innerHTML = groups.map(g => `
+        <div class="item" tabindex="0" data-group="${escHtml(g)}" style="${g===APP.state.groupSelected ? 'border-color: rgba(124,92,255,.6); background: rgba(124,92,255,.10);' : ''}">
+          <div class="thumb" aria-hidden="true">📁</div>
+          <div class="meta">
+            <b>${escHtml(g)}</b>
+            <small>${g==="Todos" ? "Exibir todos os canais" : "Filtrar por grupo"}</small>
+          </div>
+          <div class="actions"><span class="chip">Enter</span></div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".item").forEach(el=>{
+        el.addEventListener("click", ()=>{ APP.state.groupSelected = el.dataset.group; renderChannels(); renderGroups(); });
+        el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ el.click(); } });
+      });
+    }
+
+    async function isFavorite(channelId) {
+      const it = await getOne("favorites", channelId);
+      return !!it;
+    }
+
+    async function toggleFavorite(channel) {
+      const fav = await getOne("favorites", channel.id);
+      if (fav) await delOne("favorites", channel.id);
+      else await putMany("favorites", [{ id: channel.id, name: channel.name, group: channel.group, logo: channel.logo, url: channel.url, at: nowMs() }]);
+      if (APP.state.view === "favorites") renderFavorites();
+    }
+
+    async function markRecent(channel) {
+      await putMany("recents", [{ id: channel.id, name: channel.name, group: channel.group, logo: channel.logo, url: channel.url, at: nowMs() }]);
+      if (APP.state.view === "recents") renderRecents();
+    }
+
+    function renderChannels() {
+      const list = $("#channelsList");
+      const q = ($("#channelSearch").value || "").trim().toLowerCase();
+
+      let channels = APP.state.channels;
+      if (APP.state.groupSelected !== "Todos") channels = channels.filter(c => c.group === APP.state.groupSelected);
+      if (q) channels = channels.filter(c => (c.name||"").toLowerCase().includes(q) || (c.group||"").toLowerCase().includes(q));
+
+      $("#channelsCount").textContent = String(channels.length);
+      $("#epgHint").textContent = APP.state.epgByChannel.size ? "EPG: OK" : "EPG: —";
+
+      list.innerHTML = channels.slice(0, 500).map(c => `
+        <div class="item" tabindex="0" data-id="${escHtml(c.id)}">
+          <div class="thumb">${c.logo ? `<img src="${escHtml(c.logo)}" alt="">` : "📺"}</div>
+          <div class="meta">
+            <b>${escHtml(c.name)}</b>
+            <small>${escHtml(c.group)} • ${escHtml(c.url)}</small>
+          </div>
+          <div class="actions">
+            <button class="iconbtn fav" title="Favoritar" aria-label="Favoritar">★</button>
+            <span class="chip">Enter</span>
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".item").forEach(el => {
+        const id = el.dataset.id;
+        const channel = APP.state.channels.find(x => x.id === id);
+
+        el.addEventListener("click", () => openPlayerChannel(channel));
+        el.addEventListener("keydown", (e)=>{ if(e.key==="Enter"){ el.click(); } });
+
+        const favBtn = el.querySelector(".fav");
+        favBtn.addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          await toggleFavorite(channel);
+          await updateFavButton(favBtn, channel.id);
+        });
+
+        updateFavButton(favBtn, channel.id);
+      });
+    }
+
+    async function updateFavButton(btn, channelId) {
+      const fav = await isFavorite(channelId);
+      btn.classList.toggle("on", fav);
+      btn.textContent = fav ? "★" : "☆";
+    }
+
+    async function renderFavorites() {
+      const list = $("#favoritesList");
+      const favs = await getAll("favorites");
+      favs.sort((a,b)=>(b.at||0)-(a.at||0));
+      $("#favoritesCount").textContent = String(favs.length);
+
+      list.innerHTML = favs.map(c => `
+        <div class="item" tabindex="0" data-id="${escHtml(c.id)}">
+          <div class="thumb">${c.logo ? `<img src="${escHtml(c.logo)}" alt="">` : "★"}</div>
+          <div class="meta">
+            <b>${escHtml(c.name)}</b>
+            <small>${escHtml(c.group || "—")}</small>
+          </div>
+          <div class="actions">
+            <button class="iconbtn" title="Remover" aria-label="Remover">🗑</button>
+            <span class="chip">Enter</span>
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".item").forEach(el => {
+        const id = el.dataset.id;
+        const item = favs.find(x=>x.id===id);
+        el.addEventListener("click", ()=> openPlayerChannel(item));
+        el.addEventListener("keydown",(e)=>{ if(e.key==="Enter") el.click(); });
+
+        el.querySelector("button").addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          await delOne("favorites", id);
+          renderFavorites();
+        });
+      });
+    }
+
+    async function renderRecents() {
+      const list = $("#recentsList");
+      const rec = await getAll("recents");
+      rec.sort((a,b)=>(b.at||0)-(a.at||0));
+      const trimmed = rec.slice(0, 20);
+      $("#recentsCount").textContent = String(trimmed.length);
+
+      list.innerHTML = trimmed.map(c => `
+        <div class="item" tabindex="0" data-id="${escHtml(c.id)}">
+          <div class="thumb">${c.logo ? `<img src="${escHtml(c.logo)}" alt="">` : "🕒"}</div>
+          <div class="meta">
+            <b>${escHtml(c.name)}</b>
+            <small>Visto às ${fmtTime(c.at||0)} • ${escHtml(c.group||"—")}</small>
+          </div>
+          <div class="actions">
+            <button class="iconbtn" title="Remover" aria-label="Remover">🗑</button>
+            <span class="chip">Enter</span>
+          </div>
+        </div>
+      `).join("");
+
+      list.querySelectorAll(".item").forEach(el => {
+        const id = el.dataset.id;
+        const item = trimmed.find(x=>x.id===id);
+        el.addEventListener("click", ()=> openPlayerChannel(item));
+        el.addEventListener("keydown",(e)=>{ if(e.key==="Enter") el.click(); });
+
+        el.querySelector("button").addEventListener("click", async (e)=>{
+          e.stopPropagation();
+          await delOne("recents", id);
+          renderRecents();
+        });
+      });
+    }
+
+    function renderSettings() {
+      $("#inpM3U").value = APP.state.settings.m3uUrl;
+      $("#inpEPG").value = APP.state.settings.epgUrl;
+      $("#inpVOD").value = APP.state.settings.vodUrl;
+
+      $("#settingsStatus").textContent = "—";
+      $("#diagChip").textContent = hasEncryptedToken() ? "Token criptografado: SIM" : "Token criptografado: NÃO";
+      $("#authStatus").textContent = `Token: ${hasEncryptedToken() ? "SALVO (criptografado)" : "—"} • Em memória: ${APP.sessionToken ? "SIM" : "NÃO"}`;
+    }
+
+    async function renderVod() {
+      const items = await getAll("vod");
+      items.sort((a,b)=>(b.updatedAt||0)-(a.updatedAt||0));
+      APP.state.vodItems = items;
+
+      $("#vodCount").textContent = String(items.length);
+      $("#vodGrid").innerHTML = items.map(it => `
+        <div class="vodCard" tabindex="0" data-id="${escHtml(it.id)}">
+          <div class="vodPoster">${it.poster ? `<img src="${escHtml(it.poster)}" alt="">` : ""}</div>
+          <div class="vodInfo">
+            <b>${escHtml(it.title || "Sem título")}</b>
+            <small>${escHtml(it.type || "VOD")}</small>
+          </div>
+        </div>
+      `).join("");
+
+      $("#vodGrid").querySelectorAll(".vodCard").forEach(el => {
+        const id = el.dataset.id;
+        const item = items.find(x=>x.id===id);
+        el.addEventListener("click", ()=> openPlayerVOD(item));
+        el.addEventListener("keydown",(e)=>{ if(e.key==="Enter") el.click(); });
+      });
+    }
+
+    /***************
+     * Player
+     ***************/
+    async function openPlayerChannel(channel) {
+      if (!channel) return;
+      APP.state.playing = { kind:"channel", ...channel };
+      $("#overlay").classList.add("on");
+      $("#playTitle").textContent = channel.name;
+      $("#playSub").textContent = channel.group || "Ao vivo";
+
+      const { nowItem, nextItem } = epgNowNext(channel.tvgId || channel.id);
+      $("#nowChip").textContent = nowItem ? `Agora: ${nowItem.title || "—"}` : "Agora: —";
+      $("#nextChip").textContent = nextItem ? `Próximo: ${nextItem.title || "—"}` : "Próximo: —";
+
+      await markRecent(channel);
+      await updatePlayerFavButton(channel.id);
+      await playUrl(channel.url);
+    }
+
+    async function openPlayerVOD(item) {
+      if (!item) return;
+      APP.state.playing = { kind:"vod", ...item };
+      $("#overlay").classList.add("on");
+      $("#playTitle").textContent = item.title || "VOD";
+      $("#playSub").textContent = item.type || "—";
+      $("#nowChip").textContent = "Agora: —";
+      $("#nextChip").textContent = "Próximo: —";
+      $("#btnToggleFav").style.display = "none"; // favorites for channels only (simplify)
+      await playUrl(item.streamUrl);
+    }
+
+    async function updatePlayerFavButton(channelId) {
+      $("#btnToggleFav").style.display = "";
+      const fav = await isFavorite(channelId);
+      $("#btnToggleFav").textContent = fav ? "Remover favorito" : "Favoritar";
+    }
+
+    async function playUrl(url) {
+      const v = $("#video");
+      // Reset
+      try { v.pause(); } catch {}
+      v.removeAttribute("src");
+      v.load();
+
+      // Basic attempt: native playback
+      v.src = url;
+      try {
+        await v.play();
+        setPill("Reproduzindo", "ok");
+      } catch (e) {
+        setPill("Falha ao tocar (ver CORS/codec/HLS)", "bad");
+        // Optional HLS.js support if loaded:
+        // if (window.Hls && window.Hls.isSupported() && url.includes(".m3u8")) { ... }
+      }
+    }
+
+    function closePlayer() {
+      const v = $("#video");
+      try { v.pause(); } catch {}
+      $("#overlay").classList.remove("on");
+      $("#btnToggleFav").style.display = "";
+      APP.state.playing = null;
+    }
+
+    /***************
+     * Sync logic
+     ***************/
+    function buildGroups(channels) {
+      const set = new Set();
+      channels.forEach(c => set.add(c.group || "Sem grupo"));
+      return Array.from(set).sort((a,b)=>a.localeCompare(b));
+    }
+
+    async function syncAll() {
+      const { m3uUrl, epgUrl } = APP.state.settings;
+
+      if (!m3uUrl) {
+        setPill("Configure a URL M3U", "warn");
+        setView("settings");
+        return;
+      }
+
+      setPill("Baixando M3U...", "warn");
+      const m3uText = await fetchText(m3uUrl);
+      const channels = parseM3U(m3uText);
+
+      APP.state.channels = channels;
+      APP.state.groups = buildGroups(channels);
+      APP.state.groupSelected = "Todos";
+
+      await putMany("channels", channels);
+      await putMany("meta", [{ key:"last_m3u_sync", at: nowMs(), count: channels.length }]);
+
+      if (epgUrl) {
+        setPill("Baixando EPG...", "warn");
+        try {
+          const xml = await fetchText(epgUrl);
+          const epgMap = parseXMLTV(xml);
+          APP.state.epgByChannel = epgMap;
+          await putMany("meta", [{ key:"last_epg_sync", at: nowMs(), count: epgMap.size }]);
+          setPill("Sincronizado (M3U + EPG)", "ok");
+        } catch (e) {
+          APP.state.epgByChannel = new Map();
+          setPill("M3U OK, EPG falhou", "warn");
+        }
+      } else {
+        APP.state.epgByChannel = new Map();
+        setPill("Sincronizado (M3U)", "ok");
+      }
+
+      if (APP.state.view !== "live") setView("live");
+      renderGroups();
+      renderChannels();
+    }
+
+    async function syncVod() {
+      const url = APP.state.settings.vodUrl;
+      if (!url) { $("#vodStatus").textContent = "Configure a URL VOD (JSON) em Config."; return; }
+      $("#vodStatus").textContent = "Baixando VOD...";
+      try {
+        const json = await fetchJson(url);
+        if (!Array.isArray(json)) throw new Error("JSON deve ser um array");
+        const items = json.map(it => ({
+          id: String(it.id || normalizeId(it.title) || crypto.randomUUID()),
+          title: String(it.title || "Sem título"),
+          type: String(it.type || "vod"),
+          poster: it.poster ? String(it.poster) : "",
+          streamUrl: String(it.streamUrl || ""),
+          updatedAt: nowMs()
+        })).filter(it => it.streamUrl);
+
+        await putMany("vod", items);
+        $("#vodStatus").textContent = `OK: ${items.length} itens em cache.`;
+        renderVod();
+      } catch (e) {
+        $("#vodStatus").textContent = `Erro VOD: ${e.message}`;
+      }
+    }
+
+    /***************
+     * Test URLs
+     ***************/
+    async function testUrls(m3uUrl, epgUrl) {
+      const diag = $("#diagBox");
+      $("#diagChip").textContent = "Testando...";
+      diag.className = "status warn";
+      diag.textContent = "Testando download/parsing...";
+
+      try {
+        const t1 = await fetchText(m3uUrl);
+        const ch = parseM3U(t1);
+
+        let epgCount = 0;
+        if (epgUrl) {
+          const t2 = await fetchText(epgUrl);
+          const epg = parseXMLTV(t2);
+          epgCount = epg.size;
         }
 
-        document.getElementById("btnShare").onclick = () => {
-            const txt = `🩸 SpO2: ${document.getElementById("rSpo2").textContent} | ❤️ BPM: ${document.getElementById("rBpm").textContent} | Diagnóstico: ${document.getElementById("rDiag").innerText}`;
-            if (navigator.share) navigator.share({ title:"Meu SpO2", text:txt });
-            else navigator.clipboard.writeText(txt).then(() => alert("Copiado para área de transferência!"));
-        };
+        diag.className = "status ok";
+        diag.innerHTML = `OK.<br>M3U: ${ch.length} canais.<br>EPG: ${epgUrl ? (epgCount + " canais com programação") : "não configurado"}.`;
+        $("#diagChip").textContent = "OK";
+      } catch (e) {
+        diag.className = "status bad";
+        diag.textContent = "Erro: " + e.message;
+        $("#diagChip").textContent = "Falhou";
+      }
+    }
 
-        document.getElementById("btnNew").onclick = () => location.reload();
-    </script>
+    /***************
+     * Events
+     ***************/
+    function wireEvents() {
+      $$(".tab").forEach(b => b.addEventListener("click", ()=> setView(b.dataset.view)));
+      $("#groupSearch").addEventListener("input", renderGroups);
+      $("#channelSearch").addEventListener("input", renderChannels);
+
+      $("#btnClosePlayer").addEventListener("click", closePlayer);
+      $("#overlay").addEventListener("click", (e)=>{ if (e.target.id === "overlay") closePlayer(); });
+
+      $("#btnToggleFav").addEventListener("click", async ()=>{
+        if (!APP.state.playing || APP.state.playing.kind !== "channel") return;
+        await toggleFavorite(APP.state.playing);
+        await updatePlayerFavButton(APP.state.playing.id);
+      });
+
+      $("#btnSync").addEventListener("click", async ()=>{
+        try { await syncAll(); } catch(e){ setPill(e.message, "bad"); }
+      });
+
+      $("#btnReset").addEventListener("click", async ()=>{
+        if (!confirm("Resetar tudo (settings + cache)?")) return;
+        localStorage.removeItem(APP.settingsKey);
+        clearEncryptedToken();
+        await clearStore("channels");
+        await clearStore("epg");
+        await clearStore("favorites");
+        await clearStore("recents");
+        await clearStore("vod");
+        await clearStore("meta");
+        location.reload();
+      });
+
+      $("#btnSaveSettings").addEventListener("click", ()=>{
+        const s = {
+          m3uUrl: $("#inpM3U").value,
+          epgUrl: $("#inpEPG").value,
+          vodUrl: $("#inpVOD").value
+        };
+        saveSettings(s);
+        APP.state.settings = s;
+        $("#settingsStatus").className = "status ok";
+        $("#settingsStatus").textContent = "Configurações salvas.";
+        setPill("Config salva", "ok");
+      });
+
+      $("#btnTestUrls").addEventListener("click", async ()=>{
+        const m3u = $("#inpM3U").value.trim();
+        const epg = $("#inpEPG").value.trim();
+        if (!m3u) { $("#settingsStatus").className="status warn"; $("#settingsStatus").textContent="Informe a URL M3U."; return; }
+        await testUrls(m3u, epg);
+      });
+
+      $("#btnSaveToken").addEventListener("click", async ()=>{
+        const token = $("#inpToken").value.trim();
+        const pin = $("#inpPin").value.trim();
+        if (!token || !pin) { $("#authStatus").className="status warn"; $("#authStatus").textContent="Informe token e PIN."; return; }
+        try {
+          const blob = await encryptToken(token, pin);
+          setEncryptedTokenBlob(blob);
+          APP.sessionToken = token;
+          $("#inpToken").value = "";
+          $("#inpPin").value = "";
+          $("#authStatus").className="status ok";
+          $("#authStatus").textContent="Token salvo (criptografado) e liberado nesta sessão.";
+          $("#diagChip").textContent = "Token criptografado: SIM";
+        } catch(e) {
+          $("#authStatus").className="status bad";
+          $("#authStatus").textContent="Erro ao criptografar: " + e.message;
+        }
+      });
+
+      $("#btnLock").addEventListener("click", ()=>{
+        APP.sessionToken = null;
+        $("#authStatus").className="status";
+        $("#authStatus").textContent="Bloqueado: token removido da memória (criptografado permanece salvo).";
+      });
+
+      $("#btnClearToken").addEventListener("click", ()=>{
+        clearEncryptedToken();
+        $("#authStatus").className="status";
+        $("#authStatus").textContent="Token apagado.";
+        $("#diagChip").textContent = "Token criptografado: NÃO";
+      });
+
+      $("#btnSyncVod").addEventListener("click", syncVod);
+      $("#btnClearVod").addEventListener("click", async ()=>{
+        await clearStore("vod");
+        $("#vodStatus").textContent = "Cache VOD limpo.";
+        renderVod();
+      });
+
+      // Keyboard shortcuts
+      window.addEventListener("keydown", async (e)=>{
+        if ($("#overlay").classList.contains("on")) {
+          if (e.key === "Escape") closePlayer();
+          if (e.key.toLowerCase() === "f") {
+            if (APP.state.playing?.kind === "channel") {
+              await toggleFavorite(APP.state.playing);
+              await updatePlayerFavButton(APP.state.playing.id);
+            }
+          }
+        }
+      });
+
+      // Unlock modal
+      $("#btnUnlock").addEventListener("click", async ()=>{
+        const pin = $("#unlockPin").value.trim();
+        const blob = readEncryptedTokenBlob();
+        if (!blob || !pin) return;
+        try {
+          APP.sessionToken = await decryptToken(blob, pin);
+          $("#unlockStatus").className="status ok";
+          $("#unlockStatus").textContent="Desbloqueado para esta sessão.";
+          await sleep(500);
+          $("#unlockModal").classList.remove("on");
+        } catch(e) {
+          $("#unlockStatus").className="status bad";
+          $("#unlockStatus").textContent="PIN inválido ou dados corrompidos.";
+        }
+      });
+      $("#btnUnlockSkip").addEventListener("click", ()=> $("#unlockModal").classList.remove("on"));
+    }
+
+    /***************
+     * Boot
+     ***************/
+    async function boot() {
+      setPill("Iniciando...", "warn");
+      migrateLegacySettings();
+
+      APP.db = await openDb();
+
+      APP.state.settings = loadSettings();
+      APP.state.channels = await getAll("channels");
+      APP.state.groups = buildGroups(APP.state.channels);
+
+      // If token saved, ask to unlock (optional)
+      if (hasEncryptedToken()) {
+        $("#unlockModal").classList.add("on");
+        $("#unlockStatus").textContent = "—";
+      }
+
+      wireEvents();
+      renderGroups();
+      renderChannels();
+      setPill("Pronto", "ok");
+    }
+
+    boot().catch(e => {
+      setPill("Erro ao iniciar", "bad");
+      console.error(e);
+      alert("Erro ao iniciar: " + e.message);
+    });
+  </script>
 </body>
 </html>
