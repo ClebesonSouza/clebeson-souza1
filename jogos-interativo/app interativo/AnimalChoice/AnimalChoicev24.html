@@ -1,0 +1,1459 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AnimalChoice</title>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body {
+      background:#0d1b2a; display:flex; flex-direction:column;
+      align-items:center; justify-content:center;
+      min-height:100vh; font-family:'Arial Rounded MT Bold',Arial,sans-serif; overflow:hidden;
+    }
+    #gameWrapper { position:relative; width:800px; }
+    #gameCanvas { display:block; border-radius:16px 16px 0 0; box-shadow:0 0 40px rgba(0,200,255,0.25); }
+    #ui {
+      background:linear-gradient(135deg,#1e3c72,#2a5298);
+      border-radius:0 0 16px 16px; padding:10px 12px;
+      display:flex; gap:8px; justify-content:center;
+    }
+    .cbtn {
+      background:rgba(255,255,255,0.08); border:3px solid rgba(255,255,255,0.2);
+      border-radius:14px; padding:6px 10px; cursor:pointer; color:white;
+      font-family:inherit; transition:all 0.2s;
+      display:flex; flex-direction:column; align-items:center;
+      min-width:100px; position:relative;
+    }
+    .cbtn:hover:not(.locked) { transform:scale(1.05); background:rgba(255,255,255,0.15); }
+    .cbtn.active { border-color:#FFD700; background:rgba(255,215,0,0.18); box-shadow:0 0 18px rgba(255,215,0,0.5); transform:scale(1.08); }
+    .cbtn.locked { opacity:0.65; cursor:not-allowed; }
+    .cbtn .em { font-size:28px; }
+    .cbtn .cn { font-size:12px; font-weight:bold; margin-top:2px; }
+    .cbtn .ca { font-size:10px; color:#aef; margin-top:2px; }
+    .cbtn .ck { font-size:9px; color:rgba(255,255,255,0.4); margin-top:1px; }
+    .lock-overlay {
+      position:absolute; top:0; left:0; right:0; bottom:0;
+      background:rgba(0,0,0,0.55); border-radius:11px;
+      display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px;
+    }
+    .lock-overlay span:first-child { font-size:22px; }
+    .lock-overlay span:last-child { font-size:8px; color:rgba(255,255,255,0.8); text-align:center; line-height:1.3; }
+  
+  #muteBtn {
+    position: fixed; top: 10px; right: 10px;
+    background: rgba(0,0,0,0.55); color: #fff;
+    border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 50%; width: 38px; height: 38px;
+    font-size: 18px; cursor: pointer; z-index: 999;
+    display: flex; align-items: center; justify-content: center;
+    transition: background 0.2s;
+  }
+  #muteBtn:hover { background: rgba(0,0,0,0.8); }
+</style>
+</head>
+<body>
+<div id="gameWrapper">
+  
+<button id="muteBtn" title="Mute/Som" onclick="soundEnabled=!soundEnabled; this.textContent=soundEnabled?'🔊':'🔇'">🔊</button>
+<canvas id="gameCanvas" width="800" height="440"></canvas>
+  <div id="ui">
+    <button class="cbtn active" id="btn-cat" onclick="switchChar('cat')">
+      <span class="em">&#x1F431;</span><span class="cn">Gatinho</span>
+      <span class="ca">Pulo Alto</span><span class="ck">[1]</span>
+    </button>
+    <button class="cbtn" id="btn-dog" onclick="switchChar('dog')">
+      <span class="em">&#x1F436;</span><span class="cn">Cachorrinho</span>
+      <span class="ca">Corre Rapido</span><span class="ck">[2]</span>
+    </button>
+    <button class="cbtn" id="btn-duck" onclick="switchChar('duck')">
+      <span class="em">&#x1F986;</span><span class="cn">Patinho</span>
+      <span class="ca">Pode Nadar</span><span class="ck">[3]</span>
+    </button>
+    <button class="cbtn" id="btn-bird" onclick="switchChar('bird')">
+      <span class="em">&#x1F426;</span><span class="cn">Passarinho</span>
+      <span class="ca">Pode Voar</span><span class="ck">[4]</span>
+    </button>
+    <button class="cbtn locked" id="btn-tatu" onclick="switchChar('tatu')">
+      <span class="em">&#x1F994;</span><span class="cn">Tatuzinho</span>
+      <span class="ca">Cavar</span><span class="ck">[5]</span>
+      <div class="lock-overlay" id="cat-lock">
+        <span>&#x1F512;</span>
+        <span>Colete todas<br>as estrelas!</span>
+      </div>
+    </button>
+    <button class="cbtn locked" id="btn-frog" onclick="switchChar('frog')">
+      <span class="em">&#x1F438;</span><span class="cn">Sapinho</span>
+      <span class="ca">Come Insetos</span><span class="ck">[6]</span>
+      <div class="lock-overlay" id="frog-lock">
+        <span>&#x1F512;</span>
+        <span>Fase 3<br>Tatuzinho!</span>
+      </div>
+    </button>
+  </div>
+</div>
+<script>
+
+// ══════════════════════════════════════════════════════
+//  SISTEMA DE ÁUDIO — Web Audio API (corrigido)
+// ══════════════════════════════════════════════════════
+var audioCtx = null;
+var soundEnabled = true;
+var audioUnlocked = false;
+
+// Inicializa e desbloqueia AudioContext no primeiro gesto do usuário
+function unlockAudio(){
+  if(audioUnlocked) return;
+  try {
+    if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    audioCtx.resume().then(function(){ audioUnlocked = true; });
+  } catch(e){}
+}
+document.addEventListener('keydown', unlockAudio, {once: false});
+document.addEventListener('click',   unlockAudio, {once: false});
+document.addEventListener('touchstart', unlockAudio, {once: false});
+
+function getAudioCtx(){
+  if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  return audioCtx;
+}
+
+function playTone(freq, type, duration, volume, startFreq){
+  if(!soundEnabled || !audioUnlocked) return;
+  try {
+    var ctx = getAudioCtx();
+    var osc  = ctx.createOscillator();
+    var gain = ctx.createGain();
+    osc.connect(gain); gain.connect(ctx.destination);
+    osc.type = type || 'sine';
+    osc.frequency.setValueAtTime(startFreq || freq, ctx.currentTime);
+    if(startFreq) osc.frequency.exponentialRampToValueAtTime(freq, ctx.currentTime + duration);
+    gain.gain.setValueAtTime(volume || 0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + duration + 0.01);
+  } catch(e){}
+}
+
+function playNoise(duration, volume, filterFreq){
+  if(!soundEnabled || !audioUnlocked) return;
+  try {
+    var ctx     = getAudioCtx();
+    var bufSize = Math.floor(ctx.sampleRate * duration);
+    var buf     = ctx.createBuffer(1, bufSize, ctx.sampleRate);
+    var data    = buf.getChannelData(0);
+    for(var i=0;i<bufSize;i++) data[i] = (Math.random()*2-1);
+    var src    = ctx.createBufferSource();
+    src.buffer = buf;
+    var filter = ctx.createBiquadFilter();
+    filter.type = 'bandpass';
+    filter.frequency.value = filterFreq || 400;
+    filter.Q.value = 0.8;
+    var gain = ctx.createGain();
+    gain.gain.setValueAtTime(volume || 0.15, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duration);
+    src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+    src.start(ctx.currentTime);
+    src.stop(ctx.currentTime + duration + 0.01);
+  } catch(e){}
+}
+
+// ── Sons individuais ─────────────────────────────────
+function sndStar(){
+  // Inspirado no som da moeda do Super Mario — 2 notas 8-bit (onda quadrada)
+  playTone(988, 'square', 0.07, 0.28);                           // Si5 — ataque curto
+  setTimeout(function(){ playTone(1319,'square',0.14,0.24); }, 70); // Mi6 — resolução brilhante
+}
+
+function sndDig(){
+  // Escavação Tatuzinho — terra pesada + vibração (sawtooth + LFO)
+  var ctx = getAudioCtx();
+  if(!ctx || !audioUnlocked || !soundEnabled) return;
+  try {
+    // Raspagem grave com tremulação
+    var osc = ctx.createOscillator();
+    var lfo = ctx.createOscillator();
+    var gain = ctx.createGain();
+    var filter = ctx.createBiquadFilter();
+
+    osc.type = 'sawtooth';
+    lfo.type = 'sine';
+    lfo.frequency.value = 8; // LFO lento para vibração
+
+    osc.frequency.value = 120;
+    lfo.connect(osc.frequency);
+    osc.connect(filter);
+    filter.connect(gain);
+    gain.connect(ctx.destination);
+
+    // Envelope agressivo
+    gain.gain.setValueAtTime(0.18, ctx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.02, ctx.currentTime + 0.12);
+
+    // Filtro para tom de terra
+    filter.type = 'lowpass';
+    filter.frequency.value = 400;
+
+    osc.start(ctx.currentTime);
+    osc.stop(ctx.currentTime + 0.12);
+    lfo.start(ctx.currentTime);
+    lfo.stop(ctx.currentTime + 0.12);
+
+
+
+                      // Partículas de terra, adiciona um ruído de impacto com atraso para dar pAeso à escavação
+
+
+    setTimeout(function(){ playNoise(0.08, 0.12, 180); }, 40); // Ruído de impacto com filtro grave para simular terra sendo levantada
+
+  } catch(e){} // O bloco try/catch é usado para evitar erros em navegadores que não suportam a Web Audio API ou se o áudio não foi desbloqueado, garantindo que o jogo continue funcionando mesmo sem som.
+}
+
+
+function sndWater(){// Som de água — bolhas subindo + respingos (ruído branco filtrado)
+  playNoise(0.25, 0.18, 600);// Ruído de bolhas com filtro mais agudo
+  playTone(320,'sine',0.2,0.08,800);// Tom de respingo com slide descendente para dar sensação de água sendo perturbada
+}
+
+function sndSpeedGate(){//
+  playTone(600,'sine',0.15,0.12,300);// Tom inicial mais grave para sensação de aceleração, deslizando para um tom mais agudo
+  setTimeout(function(){ playTone(900,'sine',0.1,0.10); },80);// Tom de passagem rápida, mais curto e agudo para dar sensação de velocidade sendo alcançada
+}
+                                    //NOTAS MUSICAIS UTILIZADAS:
+function sndUnlock(){// Som de desbloqueio — acorde maior simples para sensação de conquista
+  playTone(523,'sine',0.12,0.18);// Dó5 — nota base do acorde
+  setTimeout(function(){ playTone(659,'sine',0.12,0.18); },120);// Mi5 — terceira maior para dar sensação de felicidade
+  setTimeout(function(){ playTone(784,'sine',0.18,0.18); },240);// Sol5 — quinta justa para completar o acorde e dar sensação de realização
+}
+
+function sndGameOver(){
+  playTone(440,'sawtooth',0.2,0.15);
+  setTimeout(function(){ playTone(349,'sawtooth',0.2,0.14); },200);
+  setTimeout(function(){ playTone(262,'sawtooth',0.3,0.13); },400);
+}
+
+function sndVictory(){
+  var notes=[523,659,784,1047];
+  var delays=[0,130,260,390];
+  notes.forEach(function(n,i){
+    setTimeout(function(){ playTone(n,'sine',0.2,0.18); }, delays[i]);
+  });
+}
+
+
+function sndJump(){
+  // Mario NES Jump — versão simplificada: D4 → C#4 → D# → F → G4 (subida RÁPIDA)
+  playTone(294, 'square', 0.12, 0.22);  // D4 — início do pulo
+  setTimeout(function(){ playTone(277,'square',0.08,0.20); }, 80);  // C#4 — mergulho
+  // Subida RÁPIDA: D# → F → G4
+  setTimeout(function(){ playTone(311,'square',0.05,0.18); }, 140);  // D#4
+  setTimeout(function(){ playTone(349,'square',0.05,0.17); }, 170);  // F4
+  setTimeout(function(){ playTone(392,'square',0.08,0.16); }, 200);  // G4 — fim do salto
+}
+
+
+function sndCroac(){
+  playTone(200,'sine',0.15,0.18); setTimeout(function(){ playTone(140,'sine',0.1,0.15); },130);
+}
+function sndEat(){
+  playTone(700,'square',0.07,0.22); setTimeout(function(){ playTone(900,'square',0.06,0.18); },70);
+  setTimeout(function(){ playTone(1100,'square',0.04,0.14); },130);
+}
+function sndHit(){
+  playTone(140,'sawtooth',0.15,0.18); setTimeout(function(){ playTone(90,'sawtooth',0.1,0.22); },80);
+}
+function sndPhase3Start(){
+  playTone(262,'square',0.1,0.12); setTimeout(function(){ playTone(330,'square',0.12,0.14); },110);
+  setTimeout(function(){ playTone(392,'square',0.15,0.18); },220); setTimeout(function(){ playTone(523,'square',0.18,0.22); },330);
+}
+function sndPhase2Start(){// Som de início da fase 2 — dois tons graves para dar sensação de desafio aumentado
+  playTone(392,'square',0.1,0.12);// Sol4 — tom
+  setTimeout(function(){ playTone(523,'square',0.15,0.15); },110);// Dó5 — tom mais agudo para criar contraste e dar sensação de algo novo começando
+}
+                         
+
+
+
+
+
+"use strict";// Ativa o modo estrito para evitar erros silenciosos e impor boas práticas de codificação
+var canvas = document.getElementById('gameCanvas');// Obtém o elemento canvas do DOM para desenhar o jogo
+var ctx = canvas.getContext('2d');// Obtém o contexto 2D do canvas, que é usado para desenhar formas, imagens e texto no canvas
+var CW=800, CH=440, GY=370, GRAV=0.55;// Define constantes para a largura do canvas (CW), altura do canvas (CH), posição do chão (GY) e gravidade (GRAV) que afeta a física do jogo
+function rrect(x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r); ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r); ctx.quadraticCurveTo(x,y,x+r,y);
+  ctx.closePath();
+}
+
+// ── Characters ──────────────────────────────────────────────────────────────
+var CHARS = {
+  cat:         {name:'Gatinho',     color:'#FF9800',accent:'#E65100',jumpF:-17,spd:4.5,grav:GRAV,    swim:false,fly:false,dig:false,ability:'Pulo Alto'},
+  dog:         {name:'Cachorrinho', color:'#8D6E63',accent:'#4E342E',jumpF:-12,spd:9.5,grav:GRAV,    swim:false,fly:false,dig:false,ability:'Corrida Rapida'},
+  duck:        {name:'Patinho',     color:'#FDD835',accent:'#F57F17',jumpF:-10,spd:4,  grav:GRAV,    swim:true, fly:false,dig:false,ability:'Pode Nadar'},
+  bird:        {name:'Passarinho',  color:'#29B6F6',accent:'#0277BD',jumpF:-9, spd:5,  grav:GRAV*0.25,swim:false,fly:true, dig:false,ability:'Pode Voar'},
+  tatu:        {name:'Tatuzinho',   color:'#8D6E63',accent:'#5D4037',jumpF:-8, spd:3.5,grav:GRAV,    swim:false,fly:false,dig:true, ability:'Cavar pelo Chao'}
+,  frog:        {name:'Sapinho',     color:'#4CAF50',accent:'#1B5E20',jumpF:-10,spd:4.2, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Insetos'}
+};
+
+// ── State ────────────────────────────────────────────────────────────────────
+var state='menu', phase=1, camX=0, score=0, lives=3;
+var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
+var particles=[];
+var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
+var frogUnlocked=false, frogLongJump=false, frogTongue=0;
+
+// ── Input ────────────────────────────────────────────────────────────────────
+var K={};
+window.addEventListener('keydown',function(e){
+  K[e.key]=true;
+  if(e.key==='1') switchChar('cat');
+  if(e.key==='2') switchChar('dog');
+  if(e.key==='3') switchChar('duck');
+  if(e.key==='4') switchChar('bird');
+  if(e.key==='5' && catUnlocked) switchChar('tatu');
+  if(e.key==='6' && frogUnlocked) switchChar('frog');
+  if((e.key===' '||e.key==='ArrowUp') && state==='playing' && !isDigging){
+    if(pl.char==='duck'){
+      if(pl.inWaterPit){
+        // Inside water pit: duck swims up freely (handled in update physics)
+        pl.vy=-4; // impulso de subida dentro da agua
+      } else if(pl.onGround){
+        // Outside water: flap wings but NO jump
+        duckFlapTimer=30;
+      }
+    } else if(pl.onGround){
+      pl.vy=CHARS[pl.char].jumpF; sndJump(); pl.onGround=false;
+      if(pl.char==='frog'){ frogLongJump=true; sndCroac(); }
+    }
+  }
+  if(e.key==='ArrowDown' && state==='playing' && pl.char==='tatu' && pl.onGround && !isDigging) startDig();
+  if((e.key===' '||e.key==='ArrowUp') && isDigging) stopDig();
+  if(e.key===' ' && state==='menu') startGame();
+  if(e.key===' ' && (state==='win'||state==='gameover')) state='menu';
+  if(e.key===' ' && state==='phase2intro') beginPhase2();
+  if(e.key===' ' && state==='phase3intro') beginPhase3();
+});
+window.addEventListener('keyup',function(e){ K[e.key]=false; });
+canvas.addEventListener('click',function(){
+  if(state==='menu') startGame();
+  if(state==='win'||state==='gameover') state='menu';
+  if(state==='phase2intro') beginPhase2();
+  if(state==='phase3intro') beginPhase3();
+});
+
+// ── Player ───────────────────────────────────────────────────────────────────
+var pl={x:100,y:GY-40,vx:0,vy:0,w:38,h:38,onGround:false,char:'cat',inWaterPit:false};
+
+function switchChar(c){
+  if(c==='tatu'&&!catUnlocked) return;
+  if(isDigging&&c!=='tatu') stopDig();
+  pl.char=c;
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-'+c).classList.add('active');
+}
+
+// ── Digging ──────────────────────────────────────────────────────────────────
+function startDig(){ sndDig();
+  isDigging=true; pl.y=DIG_Y; pl.vy=0; pl.onGround=false;
+  for(var i=0;i<12;i++) spawnDirt(pl.x+pl.w/2,GY);
+}
+function stopDig(){
+  isDigging=false; pl.y=GY-pl.h; pl.vy=0; pl.onGround=true;
+  for(var i=0;i<12;i++) spawnDirt(pl.x+pl.w/2,GY);
+}
+function spawnDirt(x,y){
+  particles.push({x:x,y:y,vx:(Math.random()-0.5)*4,vy:-Math.random()*4-1,life:40,color:'#795548',type:'dirt'});
+}
+function spawnBubble(x,y){
+  particles.push({x:x+(Math.random()-0.5)*20,y:y,vx:(Math.random()-0.5)*1.5,vy:-Math.random()*2-0.5,life:35,color:'rgba(150,220,255,0.85)',type:'bubble'});
+}
+
+
+             
+               //AQUI COMECA A DEFINICAO DOS NIVEIS, CADA FASE TEM PLATAFORMAS, PAREDES, BURACOS DE AGUA, PORTOES DE VELOCIDADE, MEGA BARREIRAS E ESTRELAS, CADA ELEMENTO TEM SUAS PROPRIEDADES DEFINIDAS PARA CONTROLAR O COMPORTAMENTO DO JOGO, COMO COLISOES, HABILIDADES NECESSARIAS PARA PASSAR POR DETERMINADOS OBSTACULOS, E A POSICAO DOS ITENS NO MAPA PARA O JOGADOR INTERAGIR DURANTE O JOGO.
+                  
+// ── Level data ────────────────────────────────────────────────────────────────
+var WORLD=3800;// largura total do mundo (além da largura da tela)
+
+// waterPits: gap in ground filled with water + rock ceiling to block bird
+// ceilY = y from top where ceiling starts, ceilH = ceiling thickness teto cobre de y=0 ate ceilY+ceilH
+var p1={
+  platforms:[//plataformas onde os personagens podem pular e andar, cada plataforma tem x (posicao horizontal), y (altura), w (largura) e h (espessura)
+    {x:480,y:310,w:110,h:18},{x:650,y:265,w:110,h:18},// plataformas 1 fase 1
+    {x:2050,y:305,w:130,h:18},{x:2240,y:272,w:120,h:18},// plataformas 2 fase1
+    {x:2900,y:292,w:150,h:18},{x:3100,y:262,w:130,h:18}// plataformas perto do final da fase 1
+  ],
+  walls:[// paredes verticais que bloqueiam o caminho do jogador, cada parede tem x (posicao horizontal), y (altura), w (largura) e h (altura)
+    {x:310,y:GY-195,w:36,h:195},// primeiro muro grande, perto do inicio
+    {x:1060,y:GY-445,w:36,h:405}// segundo muro grande, depois do primeiro buraco d'agua
+  ],
+  waterPits:[// buracos de agua no chao, cada buraco tem x (posicao horizontal), w (largura), ceilY (altura do teto) e ceilH (espessura do teto)
+    {x:1100, w:460, ceilY:80, ceilH:40}// primeiro buraco d'agua da fase 1,
+  ],
+  gaps:[{x:1700,w:410},{x:2605,w:190}], // aqui consigo mudar o tamanho dos buracos no chao
+
+  speedGates:[{x:2850,y:GY-5000,w:28,h:5000,passed:false}],// portao cor laranja de velocidade, bloqueia o caminho se o jogador nao tiver velocidade suficiente, o unico animal que consegue passar no primeiro portao é o cachorro, que tem a maior velocidade
+  megaBarriers:[],//
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}// linha de chegada, se o jogador passar por ela, ele vence a fase
+};
+var p1Stars=[];//
+(function(){for(var i=0;i<20;i++) p1Stars.push({x:220+i*175+Math.random()*40,y:GY-55-Math.random()*190,got:false,r:10});})();// gera as estrelas da fase 1, cada estrela tem x (posicao horizontal), y (altura), got (se o jogador ja pegou a estrela ou nao) e r (raio da estrela, para calcular a colisao com o jogador)
+
+
+              //  AQUI INICIA A FASE 2, A FASE DO TATUZINHO, QUE TEM A HABILIDADE DE CAVAR E ANDAR NO CHAO, AS ESTRELAS DA FASE 2 FICAM MAIS PERTO DO CHAO PARA INCENTIVAR O USO DO TATUZINHO, E TEM UMA MEGA BARREIRA BLOQUEANDO O CAMINHO PARA A LINHA DE CHEGADA, SE O JOGADOR NAO TIVER DESBLOQUEADO O TATUZINHO NA FASE 1, ELE NAO CONSEGUE PASSAR POR ESSA MEGA BARREIRA E CONSEQUENTEMENTE NAO CONSEGUE CHEGAR NA LINHA DE CHEGADA PARA VENCER A FASE.
+             
+
+                           //cat dog duck  bird  tatu 
+var p2={
+  platforms:[
+    {x:350,y:300,w:50,h:18},{x:550,y:260,w:120,h:18},
+    {x:1900,y:295,w:140,h:18},{x:2320,y:260,w:120,h:18},//
+    {x:2800,y:285,w:150,h:18},{x:3050,y:255,w:130,h:18}//
+  ],
+  walls:[{x:2100,y:GY-290,w:36,h:240}],
+  waterPits:[//
+    {x:200,  w:960, ceilY:80, ceilH:40},// primeiro buraco d'agua da fase2
+    {x:1750, w:440, ceilY:80, ceilH:40}// segundo buraco d'agua da fase2
+  ],
+  gaps:[{x:2550,w:400}],// aqui consigo mudar o tamanho dos buracos no chão
+  speedGates:[{x:3100,y:GY-5000,w:28,h:5000,passed:false}],//portão laranja de velocidade da fase2
+  megaBarriers:[{x:1280,y:0,w:158,h:GY}],// mega barreira bloqueia o caminho se o jogador nao tiver a habilidade de cavar, ou seja, se ele nao tiver desbloqueado o Tatuzinho, que é o unico personagem com a habilidade de cavar, o jogador tem que desbloquear o Tatuzinho na fase 1 para conseguir passar por essa mega barreira, que bloqueia o caminho para a linha de chegada, ou seja, se o jogador nao tiver desbloqueado o Tatuzinho, ele nao consegue chegar na linha de chegada e vencer a fase
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}// linha de chegada da fase 2, se o jogador passar por ela, ele vence a fase
+};
+var p2Stars=[];// gera as estrelas da fase 2, cada estrela tem x (posicao horizontal), y (altura), got (se o jogador ja pegou a estrela ou nao) e r (raio da estrela, para calcular a colisao com o jogador)
+(function(){for(var i=0;i<20;i++) p2Stars.push({x:260+i*175+Math.random()*40,y:GY-55-Math.random()*90,got:false,r:11});})();// as estrelas da fase 2 ficam mais perto do chao, para incentivar o uso do Tatuzinho, que tem a habilidade de cavar e andar no chao
+
+
+var p3={
+  platforms:[
+    {x:2100,y:200,w:120,h:18},{x:2320,y:165,w:100,h:18},
+    {x:2550,y:200,w:110,h:18},
+    {x:3000,y:295,w:130,h:18},{x:3200,y:265,w:120,h:18}
+  ],
+  walls:[{x:2750,y:GY-210,w:36,h:210}],
+  waterPits:[{x:1600,w:520,ceilY:80,ceilH:40}],
+  gaps:[{x:2450,w:200}],
+  frogGaps:[{x:900,w:260,ceilY:55,ceilH:35}],
+  speedGates:[{x:3300,y:GY-5200,w:50,h:5200,passed:false}],
+  megaBarriers:[{x:280,y:GY-5000,w:400,h:5000}],//
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+var p3Stars=[];
+(function(){for(var i=0;i<20;i++) p3Stars.push({x:1200+i*120+(i%3)*30,y:GY-55-(i%5)*38,got:false,r:10});})();
+var p3UnlockStars=[];
+(function(){
+  var xs=[305,345,385,425,465,505,545,585,625,660];
+  for(var i=0;i<10;i++) p3UnlockStars.push({x:xs[i],y:GY+25,got:false,r:10});
+})();
+var p3Insects=[
+  {x:720, y:GY-20,vx:1.5, w:24,h:16,eaten:false,type:'barata',   minX:690, maxX:875},
+  {x:790, y:GY-20,vx:-1.2,w:24,h:16,eaten:false,type:'barata',   minX:690, maxX:875},
+  {x:850, y:GY-20,vx:1.8, w:24,h:16,eaten:false,type:'barata',   minX:690, maxX:875},
+  {x:3390,y:GY-22,vx:1.0, w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580},
+  {x:3470,y:GY-22,vx:-1.3,w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580},
+  {x:3555,y:GY-22,vx:1.1, w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580}
+];
+function getLevel(){ return phase===1?p1:phase===2?p2:p3; }// funcao para pegar os dados da fase atual, se a fase for 1, retorna os dados da fase 1, se a fase for 2, retorna os dados da fase 2
+function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:p3Stars; }// funcao para pegar as estrelas da fase atual, se a fase for 1, retorna as estrelas da fase 1, se a fase for 2, retorna as estrelas da fase 2
+
+function groundAt(x){// funcao para verificar se tem chao em determinada posicao x, usada para detectar se o jogador esta no chao ou caindo em um buraco, a funcao verifica se a posicao x esta dentro de algum dos buracos (gaps) ou buracos d'agua (waterPits) da fase atual, se estiver dentro de algum desses elementos, significa que nao tem chao naquela posicao e a funcao retorna false, caso contrario, retorna true, indicando que tem chao naquela posicao
+  var lv=getLevel();// pega os dados da fase atual para verificar os buracos e buracos d'agua da fase atual
+  var i;// verifica se a posicao x esta dentro de algum dos buracos (gaps) da fase atual
+  for(i=0;i<lv.gaps.length;i++) if(x>lv.gaps[i].x&&x<lv.gaps[i].x+lv.gaps[i].w) return false;// verifica se a posicao x esta dentro de algum dos buracos d'agua (waterPits) da fase atual
+  for(i=0;i<lv.waterPits.length;i++) if(x>lv.waterPits[i].x&&x<lv.waterPits[i].x+lv.waterPits[i].w) return false;// se a posicao x nao estiver dentro de nenhum buraco ou buraco d'agua, significa que tem chao naquela posicao, entao a funcao
+  if(lv.frogGaps) for(i=0;i<lv.frogGaps.length;i++) if(x>lv.frogGaps[i].x&&x<lv.frogGaps[i].x+lv.frogGaps[i].w) return false;
+  return true;
+}
+
+
+                          ////cat dog duck  bird  tatu RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==RESERTA AS FASES AQUI==
+
+                    //FASE 2 AQUI EU DEFINO EM QUAL FASE QUE TRABALHAR AO INICIAR O JOGO
+// ── Game functions ────────────────────────────────────────────────────────────
+function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
+
+  state='playing'; phase=1;// reseta tudo para o inicio da fase 1
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
+  camX=0; score=0; lives=5; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
+  p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
+  p2Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 2 para nao coletadas
+  p1.speedGates.forEach(function(g){g.passed=false;});// reseta os portoes de velocidade da fase 1 para nao passados
+  p2.speedGates.forEach(function(g){g.passed=false;});
+  p3Stars.forEach(function(s){s.got=false;});
+  p3UnlockStars.forEach(function(s){s.got=false;});
+  p3.speedGates.forEach(function(g){g.passed=false;});
+  p3Insects.forEach(function(ins){ins.eaten=false;});
+  frogLongJump=false;// reseta os portoes de velocidade da fase 2 para nao passados
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});// reseta os botoes de escolha de personagem para nao ativos
+  document.getElementById('btn-cat').classList.add('active');// define o botao do gatinho como ativo, ja que o gatinho é o personagem inicial
+}
+function respawn(){
+  lives--; if(isDigging) stopDig();
+  if(lives<=0){state='gameover'; sndGameOver();return;}
+  pl.x=Math.max(60,camX+80); pl.y=GY-50; pl.vy=0;
+}
+function unlockCaterpillar(){ sndUnlock();
+  catUnlocked=true;
+  var btn=document.getElementById('btn-tatu');
+  btn.classList.remove('locked');
+  document.getElementById('cat-lock').style.display='none';
+}
+function beginPhase2(){ sndPhase2Start();//
+  phase=2; state='playing';
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0;
+  pl.char='cat'; // reseta personagem para o Gatinho
+  camX=0; isDigging=false;
+  p2.speedGates.forEach(function(g){g.passed=false;});
+  // Atualiza botão ativo para o Gatinho
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-cat').classList.add('active');
+}
+
+function unlockFrog(){ sndUnlock();
+  frogUnlocked=true;
+  var btn=document.getElementById('btn-frog');
+  btn.classList.remove('locked');
+  document.getElementById('frog-lock').style.display='none';
+}
+function beginPhase3(){ sndPhase3Start();
+  phase=3; state='playing';
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
+  camX=0; isDigging=false; frogLongJump=false;
+  p3.speedGates.forEach(function(g){g.passed=false;});
+  p3Insects.forEach(function(ins){ins.eaten=false;});
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-cat').classList.add('active');
+}
+// ── Update ────────────────────────────────────────────────────────────────────
+function update(){
+  if(state!=='playing') return;
+  var def=CHARS[pl.char], lv=getLevel(), sts=getStars(), i;
+
+  // Duck flap timer
+  if(duckFlapTimer>0) duckFlapTimer--;
+
+  // Particles
+  for(i=particles.length-1;i>=0;i--){
+    var pt=particles[i];
+    pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.2; pt.life--;
+    if(pt.life<=0) particles.splice(i,1);
+  }
+
+  if(isDigging&&pl.char!=='tatu') stopDig();
+  if(isDigging && !groundAt(pl.x + pl.w/2)){ stopDig(); }
+
+  // Water pit detection
+  pl.inWaterPit=false;
+  var activePit=null;
+  for(i=0;i<lv.waterPits.length;i++){
+    var wp=lv.waterPits[i];
+    if(pl.x+pl.w>wp.x&&pl.x<wp.x+wp.w){
+      pl.inWaterPit=true; activePit=wp;
+    }
+  }
+
+  // Horizontal movement
+  if(pl.char==='frog'&&frogLongJump&&!pl.onGround){
+    if(K['ArrowLeft']||K['a']) pl.vx=-10;
+    else if(K['ArrowRight']||K['d']) pl.vx=10;
+    else pl.vx=0;
+  } else {
+    if(K['ArrowLeft']||K['a']) pl.vx=-def.spd;
+    else if(K['ArrowRight']||K['d']) pl.vx=def.spd;
+    else pl.vx=0;
+  }
+
+  // Vertical physics
+  if(isDigging){
+    pl.y=DIG_Y; pl.vy=0; pl.onGround=false;
+  } else if(def.swim&&pl.inWaterPit&&pl.y+pl.h>GY-10){
+    // Duck swimming in water pit — can go up to collect stars
+    pl.vy=(K['ArrowUp']||K[' '])?-4.5:1.8;
+    if(pl.y>GY+55) pl.y=GY+55;
+    // No upper cap — duck can rise to collect stars near top of pit
+  } else if(!def.swim&&!isDigging&&pl.inWaterPit&&pl.y+pl.h>GY-5){
+    // Non-duck in water: sink fast
+    pl.vy+=GRAV*3.5;
+    if(Math.random()<0.35) spawnBubble(pl.x+pl.w/2-camX+camX,pl.y+pl.h/2);
+    if(pl.y>GY+70) respawn();
+  } else if(def.fly&&(K['ArrowUp']||K[' '])){
+    pl.vy=-3.5; pl.onGround=false;
+  } else {
+    pl.vy+=def.grav;
+  }
+
+  pl.x+=pl.vx; pl.y+=pl.vy;
+  if(pl.x<0) pl.x=0;
+  pl.onGround=false;
+
+  if(!isDigging){
+    // Ground
+    if(pl.y+pl.h>=GY&&groundAt(pl.x+pl.w/2)){
+      pl.y=GY-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=false;
+    }
+    // Platforms
+    for(i=0;i<lv.platforms.length;i++){
+      var p=lv.platforms[i];
+      if(pl.x+pl.w>p.x&&pl.x<p.x+p.w&&pl.y+pl.h>p.y&&pl.y+pl.h<p.y+p.h+12&&pl.vy>=0){
+        pl.y=p.y-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=false;
+      }
+    }
+    // Normal walls
+    for(i=0;i<lv.walls.length;i++){
+      var w=lv.walls[i];
+      if(pl.x+pl.w>w.x&&pl.x<w.x+w.w&&pl.y+pl.h>w.y&&pl.y<w.y+w.h){
+        if(pl.vx>0) pl.x=w.x-pl.w; else if(pl.vx<0) pl.x=w.x+w.w;
+        pl.vx=0;
+      }
+    }
+    // Mega barriers
+    for(i=0;i<lv.megaBarriers.length;i++){
+      var mb=lv.megaBarriers[i];
+      if(pl.x+pl.w>mb.x&&pl.x<mb.x+mb.w&&pl.y+pl.h>mb.y&&pl.y<mb.y+mb.h){
+        if(pl.vx>0) pl.x=mb.x-pl.w; else if(pl.vx<0) pl.x=mb.x+mb.w;
+        pl.vx=0;
+      }
+    }
+    // Water pit CEILING — FIX #1 (sem paredes laterais) + FIX #2 (sem condicao vy)
+    // Fix #1: paredes laterais removidas → Patinho entra livremente pelo buraco no chao
+    // Fix #2: tecto bloqueia qualquer direcao de voo → Passarinho nao sobrevoa
+    for(i=0;i<lv.waterPits.length;i++){
+      var wp2=lv.waterPits[i];
+      if(pl.x+pl.w>wp2.x&&pl.x<wp2.x+wp2.w){
+        // Bloqueia qualquer animal acima do tecto (cobre de y=0 ate ceilY+ceilH)
+        if(pl.y<wp2.ceilY+wp2.ceilH){
+          pl.y=wp2.ceilY+wp2.ceilH;
+          if(pl.vy<0) pl.vy=0; // para impulso de subida
+        }
+        // PAREDES LATERAIS REMOVIDAS — animais caem pelo buraco naturalmente
+      }
+    }
+    // Frog gap ceiling (bloqueia passarinho)
+    if(lv.frogGaps){ for(i=0;i<lv.frogGaps.length;i++){
+      var fg2=lv.frogGaps[i];
+      if(pl.x+pl.w>fg2.x&&pl.x<fg2.x+fg2.w){
+        if(pl.y<fg2.ceilY+fg2.ceilH){ pl.y=fg2.ceilY+fg2.ceilH; if(pl.vy<0) pl.vy=0; }
+      }
+    }}
+    // Speed gates
+    for(i=0;i<lv.speedGates.length;i++){
+      var sg=lv.speedGates[i];
+      if(!sg.passed&&pl.x+pl.w>sg.x&&pl.x<sg.x+sg.w&&pl.y+pl.h>sg.y&&pl.y<sg.y+sg.h){
+        if(def.spd>=9){sg.passed=true; sndSpeedGate();score+=20;}
+        else{pl.x=sg.x-pl.w; pl.vx=0;}
+      }
+    }
+  }
+
+  // Stars
+  for(i=0;i<sts.length;i++){
+    var s=sts[i];
+    if(!s.got&&Math.abs(pl.x+pl.w/2-s.x)<s.r+14&&Math.abs(pl.y+pl.h/2-s.y)<s.r+14){
+      s.got=true; score+=10; sndStar();
+    }
+  }
+
+  // P3 unlock stars + insetos
+  if(phase===3){
+    var i2;
+    for(i2=0;i2<p3UnlockStars.length;i2++){
+      var us=p3UnlockStars[i2];
+      if(!us.got&&Math.abs(pl.x+pl.w/2-us.x)<us.r+16&&Math.abs(pl.y+pl.h/2-us.y)<us.r+16){
+        us.got=true; score+=10; sndStar();
+        var allUnlock=p3UnlockStars.every(function(s){return s.got;});
+        if(allUnlock&&!frogUnlocked) unlockFrog();
+      }
+    }
+    for(i2=0;i2<p3Insects.length;i2++){
+      var ins=p3Insects[i2]; if(ins.eaten) continue;
+      ins.x+=ins.vx;
+      if(ins.x<ins.minX||ins.x>ins.maxX) ins.vx=-ins.vx;
+      if(pl.x+pl.w>ins.x&&pl.x<ins.x+ins.w&&pl.y+pl.h>ins.y&&pl.y<ins.y+ins.h){
+        if(pl.char==='frog'){ ins.eaten=true; score+=15; sndEat(); frogTongue=18;
+          for(var bi=0;bi<8;bi++) spawnBubble(ins.x+ins.w/2,ins.y+ins.h/2);
+        } else { sndHit(); respawn(); }
+      }
+    }
+  }
+  // Finish
+  if(pl.x+pl.w>lv.finish.x){
+    if(phase===1){
+      var all=p1Stars.every(function(s){return s.got;});
+      if(all&&!catUnlocked) unlockCaterpillar();
+      state='phase2intro';
+    } else if(phase===2){ state='phase3intro';
+    } else { state='win'; sndVictory(); }
+  }
+
+  if(pl.y>CH+80) respawn();
+  camX=Math.max(0,Math.min(pl.x-CW/3,WORLD-CW));
+}
+
+// ── Draw helpers ──────────────────────────────────────────────────────────────
+function cloud(x,y){
+  ctx.beginPath();
+  ctx.arc(x,y,28,0,Math.PI*2); ctx.arc(x+22,y-10,22,0,Math.PI*2); ctx.arc(x+44,y,28,0,Math.PI*2);
+  ctx.fill();
+}
+function drawTree(x,ph){
+  ctx.fillStyle=ph===2?'#37474F':'#5D4037'; ctx.fillRect(x-7,GY-48,14,48);
+  ctx.fillStyle=ph===2?'#2E7D32':'#388E3C'; ctx.beginPath(); ctx.arc(x,GY-65,32,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=ph===2?'#388E3C':'#43A047'; ctx.beginPath(); ctx.arc(x,GY-80,20,0,Math.PI*2); ctx.fill();
+}
+function drawBG(){
+  var ph=phase;
+  var sg=ctx.createLinearGradient(0,0,0,CH);
+  sg.addColorStop(0,ph===3?'#0A0E1A':ph===2?'#546E7A':'#87CEEB');
+  sg.addColorStop(1,ph===3?'#0D2137':ph===2?'#37474F':'#E0F7FA');
+  ctx.fillStyle=sg; ctx.fillRect(0,0,CW,CH);
+  if(ph===3){
+    ctx.fillStyle='rgba(255,255,220,0.92)'; ctx.beginPath(); ctx.arc(CW-80,60,30,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,200,0.25)'; ctx.beginPath(); ctx.arc(CW-80,60,45,0,Math.PI*2); ctx.fill();
+    var t3=Date.now()/800;
+    for(var fl=0;fl<8;fl++){
+      var fx=(180+fl*420-camX*0.25)%CW, fy=260+Math.sin(t3+fl*1.3)*40;
+      var fa=0.4+0.5*Math.sin(t3*2+fl); ctx.globalAlpha=fa;
+      ctx.fillStyle='#FFFF55'; ctx.beginPath(); ctx.arc(fx,fy,3,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,80,0.3)'; ctx.beginPath(); ctx.arc(fx,fy,8,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+  ctx.fillStyle=ph===3?'rgba(100,180,255,0.12)':ph===2?'rgba(200,220,255,0.2)':'rgba(255,255,255,0.82)';
+  [80,260,500,720,970,1300,1700,2100,2500,2900].forEach(function(cx){
+    var sx=cx-camX*0.45; if(sx>-80&&sx<CW+80) cloud(sx,55+(cx%3)*25);
+  });
+  [140,320,520,730,1000,1250,1520,1800,2100,2400,2700,3000,3300,3600].forEach(function(tx){
+    var sx=tx-camX*0.78; if(sx>-50&&sx<CW+50) drawTree(sx,ph);
+  });
+}
+function drawGround(){
+  var lv=getLevel(), startX=Math.floor(camX/38)*38;
+  for(var gx=startX;gx<camX+CW+38;gx+=38){
+    if(!groundAt(gx+19)) continue;
+    var sx=gx-camX;
+    ctx.fillStyle=phase===2?'#78909C':'#4CAF50'; ctx.fillRect(sx,GY,38,20);
+    ctx.fillStyle=phase===2?'#90A4AE':'#66BB6A'; ctx.fillRect(sx,GY,38,5);
+    ctx.fillStyle='#795548'; ctx.fillRect(sx,GY+20,38,CH-GY-20);
+  }
+}
+function drawPlatforms(){
+  var lv=getLevel();
+  for(var i=0;i<lv.platforms.length;i++){
+    var p=lv.platforms[i], sx=p.x-camX;
+    if(sx>CW||sx+p.w<0) continue;
+    ctx.fillStyle=phase===2?'#607D8B':'#4CAF50'; ctx.fillRect(sx,p.y,p.w,p.h);
+    ctx.fillStyle=phase===2?'#78909C':'#66BB6A'; ctx.fillRect(sx,p.y,p.w,5);
+  }
+}
+function drawWalls(){
+  var lv=getLevel();
+  for(var i=0;i<lv.walls.length;i++){
+    var w=lv.walls[i], sx=w.x-camX;
+    if(sx>CW||sx+w.w<0) continue;
+    for(var by=w.y;by<w.y+w.h;by+=18)
+      for(var bx=0;bx<w.w;bx+=18){
+        ctx.fillStyle=(Math.floor((by-w.y)/18)+Math.floor(bx/18))%2===0?'#795548':'#6D4C41';
+        ctx.fillRect(sx+bx,by,17,17);
+      }
+    ctx.fillStyle='rgba(0,0,0,0.45)'; rrect(sx+w.w/2-62,w.y-26,124,20,8); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('Use o Gatinho! [1]',sx+w.w/2,w.y-11);
+  }
+}
+
+// ── Water Pits (the key mechanic!) ────────────────────────────────────────────
+function drawWaterPits(){
+  var lv=getLevel(), t=Date.now()/600;
+  for(var i=0;i<lv.waterPits.length;i++){
+    var wp=lv.waterPits[i], sx=wp.x-camX;
+    if(sx>CW||sx+wp.w<0) continue;
+
+    // ── Dark pit abyss
+    ctx.fillStyle='#0a1520';
+    ctx.fillRect(sx,GY,wp.w,CH-GY);
+
+    // ── Water fill inside pit
+    var wg=ctx.createLinearGradient(0,GY,0,GY+80);
+    wg.addColorStop(0,'rgba(33,150,243,0.92)');
+    wg.addColorStop(0.6,'rgba(21,101,192,0.97)');
+    wg.addColorStop(1,'rgba(13,71,161,1)');
+    ctx.fillStyle=wg;
+    ctx.fillRect(sx,GY,wp.w,80);
+
+    // ── Animated waves on water surface
+    ctx.strokeStyle='rgba(255,255,255,0.55)'; ctx.lineWidth=2;
+    for(var wx=sx;wx<sx+wp.w-10;wx+=20){
+      ctx.beginPath();
+      ctx.moveTo(wx,    GY+5+Math.sin(t+wx*0.09)*4);
+      ctx.lineTo(wx+10, GY+5+Math.sin(t+wx*0.09+1.2)*4);
+      ctx.stroke();
+    }
+
+    // ── Rock ceiling above pit (blocks bird from flying over)
+    var rockGrad=ctx.createLinearGradient(0,wp.ceilY,0,wp.ceilY+wp.ceilH);
+    rockGrad.addColorStop(0,'#263238'); rockGrad.addColorStop(1,'#455A64');//
+    ctx.fillStyle=rockGrad;
+    ctx.fillRect(sx,wp.ceilY,wp.w,wp.ceilH);
+    // Rock texture lines
+    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1;
+    for(var rx=sx;rx<sx+wp.w;rx+=18){
+      ctx.beginPath(); ctx.moveTo(rx,wp.ceilY); ctx.lineTo(rx+9,wp.ceilY+wp.ceilH); ctx.stroke();
+    }
+    // Stalactites hanging from ceiling
+    ctx.fillStyle='#37474F';
+    for(var st=sx+15;st<sx+wp.w-10;st+=35){
+      var sh=12+Math.sin(st)*5;
+      ctx.beginPath();
+      ctx.moveTo(st-7,wp.ceilY+wp.ceilH);
+      ctx.lineTo(st+7,wp.ceilY+wp.ceilH);
+      ctx.lineTo(st,wp.ceilY+wp.ceilH+sh);
+      ctx.fill();
+    }
+
+    // ── Pit dirt walls (left and right edges)
+    ctx.fillStyle='#5D4037';
+    ctx.fillRect(sx-10,GY-5,10,CH-GY+5);
+    ctx.fillRect(sx+wp.w,GY-5,10,CH-GY+5);
+    // Soil texture stripes
+    ctx.fillStyle='#6D4C41';
+    for(var sy2=GY;sy2<CH;sy2+=18){
+      ctx.fillRect(sx-10,sy2,10,8);
+      ctx.fillRect(sx+wp.w,sy2,10,8);
+    }
+
+    // ── Hint label above pit
+    ctx.fillStyle='rgba(0,0,0,0.6)';
+    rrect(sx+wp.w/2-90,wp.ceilY-30,180,24,10); ctx.fill();
+    ctx.strokeStyle='#FDD835'; ctx.lineWidth=1.5;
+    rrect(sx+wp.w/2-90,wp.ceilY-30,180,24,10); ctx.stroke();
+    ctx.fillStyle='#FDD835'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+    ctx.fillText('Apenas o Patinho nada! [3]',sx+wp.w/2,wp.ceilY-14);
+
+    // ── Entry gap hint (opening between ceiling and pit walls)
+    ctx.fillStyle='rgba(253,216,53,0.15)';
+    ctx.fillRect(sx,wp.ceilY+wp.ceilH,wp.w,GY-(wp.ceilY+wp.ceilH));
+    // Small arrow pointing down into water
+    ctx.fillStyle='rgba(253,216,53,0.7)';
+    ctx.font='18px Arial'; ctx.textAlign='center';
+    ctx.fillText('v',sx+wp.w/2,wp.ceilY+wp.ceilH+20);
+  }
+}
+
+function drawMegaBarriers(){
+  var lv=getLevel();
+  if(!lv.megaBarriers||!lv.megaBarriers.length) return;
+  for(var i=0;i<lv.megaBarriers.length;i++){
+    var mb=lv.megaBarriers[i], sx=mb.x-camX;
+    if(sx>CW||sx+mb.w<0) continue;
+    var grad=ctx.createLinearGradient(sx,0,sx+mb.w,0);
+    grad.addColorStop(0,'#1a1a1a'); grad.addColorStop(0.5,'#37474F'); grad.addColorStop(1,'#1a1a1a');
+    ctx.fillStyle=grad; ctx.fillRect(sx,0,mb.w,GY);
+    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
+    for(var by=0;by<GY;by+=22)
+      for(var bx=0;bx<mb.w;bx+=26){ ctx.strokeRect(sx+bx+(by%44<22?0:13),by,25,21); }
+    for(var s2=0;s2<mb.w;s2+=12){
+      ctx.fillStyle=(Math.floor(s2/12))%2===0?'#F44336':'#FFD700';
+      ctx.fillRect(sx+s2,0,12,16);
+    }
+    ctx.fillStyle='#F44336'; rrect(sx+mb.w/2-80,GY/2-18,160,36,10); ctx.fill();
+    ctx.strokeStyle='#FF8F00'; ctx.lineWidth=2; rrect(sx+mb.w/2-80,GY/2-18,160,36,10); ctx.stroke();
+    ctx.fillStyle='white'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+    ctx.fillText('Cave por baixo!',sx+mb.w/2,GY/2-2);
+    ctx.font='11px Arial'; ctx.fillStyle='#FFD700';
+    ctx.fillText('Tatuzinho [5] + Seta v',sx+mb.w/2,GY/2+14);
+    ctx.fillStyle='rgba(102,187,106,0.3)'; ctx.fillRect(sx,GY,mb.w,30);
+    ctx.fillStyle='#66BB6A'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('TUNEL',sx+mb.w/2,GY+19);
+  }
+}
+function drawGaps(){
+  var lv=getLevel();
+  for(var i=0;i<lv.gaps.length;i++){
+    var g=lv.gaps[i], sx=g.x-camX;
+    if(sx>CW||sx+g.w<0) continue;
+    ctx.fillStyle='#0d1b2a'; ctx.fillRect(sx,GY,g.w,CH-GY);
+    ctx.fillStyle='rgba(0,0,0,0.45)'; rrect(sx+g.w/2-74,GY-24,148,18,8); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('Use o Passarinho! [4]',sx+g.w/2,GY-10);
+  }
+}
+function drawSpeedGates(){
+  var lv=getLevel();
+  for(var i=0;i<lv.speedGates.length;i++){
+    var g=lv.speedGates[i]; if(g.passed) continue;
+    var sx=g.x-camX; if(sx>CW||sx+g.w<0) continue;
+    ctx.fillStyle='#FF7043'; ctx.fillRect(sx,g.y,g.w,g.h);
+    ctx.fillStyle='rgba(0,0,0,0.45)'; rrect(sx+g.w/2-62,g.y-24,124,18,8); ctx.fill();
+    ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('Corra rapido! [2]',sx+g.w/2,g.y-10);
+  }
+}
+function drawStars(){
+  var sts=getStars(), t=Date.now()/350;
+  for(var i=0;i<sts.length;i++){
+    var s=sts[i]; if(s.got) continue;
+    var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
+    var bob=Math.sin(t+s.x)*3;
+    ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
+    ctx.fillStyle='#FFD700'; ctx.fill();
+    ctx.strokeStyle='#FFA000'; ctx.lineWidth=2; ctx.stroke();
+    ctx.fillStyle='#E65100'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
+    ctx.fillText('*',sx,s.y+bob+4);
+  }
+}
+function drawFinish(){
+  var fin=getLevel().finish, sx=fin.x-camX;
+  if(sx>CW+60||sx<-60) return;
+  ctx.fillStyle='#9E9E9E'; ctx.fillRect(sx,fin.y,fin.w,fin.h);
+  ctx.fillStyle='#F44336';
+  ctx.beginPath(); ctx.moveTo(sx+fin.w,fin.y); ctx.lineTo(sx+fin.w+48,fin.y+14); ctx.lineTo(sx+fin.w,fin.y+28); ctx.fill();
+  ctx.fillStyle='#FFD700'; ctx.font='bold 15px Arial'; ctx.textAlign='center';
+  ctx.fillText('META!',sx+26,fin.y-10);
+}
+function drawParticles(){
+  for(var i=0;i<particles.length;i++){
+    var p=particles[i];
+    ctx.globalAlpha=p.life/40;
+    if(p.type==='bubble'){
+      ctx.strokeStyle=p.color; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(p.x-camX,p.y,4,0,Math.PI*2); ctx.stroke();
+    } else {
+      ctx.fillStyle=p.color; ctx.fillRect(p.x-camX-3,p.y-3,6,6);
+    }
+  }
+  ctx.globalAlpha=1;
+}
+function drawDigTunnel(){
+  if(!isDigging) return;
+  var sx=pl.x-camX;
+  ctx.fillStyle='rgba(93,64,55,0.7)'; ctx.fillRect(sx-8,GY,pl.w+16,DIG_Y-GY+pl.h+8);
+  ctx.strokeStyle='rgba(141,110,99,0.6)'; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(sx-8,GY); ctx.lineTo(sx-8,DIG_Y+pl.h+8); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(sx+pl.w+8,GY); ctx.lineTo(sx+pl.w+8,DIG_Y+pl.h+8); ctx.stroke();
+}
+
+// ── Draw Characters ───────────────────────────────────────────────────────────
+function drawCat(cx,cy,def){
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+5,16,15,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy-5,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.moveTo(cx-9,cy-12); ctx.lineTo(cx-16,cy-23); ctx.lineTo(cx-3,cy-18); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(cx+9,cy-12); ctx.lineTo(cx+16,cy-23); ctx.lineTo(cx+3,cy-18); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(cx-6,cy-7,3,0,Math.PI*2); ctx.arc(cx+6,cy-7,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(cx-5,cy-8,1.2,0,Math.PI*2); ctx.arc(cx+7,cy-8,1.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#555'; ctx.lineWidth=1;
+  [[-12,-3],[12,-3],[-12,0],[12,0]].forEach(function(p){
+    ctx.beginPath(); ctx.moveTo(cx+(p[0]<0?p[0]:-2),cy+p[1]); ctx.lineTo(cx+(p[0]<0?-2:p[0]),cy+p[1]); ctx.stroke();
+  });
+  ctx.strokeStyle=def.color; ctx.lineWidth=3;
+  ctx.beginPath(); ctx.moveTo(cx+14,cy+5); ctx.quadraticCurveTo(cx+26,cy,cx+20,cy-14); ctx.stroke();
+}
+function drawDog(cx,cy,def){
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+5,17,15,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy-4,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.ellipse(cx-13,cy-4,5,11,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+13,cy-4,5,11,0.3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#BCAAA4'; ctx.beginPath(); ctx.ellipse(cx,cy-1,8,6,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(cx,cy-3,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx-7,cy-8,3,0,Math.PI*2); ctx.arc(cx+7,cy-8,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(cx-6,cy-9,1.2,0,Math.PI*2); ctx.arc(cx+8,cy-9,1.2,0,Math.PI*2); ctx.fill();
+}
+function drawDuck(cx,cy,def){
+  // Wing flap animation when duck tries to jump outside water
+  var wingAngle=0;
+  if(duckFlapTimer>0){
+    wingAngle=Math.sin((30-duckFlapTimer)*0.8)*0.55; // flap angle
+  }
+  // Body
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+6,17,14,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy-6,11,0,Math.PI*2); ctx.fill();
+  // Beak
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.moveTo(cx+8,cy-7); ctx.lineTo(cx+18,cy-5); ctx.lineTo(cx+8,cy-2); ctx.fill();
+  // Animated wing
+  ctx.save();
+  ctx.translate(cx-6,cy+5);
+  ctx.rotate(-wingAngle);
+  ctx.fillStyle='#F9A825';
+  ctx.beginPath(); ctx.ellipse(0,0,10,6,0,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // Eye
+  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx+4,cy-8,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx+5,cy-9,1.2,0,Math.PI*2); ctx.fill();
+  // Show "no jump" hint bubble when flapping — raised higher to avoid name conflict
+  if(duckFlapTimer>0 && !pl.inWaterPit){
+    var bx=cx, by=cy-62; // raised up well above the name tag
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    rrect(bx-32,by-14,64,22,10); ctx.fill();
+    ctx.strokeStyle='#FDD835'; ctx.lineWidth=2;
+    rrect(bx-32,by-14,64,22,10); ctx.stroke();
+    ctx.fillStyle='#E65100'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('so nado! :)',bx,by+3);
+    // Tail pointing down toward duck
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.beginPath();
+    ctx.moveTo(bx-5,by+8); ctx.lineTo(bx+5,by+8); ctx.lineTo(bx,by+16);
+    ctx.fill();
+    ctx.strokeStyle='#FDD835'; ctx.lineWidth=1.5;
+    ctx.beginPath();
+    ctx.moveTo(bx-5,by+8); ctx.lineTo(bx,by+16); ctx.lineTo(bx+5,by+8);
+    ctx.stroke();
+  }
+}
+function drawBird(cx,cy,def){
+  var flap=Math.sin(Date.now()/130)*0.5;
+  ctx.fillStyle=def.accent;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-flap);
+  ctx.beginPath(); ctx.ellipse(-13,0,13,6,0.3,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(flap);
+  ctx.beginPath(); ctx.ellipse(13,0,13,6,-0.3,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+3,12,11,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy-6,9,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#FF8F00';
+  ctx.beginPath(); ctx.moveTo(cx+7,cy-7); ctx.lineTo(cx+15,cy-5); ctx.lineTo(cx+7,cy-3); ctx.fill();
+  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx+3,cy-9,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx+4,cy-10,1.2,0,Math.PI*2); ctx.fill();
+}
+function drawTatu(cx,cy,def){
+  var t=Date.now()/180;
+  var skinColor='#D4A574';   // bege dourado suave
+  var shellColor='#A0785A';  // marrom médio carapaça
+  var bandLight='#C49A6C';   // faixa clara
+  var tummyColor='#F0D0A0';  // barriga bege clarinho
+  var darkColor='#6B4226';   // contorno suave
+
+  // ── RABO FOFO anelado (curvo para cima) ──────────────────────
+  // Rabo afinando gradualmente da base até a ponta
+  var tailSteps=14;
+  var tSx=cx-12,tSy=cy+3,tCx=cx-26,tCy=cy+2,tEx=cx-24,tEy=cy-8;
+  for(var ts=0;ts<tailSteps;ts++){
+    var t0=ts/tailSteps, t1=(ts+1)/tailSteps;
+    var lw=4.5*(1-t0)+0.3*t0;
+    var bx0=(1-t0)*(1-t0)*tSx+2*(1-t0)*t0*tCx+t0*t0*tEx;
+    var by0=(1-t0)*(1-t0)*tSy+2*(1-t0)*t0*tCy+t0*t0*tEy;
+    var bx1=(1-t1)*(1-t1)*tSx+2*(1-t1)*t1*tCx+t1*t1*tEx;
+    var by1=(1-t1)*(1-t1)*tSy+2*(1-t1)*t1*tCy+t1*t1*tEy;
+    ctx.strokeStyle=bandLight; ctx.lineWidth=lw; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(bx0,by0); ctx.lineTo(bx1,by1); ctx.stroke();
+  }
+  // Contorno sutil
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.7; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(cx-12,cy+3);
+  ctx.quadraticCurveTo(cx-26,cy+2,cx-24,cy-8);
+  ctx.stroke();
+  // Anéis do rabo
+  var raboPoints=[{x:cx-15,y:cy+2},{x:cx-19,y:cy},{x:cx-22,y:cy-4},{x:cx-23,y:cy-7}];
+  for(var r=0;r<raboPoints.length;r++){
+    ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.arc(raboPoints[r].x,raboPoints[r].y,1.5-r*0.3,0,Math.PI*2); ctx.stroke();
+  }
+
+  // ── BARRIGA clara e fofa ──────────────────────────────────────
+  ctx.fillStyle=tummyColor;
+  ctx.beginPath(); ctx.ellipse(cx-1,cy+5,11,7,0,0,Math.PI*2); ctx.fill();
+
+  // ── CORPO com carapaça em faixas ─────────────────────────────
+  // Placa traseira arredondada
+  var shGrad=ctx.createRadialGradient(cx-10,cy-4,1,cx-8,cy-1,11);
+  shGrad.addColorStop(0,bandLight); shGrad.addColorStop(1,shellColor);
+  ctx.fillStyle=shGrad;
+  ctx.beginPath(); ctx.ellipse(cx-8,cy-1,11,10,0.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx-8,cy-1,11,10,0.2,0,Math.PI*2); ctx.stroke();
+
+  // 3 faixas centrais animadas
+  for(var b=0;b<3;b++){
+    var bx=cx-1+b*5;
+    var wob=isDigging?Math.sin(t*5+b*1.2)*2:0;
+    var fg=ctx.createLinearGradient(bx-4,cy-9,bx+4,cy+7);
+    fg.addColorStop(0,bandLight); fg.addColorStop(1,shellColor);
+    ctx.fillStyle=fg;
+    ctx.beginPath(); ctx.ellipse(bx,cy-1+wob,4,9,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=darkColor; ctx.lineWidth=0.6;
+    ctx.beginPath(); ctx.ellipse(bx,cy-1+wob,4,9,0,0,Math.PI*2); ctx.stroke();
+  }
+
+  // Placa dianteira (ombro)
+  var shGrad2=ctx.createRadialGradient(cx+10,cy-3,1,cx+10,cy,8);
+  shGrad2.addColorStop(0,bandLight); shGrad2.addColorStop(1,shellColor);
+  ctx.fillStyle=shGrad2;
+  ctx.beginPath(); ctx.ellipse(cx+10,cy-1,8,9,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+10,cy-1,8,9,0,0,Math.PI*2); ctx.stroke();
+
+  // ── PATINHAS com garrinhas ────────────────────────────────────
+  var patas=[{x:cx-9,fase:0},{x:cx-1,fase:1},{x:cx+5,fase:2},{x:cx+12,fase:3}];
+  for(var p=0;p<4;p++){
+    var pa=patas[p];
+    var wobP=isDigging?Math.sin(t*5+pa.fase*1.1)*5:Math.sin(t*0.9+pa.fase)*1.5;
+    ctx.strokeStyle=skinColor; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(pa.x,cy+9); ctx.lineTo(pa.x,cy+11+wobP); ctx.stroke();
+    ctx.fillStyle=skinColor;
+    ctx.beginPath(); ctx.ellipse(pa.x,cy+12+wobP,2,1.25,0,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.ellipse(pa.x,cy+12+wobP,2,1.25,0,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle=darkColor; ctx.lineWidth=1.5; ctx.lineCap='round';
+    for(var g=-1;g<=1;g++){
+      ctx.beginPath();
+      ctx.moveTo(pa.x+g*1.5,cy+13+wobP);
+      ctx.quadraticCurveTo(pa.x+g*2,cy+15+wobP+(isDigging?2:0),
+                           pa.x+g*1.5,cy+16+wobP+(isDigging?3:0));
+      ctx.stroke();
+    }
+  }
+
+  // ── CABEÇA proporcional ao corpo ─────────────────────────────
+  ctx.fillStyle=skinColor;
+  ctx.beginPath(); ctx.ellipse(cx+20,cy-1,7,6,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+20,cy-1,7,6,0,0,Math.PI*2); ctx.stroke();
+
+  // Orelhinhas proporcionais
+  ctx.fillStyle=shellColor;
+  ctx.beginPath(); ctx.ellipse(cx+15,cy-6,2.63,4.2,0.3,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+15,cy-6,2.63,4.2,0.3,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#E8B99A';
+  ctx.beginPath(); ctx.ellipse(cx+15,cy-6,1.37,2.63,0.3,0,Math.PI*2); ctx.fill();
+
+  ctx.fillStyle=shellColor;
+  ctx.beginPath(); ctx.ellipse(cx+22,cy-7,2.63,4.2,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+22,cy-7,2.63,4.2,-0.3,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#E8B99A';
+  ctx.beginPath(); ctx.ellipse(cx+22,cy-7,1.37,2.63,-0.3,0,Math.PI*2); ctx.fill();
+
+  // Focinho pontudo e proporcional
+  ctx.fillStyle=tummyColor;
+  ctx.beginPath(); ctx.ellipse(cx+26,cy+1,4.66,2.92,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+26,cy+1,4.66,2.92,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle=darkColor;
+  ctx.beginPath(); ctx.ellipse(cx+29.5,cy+0.5,1.40,1.05,0,0,Math.PI*2); ctx.fill();
+
+  // Olho natural proporcional
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.ellipse(cx+18,cy-3,2.5,2.7,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=darkColor; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.ellipse(cx+18,cy-3,2.5,2.7,0,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='#1a0a00';
+  ctx.beginPath(); ctx.ellipse(cx+19,cy-3,1.5,1.7,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(cx+19.5,cy-4.5,0.8,0,Math.PI*2); ctx.fill();
+
+  // Sorrisinho fofo
+  ctx.strokeStyle=darkColor; ctx.lineWidth=1.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(cx+24,cy+3,2.5,Math.PI+0.4,Math.PI*2-0.4); ctx.stroke();
+
+  // Bochechinhas rosadas
+  ctx.fillStyle='rgba(255,182,193,0.45)';
+  ctx.beginPath(); ctx.ellipse(cx+22,cy+1,2,1.5,0,0,Math.PI*2); ctx.fill();
+
+  // ── EFEITO DE CAVAR ──────────────────────────────────────────
+  if(isDigging){
+    ctx.fillStyle='rgba(121,85,72,0.4)';
+    ctx.beginPath(); ctx.ellipse(cx,cy+18,22,8,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#A0785A';
+    for(var d=0;d<8;d++){
+      var da=t*3+d*(Math.PI/4);
+      var dr=20+Math.sin(t*2+d)*6;
+      ctx.beginPath();
+      ctx.arc(cx+Math.cos(da)*dr,cy+16+Math.sin(da)*7,2,0,Math.PI*2); ctx.fill();
+    }
+    ctx.strokeStyle='rgba(160,120,90,0.35)'; ctx.lineWidth=2.5;
+    for(var mv=0;mv<3;mv++){
+      ctx.beginPath();
+      ctx.moveTo(cx-22-mv*5,cy+mv*4);
+      ctx.lineTo(cx-13-mv*5,cy+mv*4); ctx.stroke();
+    }
+  }
+}
+function drawFrog(cx,cy,def){
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+4,15,12,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx,cy-6,11,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#A5D6A7'; ctx.beginPath(); ctx.ellipse(cx-7,cy-13,5,5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx+7,cy-13,5,5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx-7,cy-13,3,0,Math.PI*2); ctx.arc(cx+7,cy-13,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx-6,cy-14,1.2,0,Math.PI*2); ctx.arc(cx+8,cy-14,1.2,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle=def.accent; ctx.lineWidth=3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx-12,cy+10); ctx.lineTo(cx-20,cy+18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+12,cy+10); ctx.lineTo(cx+20,cy+18); ctx.stroke();
+  if(frogTongue>0){
+    frogTongue--;
+    ctx.strokeStyle='#E91E63'; ctx.lineWidth=3;
+    ctx.beginPath(); ctx.moveTo(cx+10,cy-5); ctx.lineTo(cx+10+frogTongue/1.5,cy-5); ctx.stroke();
+    ctx.fillStyle='#E91E63'; ctx.beginPath(); ctx.arc(cx+10+frogTongue/1.5,cy-5,4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.strokeStyle=def.accent; ctx.lineWidth=1.5;
+  ctx.beginPath(); ctx.moveTo(cx-8,cy-2); ctx.lineTo(cx+8,cy-2); ctx.stroke();
+}
+function drawFrogGaps(){
+  var lv=getLevel(); if(!lv.frogGaps) return;
+  for(var i=0;i<lv.frogGaps.length;i++){
+    var g=lv.frogGaps[i], sx=g.x-camX;
+    if(sx>CW||sx+g.w<0) continue;
+    ctx.fillStyle='#070B14'; ctx.fillRect(sx,GY,g.w,CH-GY);
+    var rg=ctx.createLinearGradient(0,g.ceilY,0,g.ceilY+g.ceilH);
+    rg.addColorStop(0,'#1A2744'); rg.addColorStop(1,'#2E3F6B');
+    ctx.fillStyle=rg; ctx.fillRect(sx,g.ceilY,g.w,g.ceilH);
+    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1;
+    for(var rx=sx;rx<sx+g.w;rx+=16){ ctx.beginPath(); ctx.moveTo(rx,g.ceilY); ctx.lineTo(rx+8,g.ceilY+g.ceilH); ctx.stroke(); }
+    ctx.fillStyle='#1A2744';
+    for(var st=sx+12;st<sx+g.w-8;st+=30){
+      var sh=10+Math.sin(st)*4;
+      ctx.beginPath(); ctx.moveTo(st-5,g.ceilY+g.ceilH); ctx.lineTo(st+5,g.ceilY+g.ceilH); ctx.lineTo(st,g.ceilY+g.ceilH+sh); ctx.fill();
+    }
+    ctx.fillStyle='rgba(0,0,0,0.6)'; rrect(sx+g.w/2-85,g.ceilY-30,170,24,10); ctx.fill();
+    ctx.strokeStyle='#4CAF50'; ctx.lineWidth=1.5; rrect(sx+g.w/2-85,g.ceilY-30,170,24,10); ctx.stroke();
+    ctx.fillStyle='#4CAF50'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+    ctx.fillText('So o Sapinho salta! [6]',sx+g.w/2,g.ceilY-14);
+  }
+}
+function drawInsects(){
+  if(phase!==3) return;
+  var t=Date.now()/120;
+  for(var i=0;i<p3Insects.length;i++){
+    var ins=p3Insects[i]; if(ins.eaten) continue;
+    var sx=ins.x-camX; if(sx>CW+60||sx<-60) continue;
+    if(ins.type==='barata'){
+      ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+8,10,6,0,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='#6D4C41'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+6,5,4,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='#222'; ctx.lineWidth=1;
+      for(var lg=-1;lg<=1;lg+=2){
+        ctx.beginPath(); ctx.moveTo(sx+12,ins.y+8); ctx.lineTo(sx+12+lg*14,ins.y+8+Math.sin(t+lg)*3); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx+12,ins.y+7); ctx.lineTo(sx+12+lg*12,ins.y+4); ctx.stroke();
+      }
+    } else {
+      for(var seg=0;seg<5;seg++){
+        var bx=sx+seg*9+4, by=ins.y+9+Math.sin(t+seg*0.7)*2;
+        ctx.fillStyle=seg%2===0?'#D84315':'#BF360C';
+        ctx.beginPath(); ctx.arc(bx,by,5,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#444'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by+4+Math.sin(t+seg)*2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by-4+Math.sin(t+seg)*2); ctx.stroke();
+      }
+    }
+    var pulse=0.6+0.4*Math.sin(t*3); ctx.globalAlpha=pulse;
+    ctx.fillStyle='#F44336'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('!',sx+ins.w/2,ins.y-6); ctx.globalAlpha=1;
+  }
+}
+function drawP3UnlockStars(){
+  if(phase!==3||!isDigging) return;
+  var t=Date.now()/350;
+  for(var i=0;i<p3UnlockStars.length;i++){
+    var s=p3UnlockStars[i]; if(s.got) continue;
+    var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
+    var bob=Math.sin(t+s.x)*2;
+    ctx.shadowColor='#FFD700'; ctx.shadowBlur=12;
+    ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
+    ctx.fillStyle='#FFD700'; ctx.fill();
+    ctx.strokeStyle='#FF6F00'; ctx.lineWidth=2; ctx.stroke();
+    ctx.shadowBlur=0;
+  }
+}
+function drawPlayer(){
+  var def=CHARS[pl.char], sx=pl.x-camX, sy=pl.y, cx=sx+pl.w/2, cy=sy+pl.h/2;
+  switch(pl.char){
+    case 'cat':         drawCat(cx,cy,def);         break;
+    case 'dog':         drawDog(cx,cy,def);         break;
+    case 'duck':        drawDuck(cx,cy,def);        break;
+    case 'bird':        drawBird(cx,cy,def);        break;
+    case 'tatu':        drawTatu(cx,cy,def);        break;
+    case 'frog':        drawFrog(cx,cy,def);        break;
+  }
+  if(!isDigging){
+    ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText(def.name,cx,sy-5);
+  }
+}
+
+// ── HUD ───────────────────────────────────────────────────────────────────────
+function drawHUD(){
+  var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,10,145,36,10); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
+  ctx.fillText('Pts: '+score,18,31);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW-118,10,108,36,10); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='right';
+  ctx.fillText('Vidas: '+lives,CW-14,31);
+  var def=CHARS[pl.char];
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10,170,36,10); ctx.fill();
+  ctx.fillStyle='#FFD700'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+  ctx.fillText(def.ability,CW/2,31);
+  var all20=(got>=20);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52,150,26,8); ctx.fill();
+  ctx.fillStyle=all20?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+  ctx.fillText('Estrelas: '+got+'/20'+(all20?' OK!':''),18,68);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52,84,26,8); ctx.fill();
+  ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+  ctx.fillText('Fase '+phase+' de 3',CW/2,68);
+  if(pl.char==='tatu'){
+    ctx.fillStyle='rgba(102,187,106,0.88)'; rrect(10,CH-30,250,20,8); ctx.fill();
+    ctx.fillStyle='#1a1a1a'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
+    ctx.fillText(isDigging?'Seta Cima = Emergir':'Seta Baixo = Cavar | Seta Cima = Emergir',15,CH-16);
+  } else {
+    ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='10px Arial'; ctx.textAlign='left';
+    ctx.fillText('Setas: Mover | Espaco/Cima: Pular | 1-6: Trocar animal',12,CH-8);
+  }
+}
+
+// ── Screens ───────────────────────────────────────────────────────────────────
+function drawMenu(){
+  var mg=ctx.createLinearGradient(0,0,0,CH);
+  mg.addColorStop(0,'#1565C0'); mg.addColorStop(1,'#0D47A1');
+  ctx.fillStyle=mg; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='rgba(255,255,255,0.22)';
+  [[80,75],[300,55],[560,80],[720,60]].forEach(function(p){cloud(p[0],p[1]);});
+  ctx.fillStyle='#FFD700'; ctx.font='bold 58px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#FF6F00'; ctx.shadowBlur=25; ctx.fillText('AnimalChoice',CW/2,108); ctx.shadowBlur=0;
+  ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='15px Arial';
+  ctx.fillText('Escolha o animal certo para superar cada obstaculo!',CW/2,142);
+  var cards=[
+    {n:'Gatinho',    a:'Pulo Alto',  c:'#FF9800'},
+    {n:'Cachorrinho',a:'Corrida',    c:'#8D6E63'},
+    {n:'Patinho',    a:'Nada',       c:'#FDD835'},
+    {n:'Passarinho', a:'Voa',        c:'#29B6F6'},
+    {n:'Tatuzinho',  a:'Cavar',      c:'#8D6E63',locked:true}
+  ];
+  cards.forEach(function(cd,i){
+    var bx=78+i*132, by=198;
+    ctx.fillStyle='rgba(255,255,255,0.1)'; rrect(bx-50,by-15,100,108,12); ctx.fill();
+    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=2; rrect(bx-50,by-15,100,108,12); ctx.stroke();
+    if(cd.locked){
+      ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(bx-50,by-15,100,108,12); ctx.fill();
+      ctx.fillStyle='#aaa'; ctx.font='22px Arial'; ctx.textAlign='center'; ctx.fillText('?',bx,by+42);
+      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='9px Arial';
+      ctx.fillText('Colete todas',bx,by+62); ctx.fillText('as estrelas!',bx,by+74);
+    } else {
+      ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+      ctx.fillText(cd.n,bx,by+42);
+      ctx.fillStyle=cd.c; ctx.font='11px Arial'; ctx.fillText(cd.a,bx,by+60);
+    }
+  });
+  var pulse=Math.sin(Date.now()/380)*4;
+  ctx.fillStyle='#43A047'; rrect(CW/2-125,368-pulse/2,250,48+pulse,28); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 21px Arial'; ctx.textAlign='center';
+  ctx.fillText('JOGAR AGORA!',CW/2,399);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
+  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+}
+function drawPhase2Intro(){
+  var allGot=p1Stars.every(function(s){return s.got;});
+  var got=p1Stars.filter(function(s){return s.got;}).length;
+  ctx.fillStyle='rgba(0,0,0,0.78)'; ctx.fillRect(0,0,CW,CH);
+  if(allGot){
+    var t=Date.now()/500;
+    ctx.fillStyle='#FFD700'; ctx.font='bold 40px Arial'; ctx.textAlign='center';
+    ctx.shadowColor='#FF6F00'; ctx.shadowBlur=28; ctx.fillText('LAGARTINHA DESBLOQUEADA!',CW/2,115); ctx.shadowBlur=0;
+    for(var i=0;i<10;i++){
+      var a=t+i*(Math.PI*2/10), rx=CW/2+Math.cos(a)*95, ry=185+Math.sin(a)*35;
+      ctx.fillStyle='#FFD700'; ctx.font='16px Arial'; ctx.fillText('*',rx,ry);
+    }
+    ctx.fillStyle='#66BB6A'; ctx.font='bold 20px Arial';
+    ctx.fillText('Voce coletou todas as 20 estrelas!',CW/2,220);
+    ctx.fillStyle='white'; ctx.font='16px Arial';
+    ctx.fillText('Na Fase 2 o Tatuzinho cava por baixo da barreira!',CW/2,255);
+    ctx.fillStyle='#aef'; ctx.font='13px Arial';
+    ctx.fillText('Use o Tatuzinho [5] + Seta para baixo',CW/2,285);
+  } else {
+    ctx.fillStyle='#FFD700'; ctx.font='bold 36px Arial'; ctx.textAlign='center';
+    ctx.fillText('Fase 1 Concluida!',CW/2,115);
+    ctx.fillStyle='#EF5350'; ctx.font='20px Arial';
+    ctx.fillText('Voce pegou '+got+'/20 estrelas',CW/2,165);
+    ctx.fillStyle='white'; ctx.font='16px Arial';
+    ctx.fillText('Volte na Fase 1 para desbloquear o Tatuzinho!',CW/2,210);
+    ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='13px Arial';
+    ctx.fillText('(Voce pode continuar sem ela)',CW/2,245);
+  }
+  ctx.fillStyle='#43A047'; rrect(CW/2-125,358,250,48,28); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 19px Arial'; ctx.textAlign='center';
+  ctx.fillText('Continuar para Fase 2!',CW/2,389);
+  ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='12px Arial';
+  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+}
+function drawPhase3Intro(){
+  var allGot=p2Stars.every(function(s){return s.got;});
+  var got=p2Stars.filter(function(s){return s.got;}).length;
+  ctx.fillStyle='rgba(10,14,26,0.88)'; ctx.fillRect(0,0,CW,CH);
+  var t=Date.now()/500;
+  ctx.fillStyle='#4CAF50'; ctx.font='bold 34px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#1B5E20'; ctx.shadowBlur=20; ctx.fillText('FASE 2 CONCLUIDA!',CW/2,95); ctx.shadowBlur=0;
+  if(allGot){
+    ctx.fillStyle='#FFD700'; ctx.font='bold 20px Arial'; ctx.fillText('Todas as estrelas coletadas!',CW/2,140);
+    ctx.fillStyle='white'; ctx.font='16px Arial';
+    ctx.fillText('Fase 3 - Floresta Noturna!',CW/2,178);
+    ctx.fillText('Tatuzinho cava pela megaBarrier',CW/2,205);
+    ctx.fillText('para desbloquear o SAPINHO! 🐸',CW/2,230);
+    ctx.fillStyle='rgba(76,175,80,0.18)'; ctx.beginPath(); ctx.arc(CW/2,300,50,0,Math.PI*2); ctx.fill();
+    ctx.font='55px Arial'; ctx.textAlign='center'; ctx.fillText('🐸',CW/2,320);
+    for(var i=0;i<8;i++){
+      var a=t+i*(Math.PI*2/8), rx=CW/2+Math.cos(a)*88, ry=300+Math.sin(a)*28;
+      ctx.fillStyle='#FFD700'; ctx.font='14px Arial'; ctx.fillText('*',rx,ry);
+    }
+  } else {
+    ctx.fillStyle='#aaa'; ctx.font='18px Arial'; ctx.fillText(got+'/20 estrelas — continue tentando!',CW/2,155);
+    ctx.font='50px Arial'; ctx.fillText('🐸',CW/2,265);
+    ctx.fillStyle='#aaa'; ctx.font='13px Arial'; ctx.fillText('O Sapinho te espera na Fase 3!',CW/2,315);
+  }
+  ctx.fillStyle='#2E7D32'; rrect(CW/2-130,368,260,48,28); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+  ctx.fillText('Entrar na Fase 3!',CW/2,399);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
+  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+}
+function drawWin(){
+  ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#FFD700'; ctx.font='bold 52px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#FF6F00'; ctx.shadowBlur=22; ctx.fillText('PARABENS!',CW/2,140); ctx.shadowBlur=0;
+  ctx.fillStyle='white'; ctx.font='22px Arial'; ctx.fillText('Voce zerou o AnimalChoice!',CW/2,192);
+  ctx.fillStyle='#FFD700'; ctx.font='bold 20px Arial'; ctx.fillText('Pontuacao Final: '+score+' pontos',CW/2,238);
+  var total=p1Stars.filter(function(s){return s.got;}).length+p2Stars.filter(function(s){return s.got;}).length+p3Stars.filter(function(s){return s.got;}).length;
+  ctx.fillStyle='#aef'; ctx.font='17px Arial'; ctx.fillText('Estrelas: '+total+'/60',CW/2,278);
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,355);
+}
+function drawGameOver(){
+  ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#EF5350'; ctx.font='bold 50px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#B71C1C'; ctx.shadowBlur=20; ctx.fillText('Tente de Novo!',CW/2,150); ctx.shadowBlur=0;
+  ctx.fillStyle='white'; ctx.font='22px Arial'; ctx.fillText('Pontuacao: '+score,CW/2,210);
+  ctx.fillStyle='#FFD700'; ctx.font='16px Arial'; ctx.fillText('Escolha o animal certo para cada obstaculo!',CW/2,265);
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,355);
+}
+
+// ── Game Loop ─────────────────────────────────────────────────────────────────
+function loop(){
+  ctx.clearRect(0,0,CW,CH);
+  if(state==='menu') drawMenu();
+  else if(state==='playing'){
+    update();
+    drawBG(); drawGround(); drawPlatforms(); drawWalls();
+    drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
+    drawSpeedGates(); drawStars(); drawInsects(); drawFinish();
+    drawDigTunnel(); drawP3UnlockStars(); drawPlayer(); drawParticles(); drawHUD();
+  }
+  else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
+  else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
+  else if(state==='win')        { drawBG(); drawGround(); drawWin(); }
+  else if(state==='gameover')   { drawBG(); drawGround(); drawGameOver(); }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
