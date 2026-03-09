@@ -2717,90 +2717,117 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
 
 
 
+
+
 // ══════════════════════════════════════════════════════════════
-// RESPONSIVIDADE: LANDSCAPE FORÇADO + SCALE PERFEITO
+// RESPONSIVIDADE: CANVAS FULLSCREEN (D-PAD SOBREPOSTO)
 // ══════════════════════════════════════════════════════════════
 (function(){
-  var GW = 800, GH = 540; // largura × altura total do jogo (canvas+UI)
+  var GW = 800, GH = 440; // só o canvas — botões ocultos no mobile
 
   function applyScale(){
     var wrapper = document.getElementById('gameWrapper');
     var overlay = document.getElementById('rotateOverlay');
     var tpad    = document.getElementById('touchControls');
+    var ui      = document.getElementById('ui');
     var mute    = document.getElementById('muteBtn');
     if(!wrapper) return;
 
     var vw = window.innerWidth;
     var vh = window.innerHeight;
-    var isTouch   = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
-    var isMobile  = isTouch || vw <= 900;
+    var isTouch  = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    var isMobile = isTouch || vw <= 900;
     var isPortrait = vh > vw;
 
-    // ── Desktop: sem alteração ────────────────────────────────
+    // ── Desktop: tudo original ────────────────────────────────
     if(!isMobile){
-      wrapper.style.transform  = '';
-      wrapper.style.position   = 'relative';
+      wrapper.style.cssText    = '';
       if(overlay) overlay.style.display = 'none';
       if(tpad)    tpad.style.display    = 'none';
+      if(ui)      ui.style.display      = '';
+      if(mute)  { mute.style.top = ''; mute.style.right = ''; }
       return;
     }
 
-    // ── Mobile Portrait: mostrar overlay "gire o celular" ────
+    // ── Mobile Portrait: overlay "gire o celular" ─────────────
     if(isPortrait){
-      if(overlay){ overlay.style.display = 'flex'; }
+      if(overlay) overlay.style.display = 'flex';
       wrapper.style.visibility = 'hidden';
       if(tpad) tpad.style.display = 'none';
       return;
     }
 
-    // ── Mobile Landscape: escalar para preencher tela ─────────
-    if(overlay){ overlay.style.display = 'none'; }
+    // ── Mobile Landscape: canvas fullscreen ───────────────────
+    if(overlay) overlay.style.display = 'none';
     wrapper.style.visibility = 'visible';
 
-    // Tenta bloquear orientação em landscape (Android Chrome)
+    // Oculta botões de personagem — D-pad substitui no mobile
+    if(ui) ui.style.display = 'none';
+
+    // Tenta travar landscape no Android Chrome
     try{
-      if(screen.orientation && screen.orientation.lock){
+      if(screen.orientation && screen.orientation.lock)
         screen.orientation.lock('landscape').catch(function(){});
-      }
     }catch(e){}
 
-    // Calcula escala para preencher viewport sem cortar
-    var dpadH = 120; // altura do D-pad
-    var scale = Math.min(vw / GW, (vh - dpadH) / GH);
-
-    // Centraliza o wrapper escalado
+    // Escala canvas para preencher a tela toda
+    var scale = Math.min(vw / GW, vh / GH);
     var scaledW = GW * scale;
     var scaledH = GH * scale;
-    var offX = Math.max(0, (vw - scaledW) / 2);
-    var offY = Math.max(0, (vh - dpadH - scaledH) / 2);
+    var offX = Math.round((vw - scaledW) / 2);
+    var offY = Math.round((vh - scaledH) / 2);
 
+    wrapper.style.position       = 'fixed';
+    wrapper.style.top            = '0';
+    wrapper.style.left           = '0';
     wrapper.style.transformOrigin = 'top left';
-    wrapper.style.transform = 'translate('+offX+'px,'+offY+'px) scale('+scale+')';
-    wrapper.style.position  = 'fixed';
-    wrapper.style.top  = '0';
-    wrapper.style.left = '0';
+    wrapper.style.transform      = 'translate('+offX+'px,'+offY+'px) scale('+scale+')';
 
     // Mostra D-pad
     if(tpad) tpad.style.display = 'flex';
 
-    // Reposiciona botão mute sobre o canvas escalado
+    // Reposiciona botão mute no canto superior direito do canvas
     if(mute){
+      mute.style.position = 'fixed';
       mute.style.top   = (offY + 8) + 'px';
       mute.style.right = (vw - offX - scaledW + 8) + 'px';
     }
   }
 
-  window.addEventListener('resize', applyScale);
-  window.addEventListener('orientationchange', function(){ setTimeout(applyScale, 300); });
+  // Mostra/oculta UI ao trocar estado (menu vs jogo)
+  // Sobrescreve startGame para ocultar UI no mobile
+  var _origStart = null;
+  function patchStartGame(){
+    if(typeof startGame !== 'undefined' && !_origStart){
+      _origStart = startGame;
+      startGame = function(){
+        _origStart();
+        var isTouch = ('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+        var ui = document.getElementById('ui');
+        if(ui && (isTouch || window.innerWidth<=900)) ui.style.display='none';
+      };
+    }
+  }
 
-  if(document.readyState === 'loading'){
+  window.addEventListener('resize', applyScale);
+  window.addEventListener('orientationchange', function(){ setTimeout(applyScale,300); });
+
+  if(document.readyState==='loading'){
     document.addEventListener('DOMContentLoaded', function(){
-      applyScale(); setTimeout(applyScale, 200);
+      applyScale(); setTimeout(applyScale,200);
+      setTimeout(patchStartGame, 500);
     });
   } else {
-    applyScale(); setTimeout(applyScale, 200);
+    applyScale(); setTimeout(applyScale,200);
+    setTimeout(patchStartGame, 500);
   }
 })();
+
+function toggleCharPanel(){
+  var p = document.getElementById('charPanel');
+  if(!p) return;
+  p.style.display = p.style.display==='flex' ? 'none' : 'flex';
+}
 </script>
 
 
@@ -2816,10 +2843,23 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
       <button class="tbtn" id="tbtn-left"  ontouchstart="touchStart('ArrowLeft')"  ontouchend="touchEnd('ArrowLeft')"  onmousedown="touchStart('ArrowLeft')"  onmouseup="touchEnd('ArrowLeft')">◀</button>
       <button class="tbtn" id="tbtn-right" ontouchstart="touchStart('ArrowRight')" ontouchend="touchEnd('ArrowRight')" onmousedown="touchStart('ArrowRight')" onmouseup="touchEnd('ArrowRight')">▶</button>
     </div>
+    <div style="pointer-events:all;display:flex;align-items:flex-end;">
+      <button class="tbtn" style="width:52px;height:52px;font-size:20px;background:rgba(100,100,255,0.2);border-color:rgba(150,150,255,0.5);" onclick="toggleCharPanel()" title="Trocar animal">🐾</button>
+    </div>
     <div class="tpad-right">
       <button class="tbtn tbtn-dig"  id="tbtn-down" ontouchstart="touchStart('ArrowDown')"  ontouchend="touchEnd('ArrowDown')"  onmousedown="touchStart('ArrowDown')"  onmouseup="touchEnd('ArrowDown')">⬇️</button>
       <button class="tbtn tbtn-jump" id="tbtn-up"   ontouchstart="touchStart('ArrowUp')"    ontouchend="touchEnd('ArrowUp')"    onmousedown="touchStart('ArrowUp')"    onmouseup="touchEnd('ArrowUp')">🔼</button>
     </div>
+  </div>
+  <!-- Painel compacto de troca de personagem -->
+  <div id="charPanel" style="display:none;position:fixed;bottom:130px;left:50%;transform:translateX(-50%);background:rgba(10,20,50,0.95);border:2px solid rgba(255,215,0,0.4);border-radius:14px;padding:8px 12px;z-index:1001;flex-direction:row;gap:8px;align-items:center;">
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('cat');toggleCharPanel()">🐱</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('dog');toggleCharPanel()">🐶</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('duck');toggleCharPanel()">🦆</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('bird');toggleCharPanel()">🐦</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('tatu');toggleCharPanel()">🦔</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('frog');toggleCharPanel()">🐸</button>
+    <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('caterpillar');toggleCharPanel()">🐛</button>
   </div>
 </body>
 </html>
