@@ -2389,6 +2389,7 @@ function drawPlayer(){
 
   ctx.translate(0, -mobileViewOffsetY);
 
+  // HUD sempre no topo da tela (sem offset)
 function drawHUD(){
   var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
   // Fase 5: adiciona as estrelas escondidas na contagem
@@ -2682,10 +2683,9 @@ function drawGameOver(){
 
 // ── Game Loop ─────────────────────────────────────────────────────────────────
 function loop(){
-  ctx.clearRect(0,0,CW,CH);
-  
   // Mobile offset: sobe o mundo
   ctx.translate(0, mobileViewOffsetY);
+  ctx.clearRect(0,0,CW,CH);
 
 if(state==='menu') drawMenu();
   else if(state==='playing'){
@@ -2788,7 +2788,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Offset para mobile: sobe o mundo 40px para chão aparecer na tela
     var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
     if(isTouch && !isPortrait){
-      mobileViewOffsetY = 40; // sobe 40px
+      mobileViewOffsetY = 50; // sobe 50px para mostrar chão/cavar
     } else {
       mobileViewOffsetY = 0;
     }
