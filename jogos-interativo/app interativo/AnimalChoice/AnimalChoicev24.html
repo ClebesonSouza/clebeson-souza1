@@ -50,6 +50,76 @@
     transition: background 0.2s;
   }
   #muteBtn:hover { background: rgba(0,0,0,0.8); }
+
+    /* ── RESPONSIVIDADE MOBILE ── */
+    @media (max-width: 820px) {
+      body { justify-content: flex-start; padding-top: 8px; }
+      #gameWrapper { width: 100vw; }
+      #gameCanvas {
+        width: 100vw !important;
+        height: auto !important;
+        border-radius: 0;
+      }
+      #ui {
+        flex-wrap: wrap;
+        gap: 4px;
+        padding: 6px 4px;
+        justify-content: center;
+      }
+      .cbtn { min-width: 70px; padding: 4px 6px; }
+      .cbtn .em { font-size: 22px; }
+      .cbtn .cn { font-size: 10px; }
+      .cbtn .ca, .cbtn .ck { display: none; }
+      #muteBtn { top: 6px; right: 6px; width: 32px; height: 32px; font-size: 15px; }
+    }
+
+    /* ── TOUCH D-PAD ── */
+    #touchControls {
+      display: none;
+      position: fixed;
+      bottom: 0; left: 0; right: 0;
+      height: 130px;
+      pointer-events: none;
+      z-index: 100;
+      padding: 0 12px 10px;
+      box-sizing: border-box;
+      justify-content: space-between;
+      align-items: flex-end;
+    }
+    @media (max-width: 820px) {
+      #touchControls { display: flex; }
+      body { padding-bottom: 140px; }
+    }
+    .tpad-left, .tpad-right {
+      display: flex;
+      gap: 8px;
+      align-items: flex-end;
+      pointer-events: all;
+    }
+    .tbtn {
+      width: 64px; height: 64px;
+      background: rgba(255,255,255,0.15);
+      border: 2.5px solid rgba(255,255,255,0.35);
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 26px;
+      user-select: none;
+      -webkit-user-select: none;
+      cursor: pointer;
+      transition: background 0.1s, transform 0.1s;
+      color: white;
+      text-shadow: 0 1px 4px rgba(0,0,0,0.5);
+      -webkit-tap-highlight-color: transparent;
+    }
+    .tbtn.pressed {
+      background: rgba(255,215,0,0.35);
+      border-color: #FFD700;
+      transform: scale(0.92);
+    }
+    .tbtn-jump { width: 72px; height: 72px; font-size: 30px; background: rgba(255,100,100,0.18); border-color: rgba(255,100,100,0.5); }
+    .tbtn-dig  { width: 56px; height: 56px; font-size: 22px; background: rgba(100,200,100,0.18); border-color: rgba(100,200,100,0.5); }
+    .tbtn-jump.pressed { background: rgba(255,100,100,0.5); border-color: #FF6464; }
+    .tbtn-dig.pressed  { background: rgba(100,200,100,0.5); border-color: #64FF64; }
 </style>
 </head>
 <body>
@@ -88,6 +158,14 @@
       <div class="lock-overlay" id="frog-lock">
         <span>&#x1F512;</span>
         <span>Fase 3<br>Tatuzinho!</span>
+      </div>
+    </button>
+    <button class="cbtn locked" id="btn-caterpillar" onclick="switchChar('caterpillar')">
+      <span class="em">🐛</span><span class="cn">Lagartinha</span>
+      <span class="ca">Come Folhas</span><span class="ck">[7]</span>
+      <div class="lock-overlay" id="caterpillar-lock">
+        <span>&#x1F512;</span>
+        <span>Fase 5<br>Colete 20 ⭐</span>
       </div>
     </button>
   </div>
@@ -270,6 +348,25 @@ function sndPhase2Start(){// Som de início da fase 2 — dois tons graves para 
   playTone(392,'square',0.1,0.12);// Sol4 — tom
   setTimeout(function(){ playTone(523,'square',0.15,0.15); },110);// Dó5 — tom mais agudo para criar contraste e dar sensação de algo novo começando
 }
+function sndPhase4Start(){// Pântano da Lua Cheia - misterioso, noturno
+  playTone(220,'sine',0.12,0.12);
+  setTimeout(function(){ playTone(277,'sine',0.12,0.14); },130);
+  setTimeout(function(){ playTone(330,'sine',0.18,0.16); },260);
+  setTimeout(function(){ playTone(440,'sine',0.22,0.18); },390);
+}
+function sndPhase5Start(){// Floresta Encantada - alegre, diurno
+  playTone(523,'square',0.08,0.14);
+  setTimeout(function(){ playTone(659,'square',0.10,0.16); },100);
+  setTimeout(function(){ playTone(784,'square',0.12,0.18); },200);
+  setTimeout(function(){ playTone(1047,'square',0.16,0.20); },300);
+}
+function sndPhase6Start(){// Jardim da Metamorfose - mágico, especial
+  playTone(523,'sine',0.10,0.16);
+  setTimeout(function(){ playTone(659,'sine',0.12,0.18); },110);
+  setTimeout(function(){ playTone(784,'sine',0.14,0.20); },220);
+  setTimeout(function(){ playTone(1047,'sine',0.18,0.22); },330);
+  setTimeout(function(){ playTone(1319,'sine',0.22,0.24); },450);
+}
                          
 
 
@@ -296,15 +393,21 @@ var CHARS = {
   duck:        {name:'Patinho',     color:'#FDD835',accent:'#F57F17',jumpF:-10,spd:4,  grav:GRAV,    swim:true, fly:false,dig:false,ability:'Pode Nadar'},
   bird:        {name:'Passarinho',  color:'#29B6F6',accent:'#0277BD',jumpF:-9, spd:5,  grav:GRAV*0.25,swim:false,fly:true, dig:false,ability:'Pode Voar'},
   tatu:        {name:'Tatuzinho',   color:'#8D6E63',accent:'#5D4037',jumpF:-8, spd:3.5,grav:GRAV,    swim:false,fly:false,dig:true, ability:'Cavar pelo Chao'}
-,  frog:        {name:'Sapinho',     color:'#4CAF50',accent:'#1B5E20',jumpF:-10,spd:4.2, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Insetos'}
+,  frog:        {name:'Sapinho',     color:'#4CAF50',accent:'#1B5E20',jumpF:-10,spd:4.2, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Insetos'},
+  caterpillar: {name:'Lagartinha',   color:'#C1FF00',accent:'#990000',jumpF:-7, spd:3.5, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Folhas'},
+  butterfly: {name:'Borboleta!',color:'#FF69B4',accent:'#FF1493',jumpF:-18,spd:4.8,grav:GRAV*0.18,swim:false,fly:true,dig:false,ability:'Pula Alto e Paira'}
 };
 
 // ── State ────────────────────────────────────────────────────────────────────
-var state='menu', phase=1, camX=0, score=0, lives=3;
+var state='menu', phase=1, camX=0, score=0, lives=3, webStuck=0;
 var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
 var frogUnlocked=false, frogLongJump=false, frogTongue=0;
+var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
+var butterflyUnlocked=false;
+var metamorphState='none', metamorphTimer=0, metamorphCountdown=3;
+var p6Leaves=[], leavesEaten=0, TOTAL_LEAVES=20;
 
 // ── Input ────────────────────────────────────────────────────────────────────
 var K={};
@@ -316,8 +419,11 @@ window.addEventListener('keydown',function(e){
   if(e.key==='4') switchChar('bird');
   if(e.key==='5' && catUnlocked) switchChar('tatu');
   if(e.key==='6' && frogUnlocked) switchChar('frog');
+  if(e.key==='7'){ if(butterflyUnlocked) switchChar('butterfly'); else if(caterpillarUnlocked) switchChar('caterpillar'); }
   if((e.key===' '||e.key==='ArrowUp') && state==='playing' && !isDigging){
-    if(pl.char==='duck'){
+    if(pl.char==='frog' && !pl.onGround && frogLongJump < 2){ // PULO DUPLO DO SAPINHO!
+      pl.vy = -6; frogLongJump++; sndJump();
+    } else if(pl.char==='duck'){
       if(pl.inWaterPit){
         // Inside water pit: duck swims up freely (handled in update physics)
         pl.vy=-4; // impulso de subida dentro da agua
@@ -327,7 +433,7 @@ window.addEventListener('keydown',function(e){
       }
     } else if(pl.onGround){
       pl.vy=CHARS[pl.char].jumpF; sndJump(); pl.onGround=false;
-      if(pl.char==='frog'){ frogLongJump=true; sndCroac(); }
+      if(pl.char==='frog'){ frogLongJump=1; sndCroac(); } // Primeiro pulo
     }
   }
   if(e.key==='ArrowDown' && state==='playing' && pl.char==='tatu' && pl.onGround && !isDigging) startDig();
@@ -336,6 +442,9 @@ window.addEventListener('keydown',function(e){
   if(e.key===' ' && (state==='win'||state==='gameover')) state='menu';
   if(e.key===' ' && state==='phase2intro') beginPhase2();
   if(e.key===' ' && state==='phase3intro') beginPhase3();
+  if(e.key===' ' && state==='phase4intro') beginPhase4();
+  if(e.key===' ' && state==='phase5intro') beginPhase5();
+  if(e.key===' ' && state==='phase6intro') beginPhase6();
 });
 window.addEventListener('keyup',function(e){ K[e.key]=false; });
 canvas.addEventListener('click',function(){
@@ -343,17 +452,30 @@ canvas.addEventListener('click',function(){
   if(state==='win'||state==='gameover') state='menu';
   if(state==='phase2intro') beginPhase2();
   if(state==='phase3intro') beginPhase3();
+  if(state==='phase4intro') beginPhase4();
+  if(state==='phase5intro') beginPhase5();
+  if(state==='phase6intro') beginPhase6();
 });
 
 // ── Player ───────────────────────────────────────────────────────────────────
 var pl={x:100,y:GY-40,vx:0,vy:0,w:38,h:38,onGround:false,char:'cat',inWaterPit:false};
 
 function switchChar(c){
+  if(c==='caterpillar'&&butterflyUnlocked) c='butterfly';
   if(c==='tatu'&&!catUnlocked) return;
   if(isDigging&&c!=='tatu') stopDig();
   pl.char=c;
+  
+  // Ajusta dimensões da hitbox conforme o personagem
+  if(c==='caterpillar'){
+    pl.w=48; pl.h=52; // Lagartinha maior e mais baixa: 48x52
+  } else {
+    pl.w=38; pl.h=38; // Outros personagens: tamanho padrão
+  }
+  
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
-  document.getElementById('btn-'+c).classList.add('active');
+  var btnId=(c==='butterfly')?'btn-caterpillar':'btn-'+c;
+  document.getElementById(btnId).classList.add('active');
 }
 
 // ── Digging ──────────────────────────────────────────────────────────────────
@@ -377,7 +499,7 @@ function spawnBubble(x,y){
                //AQUI COMECA A DEFINICAO DOS NIVEIS, CADA FASE TEM PLATAFORMAS, PAREDES, BURACOS DE AGUA, PORTOES DE VELOCIDADE, MEGA BARREIRAS E ESTRELAS, CADA ELEMENTO TEM SUAS PROPRIEDADES DEFINIDAS PARA CONTROLAR O COMPORTAMENTO DO JOGO, COMO COLISOES, HABILIDADES NECESSARIAS PARA PASSAR POR DETERMINADOS OBSTACULOS, E A POSICAO DOS ITENS NO MAPA PARA O JOGADOR INTERAGIR DURANTE O JOGO.
                   
 // ── Level data ────────────────────────────────────────────────────────────────
-var WORLD=3800;// largura total do mundo (além da largura da tela)
+var WORLD=5500;// largura total do mundo - AUMENTADO PARA FASE 5
 
 // waterPits: gap in ground filled with water + rock ceiling to block bird
 // ceilY = y from top where ceiling starts, ceilH = ceiling thickness teto cobre de y=0 ate ceilY+ceilH
@@ -421,7 +543,7 @@ var p2={
   ],
   gaps:[{x:2550,w:400}],// aqui consigo mudar o tamanho dos buracos no chão
   speedGates:[{x:3100,y:GY-5000,w:28,h:5000,passed:false}],//portão laranja de velocidade da fase2
-  megaBarriers:[{x:1280,y:0,w:158,h:GY}],// mega barreira bloqueia o caminho se o jogador nao tiver a habilidade de cavar, ou seja, se ele nao tiver desbloqueado o Tatuzinho, que é o unico personagem com a habilidade de cavar, o jogador tem que desbloquear o Tatuzinho na fase 1 para conseguir passar por essa mega barreira, que bloqueia o caminho para a linha de chegada, ou seja, se o jogador nao tiver desbloqueado o Tatuzinho, ele nao consegue chegar na linha de chegada e vencer a fase
+  megaBarriers:[{x:1280,y:GY-5000,w:300,h:5000}],// mega barreira bloqueia o caminho se o jogador nao tiver a habilidade de cavar, ou seja, se ele nao tiver desbloqueado o Tatuzinho, que é o unico personagem com a habilidade de cavar, o jogador tem que desbloquear o Tatuzinho na fase 1 para conseguir passar por essa mega barreira, que bloqueia o caminho para a linha de chegada, ou seja, se o jogador nao tiver desbloqueado o Tatuzinho, ele nao consegue chegar na linha de chegada e vencer a fase
   finish:{x:WORLD-180,y:GY-110,w:18,h:110}// linha de chegada da fase 2, se o jogador passar por ela, ele vence a fase
 };
 var p2Stars=[];// gera as estrelas da fase 2, cada estrela tem x (posicao horizontal), y (altura), got (se o jogador ja pegou a estrela ou nao) e r (raio da estrela, para calcular a colisao com o jogador)
@@ -457,8 +579,148 @@ var p3Insects=[
   {x:3470,y:GY-22,vx:-1.3,w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580},
   {x:3555,y:GY-22,vx:1.1, w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580}
 ];
-function getLevel(){ return phase===1?p1:phase===2?p2:p3; }// funcao para pegar os dados da fase atual, se a fase for 1, retorna os dados da fase 1, se a fase for 2, retorna os dados da fase 2
-function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:p3Stars; }// funcao para pegar as estrelas da fase atual, se a fase for 1, retorna as estrelas da fase 1, se a fase for 2, retorna as estrelas da fase 2
+
+                     
+
+                                     // FASE 4
+
+                      // ── FASE 4: PÂNTANO DA LUA CHEIA 
+                     //AQUI COMEÇA A FASE 4, A FASE DO SAPINHO, QUE TEM A HABILIDADE DE COMER INSETOS VOADORES PARA RECUPERAR ENERGIA, AS ESTRELAS DA FASE 4 FICAM ESPALHADAS EM ALTURAS VARIADAS PARA INCENTIVAR O USO DO SAPINHO, QUE PODE VOAR E ALCANÇAR AS ESTRELAS MAIS ALTAS, ALÉM DISSO, NESSA FASE TEM INSETOS VOADORES COMO OBSTÁCULOS, QUE SE O SAPINHO CONSEGUIR COMER, ELE RECUPERA ENERGIA, MAS SE ELE BATER NISSO SEM COMER, ELE PERDE VIDA.
+
+var p4={
+  platforms:[
+    {x:800,y:280,w:120,h:18},{x:1100,y:240,w:100,h:18},{x:1400,y:280,w:110,h:18},
+    {x:2200,y:260,w:130,h:18},{x:2500,y:220,w:120,h:18},{x:2800,y:260,w:110,h:18},
+    {x:3200,y:240,w:140,h:18},{x:3500,y:200,w:120,h:18},{x:3800,y:240,w:130,h:18}
+  ],
+  walls:[{x:600,y:GY-180,w:36,h:180},{x:1800,y:GY-220,w:36,h:220}],
+  waterPits:[{x:300,w:400,ceilY:80,ceilH:40},{x:1600,w:300,ceilY:80,ceilH:40}],
+  gaps:[{x:1000,w:200},{x:2000,w:250},{x:3100,w:180}],
+  speedGates:[{x:4000,y:GY-5000,w:28,h:5000,passed:false}],
+  megaBarriers:[{x:3500,y:GY-5000,w:300,h:5000}], // Mega barreira para Tatuzinho cavar
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+var p4Stars=[];// 20 estrelas na Fase 4
+(function(){for(var i=0;i<20;i++) p4Stars.push({x:300+i*200+Math.random()*60,y:GY-55-Math.random()*160,got:false,r:10});})();
+var p4FlyingInsects=[ // Insetos voadores que se movem verticalmente - só Sapinho pega
+  {x:1200,y:GY-80,vx:0,vy:1.2,amp:40,baseY:GY-80,eaten:false,type:'borboleta',w:20,h:16},
+  {x:1500,y:GY-60,vx:0,vy:-0.8,amp:35,baseY:GY-60,eaten:false,type:'libelula',w:18,h:14},
+  {x:1800,y:GY-100,vx:0,vy:1.5,amp:45,baseY:GY-100,eaten:false,type:'borboleta',w:22,h:18},
+  {x:2200,y:GY-70,vx:0,vy:-1.0,amp:30,baseY:GY-70,eaten:false,type:'libelula',w:16,h:12},
+  {x:2600,y:GY-90,vx:0,vy:1.3,amp:50,baseY:GY-90,eaten:false,type:'borboleta',w:24,h:20},
+  {x:3000,y:GY-50,vx:0,vy:-0.9,amp:25,baseY:GY-50,eaten:false,type:'libelula',w:20,h:16}
+];
+var p4Webs=[ // Teias de aranha gigantes como obstáculos
+  {x:700,y:GY-120,w:80,h:60},{x:1300,y:GY-150,w:90,h:70},{x:1900,y:GY-130,w:85,h:65},
+  {x:2400,y:GY-140,w:95,h:75},{x:2900,y:GY-160,w:100,h:80},{x:3400,y:GY-135,w:88,h:68}
+];
+
+// ── FASE 5: FLORESTA ENCANTADA ───────────────────────────────────────────────
+var p5={
+  platforms:[
+    {x:400,y:300,w:100,h:18},{x:650,y:270,w:120,h:18},{x:950,y:310,w:110,h:18}, 
+    {x:1350,y:280,w:130,h:18},{x:1700,y:250,w:120,h:18},{x:2300,y:290,w:140,h:18}, 
+    {x:2400,y:260,w:130,h:18},{x:3800,y:280,w:120,h:18},
+    {x:4200,y:250,w:130,h:18},{x:4600,y:290,w:140,h:18}
+  ],
+  walls:[{x:1200,y:GY-250,w:36,h:250},{x:3200,y:GY-250,w:36,h:250}],
+  waterPits:[{x:900,w:380,ceilY:80,ceilH:40},{x:2200,w:420,ceilY:80,ceilH:40}], 
+  gaps:[{x:1600,w:250},{x:3650,w:300}],//
+  speedGates:[{x:4800,y:GY-5000,w:28,h:5000,passed:false}],
+  // Mega barreira intransponível - apenas Tatuzinho consegue cavar
+  megaBarriers:[{x:3000,y:GY-5000,w:400,h:5000}], // Mega barreira bloqueia o caminho para a linha de chegada, se o jogador nao tiver a habilidade de cavar, ou seja, se ele nao tiver desbloqueado o Tatuzinho, que é o unico personagem com a habilidade de cavar, o jogador tem que desbloquear o Tatuzinho na fase 1 para conseguir passar por essa mega barreira, que bloqueia o caminho para a linha de chegada, ou seja, se o jogador nao tiver desbloqueado o Tatuzinho, ele nao consegue chegar na linha de chegada e vencer a fase
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+
+// 50 estrelas na Fase 5: 30 fora da barreira + 20 dentro
+var p5Stars=[], p5BarrierStars=[];
+
+// 30 estrelas visíveis fora da barreira
+(function(){
+  for(var i=0;i<30;i++) {
+    p5Stars.push({x:200+i*95+Math.random()*50,y:GY-60-Math.random()*150,got:false,r:10});
+  }
+})();
+
+// 20 estrelas escondidas dentro da barreira (só aparecem quando Tatuzinho cava)
+(function(){
+  var xs=[3050,3080,3110,3140,3170,3200,3230,3260,3290,3320,3350,3380,3410,3440,3470,3500,3530,3560,3590,3620];
+  for(var i=0;i<20;i++) {
+    p5BarrierStars.push({x:xs[i],y:GY+25,got:false,r:10});
+  }
+})();
+
+// 15 insetos variados para o Sapinho comer no início (x~400)
+var p5Insects=[
+  // Espécies já conhecidas
+  {x:350, y:GY-20,vx:1.2, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
+  {x:420, y:GY-20,vx:-1.0,w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
+  {x:480, y:GY-20,vx:1.5, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
+  {x:550, y:GY-22,vx:0.8, w:50,h:18,eaten:false,type:'centopeia',  minX:300, maxX:600},
+  {x:600, y:GY-25,vx:-1.1,w:28,h:14,eaten:false,type:'borboleta',  minX:300, maxX:600},
+  
+  // 5 novas espécies de insetos
+  {x:360, y:GY-18,vx:1.3, w:20,h:18,eaten:false,type:'formiga',    minX:300, maxX:500},  // Formiga
+  {x:430, y:GY-15,vx:-0.9,w:32,h:20,eaten:false,type:'joaninha',   minX:300, maxX:550},  // Joaninha (ponto vermelho)
+  {x:500, y:GY-22,vx:1.4, w:26,h:16,eaten:false,type:'mosca',      minX:300, maxX:580},  // Mosca
+  {x:570, y:GY-20,vx:-1.2,w:22,h:22,eaten:false,type:'araninha',   minX:300, maxX:620},  // Araninha pequena
+  {x:410, y:GY-25,vx:0.7, w:18,h:14,eaten:false,type:'pulgao',     minX:300, maxX:500},  // Pulgão
+  
+  // Mais insetos para completar os 15
+  {x:380, y:GY-20,vx:1.1, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
+  {x:460, y:GY-22,vx:-0.95,w:50,h:18,eaten:false,type:'centopeia', minX:300, maxX:600},
+  {x:520, y:GY-18,vx:1.6, w:20,h:18,eaten:false,type:'formiga',    minX:300, maxX:550},
+  {x:590, y:GY-20,vx:-1.3,w:32,h:20,eaten:false,type:'joaninha',   minX:300, maxX:620},
+  {x:440, y:GY-25,vx:0.9, w:26,h:16,eaten:false,type:'mosca',      minX:300, maxX:580}
+];
+
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FASE 6 — JARDIM DA METAMORFOSE
+// ══════════════════════════════════════════════════════════════════════════════
+var p6={
+  platforms:[
+    {x:300,y:320,w:120,h:18},{x:500,y:285,w:100,h:18},{x:720,y:310,w:130,h:18},
+    {x:950,y:270,w:110,h:18},{x:1200,y:300,w:140,h:18},{x:1500,y:260,w:120,h:18},
+    {x:1800,y:290,w:130,h:18},{x:2100,y:250,w:110,h:18},{x:2400,y:280,w:150,h:18},
+    {x:2800,y:260,w:120,h:18},{x:3100,y:230,w:130,h:18},{x:3400,y:260,w:140,h:18},
+    {x:3800,y:280,w:120,h:18},{x:4100,y:250,w:130,h:18},{x:4400,y:290,w:140,h:18}
+  ],
+  walls:[{x:1600,y:GY-280,w:36,h:280}],
+  waterPits:[{x:700,w:360,ceilY:80,ceilH:40},{x:2600,w:320,ceilY:80,ceilH:40}],
+  gaps:[{x:1300,w:200},{x:3200,w:220},{x:4700,w:180}],
+  frogGaps:[],
+  speedGates:[{x:4900,y:GY-5000,w:28,h:5000,passed:false}],
+  megaBarriers:[{x:3500,y:GY-5000,w:350,h:5000}],
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+var p6Stars=[];
+(function(){for(var i=0;i<20;i++) p6Stars.push({x:3600+i*70+Math.random()*40,y:GY-55-Math.random()*140,got:false,r:10});})();
+function genP6Leaves(){
+  p6Leaves=[]; leavesEaten=0;
+  // Todas as folhas em chão SÓLIDO, fora de poços e buracos
+  // Lagarta: pulo máx ~44px, então y mínimo = GY-44
+  var ld=[
+    // Zona 1 — antes do poço (x: 80-699)
+    {x: 90, y:GY-22}, {x:160, y:GY-38}, {x:240, y:GY-22},
+    {x:340, y:GY-38}, {x:430, y:GY-22}, {x:520, y:GY-38},
+    {x:600, y:GY-22}, {x:660, y:GY-38},
+    // Zona 2 — entre poço 1 e buraco 1 (x: 1061-1299)
+    {x:1075, y:GY-22}, {x:1140, y:GY-38},
+    {x:1200, y:GY-22}, {x:1270, y:GY-38},
+    // Zona 3 — entre buraco 1 e parede (x: 1501-1599)
+    {x:1510, y:GY-22}, {x:1570, y:GY-38},
+    // Zona 4 — após parede, antes do poço 2 (x: 1637-2599)
+    {x:1660, y:GY-22}, {x:1760, y:GY-38},
+    {x:1880, y:GY-22}, {x:1980, y:GY-38},
+    // Zona 5 — após poço 2, antes do buraco 2 (x: 2921-3199)
+    {x:2940, y:GY-22}, {x:3060, y:GY-38}
+  ];
+  for(var i=0;i<ld.length;i++) p6Leaves.push({x:ld[i].x,y:ld[i].y,w:18,h:14,eaten:false,wobble:Math.random()*Math.PI*2});
+}
+genP6Leaves();
+function getLevel(){ return phase===1?p1:phase===2?p2:phase===3?p3:phase===4?p4:phase===5?p5:p6; }
+function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:phase===3?p3Stars:phase===4?p4Stars:phase===5?p5Stars:p6Stars; }
 
 function groundAt(x){// funcao para verificar se tem chao em determinada posicao x, usada para detectar se o jogador esta no chao ou caindo em um buraco, a funcao verifica se a posicao x esta dentro de algum dos buracos (gaps) ou buracos d'agua (waterPits) da fase atual, se estiver dentro de algum desses elementos, significa que nao tem chao naquela posicao e a funcao retorna false, caso contrario, retorna true, indicando que tem chao naquela posicao
   var lv=getLevel();// pega os dados da fase atual para verificar os buracos e buracos d'agua da fase atual
@@ -478,7 +740,7 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
 
   state='playing'; phase=1;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
-  camX=0; score=0; lives=5; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
+  camX=0; score=0; lives=3; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
   p2Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 2 para nao coletadas
   p1.speedGates.forEach(function(g){g.passed=false;});// reseta os portoes de velocidade da fase 1 para nao passados
@@ -487,6 +749,17 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   p3UnlockStars.forEach(function(s){s.got=false;});
   p3.speedGates.forEach(function(g){g.passed=false;});
   p3Insects.forEach(function(ins){ins.eaten=false;});
+  p4Stars.forEach(function(s){s.got=false;}); // RESET FASE 4
+  p4FlyingInsects.forEach(function(ins){ins.eaten=false;}); // RESET INSETOS VOADORES FASE 4
+  p4.speedGates.forEach(function(g){g.passed=false;}); // RESET PORTÕES FASE 4
+  p5Stars.forEach(function(s){s.got=false;}); // RESET FASE 5
+  p5BarrierStars.forEach(function(s){s.got=false;}); // RESET ESTRELAS ESCONDIDAS FASE 5
+  p5Insects.forEach(function(ins){ins.eaten=false;}); // RESET INSETOS FASE 5
+  p5.speedGates.forEach(function(g){g.passed=false;}); // RESET PORTÕES FASE 5
+  caterpillarBarrierStarsCollected=0;
+  genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
+  p6.speedGates.forEach(function(g){g.passed=false;});
+  butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;// reseta os portoes de velocidade da fase 2 para nao passados
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});// reseta os botoes de escolha de personagem para nao ativos
   document.getElementById('btn-cat').classList.add('active');// define o botao do gatinho como ativo, ja que o gatinho é o personagem inicial
@@ -501,6 +774,12 @@ function unlockCaterpillar(){ sndUnlock();
   var btn=document.getElementById('btn-tatu');
   btn.classList.remove('locked');
   document.getElementById('cat-lock').style.display='none';
+}
+function unlockCaterpillarButterfly(){ sndUnlock();
+  caterpillarUnlocked=true;
+  var btn=document.getElementById('btn-caterpillar');
+  btn.classList.remove('locked');
+  document.getElementById('caterpillar-lock').style.display='none';
 }
 function beginPhase2(){ sndPhase2Start();//
   phase=2; state='playing';
@@ -528,7 +807,44 @@ function beginPhase3(){ sndPhase3Start();
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
 }
+function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
+  sndPhase4Start();
+  phase=4; state='playing';
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
+  camX=0; isDigging=false; frogLongJump=0;
+  p4.speedGates.forEach(function(g){g.passed=false;});
+  p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-cat').classList.add('active');
+}
+function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
+  sndPhase5Start();
+  phase=5; state='playing';
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='frog'; // Começa com Sapinho
+  camX=0; isDigging=false; frogLongJump=0;
+  p5.speedGates.forEach(function(g){g.passed=false;});
+  p5Insects.forEach(function(ins){ins.eaten=false;});
+  caterpillarBarrierStarsCollected=0;
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-frog').classList.add('active');
+}
 // ── Update ────────────────────────────────────────────────────────────────────
+function beginPhase6(){
+  sndPhase6Start();
+  phase=6; state='playing';
+  pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='caterpillar'; pl.w=48; pl.h=52;
+  camX=0; isDigging=false; frogLongJump=0;
+  metamorphState='none'; metamorphTimer=0; metamorphCountdown=3;
+  genP6Leaves();
+  p6.speedGates.forEach(function(g){g.passed=false;});
+  p6Stars.forEach(function(s){s.got=false;});
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-caterpillar').classList.add('active');
+  document.querySelector('#btn-caterpillar .em').textContent='🐛';
+  document.querySelector('#btn-caterpillar .cn').textContent='Lagartinha';
+  document.querySelector('#btn-caterpillar .ca').textContent='Come Folhas';
+}
+
 function update(){
   if(state!=='playing') return;
   var def=CHARS[pl.char], lv=getLevel(), sts=getStars(), i;
@@ -593,13 +909,13 @@ function update(){
   if(!isDigging){
     // Ground
     if(pl.y+pl.h>=GY&&groundAt(pl.x+pl.w/2)){
-      pl.y=GY-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=false;
+      pl.y=GY-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=0; // RESET PULO DUPLO
     }
     // Platforms
     for(i=0;i<lv.platforms.length;i++){
       var p=lv.platforms[i];
       if(pl.x+pl.w>p.x&&pl.x<p.x+p.w&&pl.y+pl.h>p.y&&pl.y+pl.h<p.y+p.h+12&&pl.vy>=0){
-        pl.y=p.y-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=false;
+        pl.y=p.y-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=0; // RESET PULO DUPLO
       }
     }
     // Normal walls
@@ -656,6 +972,18 @@ function update(){
       s.got=true; score+=10; sndStar();
     }
   }
+  
+  // P5 barrier stars (hidden stars underground)
+  if(phase===5){
+    for(i2=0;i2<p5BarrierStars.length;i2++){
+      var bs=p5BarrierStars[i2];
+      if(!bs.got&&Math.abs(pl.x+pl.w/2-bs.x)<bs.r+16&&Math.abs(pl.y+pl.h/2-bs.y)<bs.r+16){
+        bs.got=true; score+=10; sndStar();
+        var allBarrier=p5BarrierStars.every(function(s){return s.got;});
+        if(allBarrier&&!caterpillarUnlocked) unlockCaterpillarButterfly();
+      }
+    }
+  }
 
   // P3 unlock stars + insetos
   if(phase===3){
@@ -679,6 +1007,88 @@ function update(){
       }
     }
   }
+
+  // P4 flying insects + webs (insetos voadores e teias de aranha)
+  if(phase===4){
+    // Insetos voadores - movimento vertical senoidal
+    for(var fi=0;fi<p4FlyingInsects.length;fi++){
+      var fins=p4FlyingInsects[fi]; if(fins.eaten) continue;
+      fins.y += fins.vy;
+      if(Math.abs(fins.y - fins.baseY) > fins.amp) fins.vy = -fins.vy;
+      if(pl.x+pl.w>fins.x&&pl.x<fins.x+fins.w&&pl.y+pl.h>fins.y&&pl.y<fins.y+fins.h){
+        if(pl.char==='frog'){ fins.eaten=true; score+=20; sndEat(); frogTongue=25; // LÍNGUA MAIOR!
+          for(var bi=0;bi<10;bi++) spawnBubble(fins.x+fins.w/2,fins.y+fins.h/2);
+        } else { sndHit(); respawn(); }
+      }
+    }
+    // Teias de aranha como obstáculos - colisão com jogador
+    for(var wi=0;wi<p4Webs.length;wi++){
+      var web=p4Webs[wi];
+      if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
+        // Teia desacelera o jogador e pode prender por um momento
+        pl.vx *= 0.7; // Reduz velocidade horizontal
+        if(Math.random()<0.3) pl.vy = Math.min(pl.vy, -2); // Pode dar um pequeno impulso para cima
+      }
+    }
+  }
+
+  // P5 insects + barrier logic (Sapinho come insetos, Tatuzinho entra na barreira)
+  if(phase===5){
+    // Insetos da Fase 5 - Sapinho come
+    for(var ii=0;ii<p5Insects.length;ii++){
+      var inst=p5Insects[ii]; if(inst.eaten) continue;
+      inst.x+=inst.vx;
+      if(inst.x<inst.minX||inst.x>inst.maxX) inst.vx=-inst.vx;
+      if(pl.x+pl.w>inst.x&&pl.x<inst.x+inst.w&&pl.y+pl.h>inst.y&&pl.y<inst.y+inst.h){
+        if(pl.char==='frog'){ inst.eaten=true; score+=15; sndEat();
+          for(var bi=0;bi<8;bi++) spawnBubble(inst.x+inst.w/2,inst.y+inst.h/2);
+        } else { sndHit(); respawn(); }
+      }
+    }
+    
+    // (Desbloqueio da Lagartinha agora é feito ao coletar all p5BarrierStars acima)
+  }
+
+  // ── Fase 6 ──────────────────────────────────────────────────────────────────
+  if(phase===6){
+    if(metamorphState!=='none'&&metamorphState!=='done'){
+      pl.vx=0;
+      if(metamorphState==='cocooning'){
+        metamorphTimer++;
+        if(metamorphTimer>=80){metamorphState='countdown';metamorphTimer=0;metamorphCountdown=3;}
+      }else if(metamorphState==='countdown'){
+        metamorphTimer++;
+        if(metamorphTimer%60===0&&metamorphCountdown>0) metamorphCountdown--;
+        if(metamorphCountdown===0&&metamorphTimer>=70){
+          metamorphState='burst'; metamorphTimer=0;
+          var bC=['#FF69B4','#FFD700','#7FFF00','#00BFFF','#FF6347','#DA70D6','#fff'];
+          for(var bi=0;bi<70;bi++) particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h/2,vx:(Math.random()-0.5)*10,vy:-Math.random()*8-1,life:100,color:bC[Math.floor(Math.random()*bC.length)],type:'burst'});
+          sndVictory();
+          pl.char='butterfly'; pl.w=38; pl.h=38; butterflyUnlocked=true;
+          document.querySelector('#btn-caterpillar .em').textContent='🦋';
+          document.querySelector('#btn-caterpillar .cn').textContent='Borboleta!';
+          document.querySelector('#btn-caterpillar .ca').textContent='Pairar';
+        }
+      }else if(metamorphState==='burst'){
+        metamorphTimer++;
+        if(metamorphTimer>=100) metamorphState='done';
+      }
+    }
+    if(pl.char==='caterpillar'&&metamorphState==='none'){
+      for(var li=0;li<p6Leaves.length;li++){
+        var lf=p6Leaves[li]; if(lf.eaten) continue;
+        lf.wobble=(lf.wobble||0)+0.05;
+        if(Math.abs(pl.x+pl.w/2-lf.x)<22&&Math.abs(pl.y+pl.h/2-lf.y)<22){
+          lf.eaten=true; leavesEaten++; score+=8; sndEat();
+          for(var pi=0;pi<6;pi++) particles.push({x:lf.x,y:lf.y,vx:(Math.random()-0.5)*4,vy:-Math.random()*3-1,life:30,color:'#7FFF00',type:'leaf'});
+          if(leavesEaten>=TOTAL_LEAVES) metamorphState='cocooning';
+        }
+      }
+    }
+    if(pl.char==='butterfly'&&(K['ArrowUp']||K['w'])&&!pl.onGround&&pl.vy>-1){
+      pl.vy=Math.min(pl.vy,0.5);
+    }
+  }
   // Finish
   if(pl.x+pl.w>lv.finish.x){
     if(phase===1){
@@ -686,6 +1096,9 @@ function update(){
       if(all&&!catUnlocked) unlockCaterpillar();
       state='phase2intro';
     } else if(phase===2){ state='phase3intro';
+    } else if(phase===3){ state='phase4intro'; // NOVA TRANSIÇÃO PARA FASE 4
+    } else if(phase===4){ state='phase5intro'; // NOVA TRANSIÇÃO PARA FASE 5
+    } else if(phase===5){ state='phase6intro';
     } else { state='win'; sndVictory(); }
   }
 
@@ -707,10 +1120,54 @@ function drawTree(x,ph){
 function drawBG(){
   var ph=phase;
   var sg=ctx.createLinearGradient(0,0,0,CH);
-  sg.addColorStop(0,ph===3?'#0A0E1A':ph===2?'#546E7A':'#87CEEB');
-  sg.addColorStop(1,ph===3?'#0D2137':ph===2?'#37474F':'#E0F7FA');
+  sg.addColorStop(0,ph===5?'#87CEEB':ph===4?'#0D1B2A':ph===3?'#0A0E1A':ph===2?'#546E7A':'#87CEEB'); // FASE 5: azul claro (dia)
+  sg.addColorStop(1,ph===5?'#90EE90':ph===4?'#1B4332':ph===3?'#0D2137':ph===2?'#37474F':'#E0F7FA'); // FASE 5: verde claro (grama)
   ctx.fillStyle=sg; ctx.fillRect(0,0,CW,CH);
-  if(ph===3){
+  if(ph===5){
+    // SOL brilhante no canto superior direito
+    ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(CW-80,70,50,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,215,0,0.3)'; ctx.beginPath(); ctx.arc(CW-80,70,75,0,Math.PI*2); ctx.fill();
+    
+    // CAMPO DE FLORES FIXAS NO CHÃO (jardim)
+    var flowerPositions = [150, 350, 550, 850, 1150, 1450, 1750, 2050, 2350, 2650, 2950, 3250, 3550, 3850, 4150, 4450, 4750, 5050, 5350];
+    for(var i=0; i<flowerPositions.length; i++){
+      var fx = flowerPositions[i] - camX;
+      if(fx > -50 && fx < CW + 50){
+        // Talos das flores
+        ctx.strokeStyle='#228B22'; ctx.lineWidth=2; ctx.lineCap='round';
+        ctx.beginPath(); ctx.moveTo(fx, GY); ctx.lineTo(fx, GY-15); ctx.stroke();
+        
+        // Flor (pétalas rosadas)
+        var colors = ['#FF69B4', '#FF1493', '#FFB6C1', '#FF69B4', '#FF1493'];
+        ctx.fillStyle = colors[i % colors.length];
+        ctx.beginPath();
+        ctx.arc(fx-4, GY-18, 3, 0, Math.PI*2); ctx.fill(); // Pétala esquerda
+        ctx.beginPath();
+        ctx.arc(fx+4, GY-18, 3, 0, Math.PI*2); ctx.fill(); // Pétala direita
+        ctx.beginPath();
+        ctx.arc(fx, GY-22, 3, 0, Math.PI*2); ctx.fill(); // Pétala cima
+        ctx.beginPath();
+        ctx.arc(fx, GY-14, 3, 0, Math.PI*2); ctx.fill(); // Pétala baixo
+        
+        // Centro da flor (amarelo)
+        ctx.fillStyle='#FFD700';
+        ctx.beginPath(); ctx.arc(fx, GY-18, 2, 0, Math.PI*2); ctx.fill();
+      }
+    }
+  } else if(ph===4){
+    // LUA CHEIA no canto superior direito
+    ctx.fillStyle='rgba(255,255,240,0.95)'; ctx.beginPath(); ctx.arc(CW-100,80,45,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,220,0.3)'; ctx.beginPath(); ctx.arc(CW-100,80,65,0,Math.PI*2); ctx.fill();
+    // VAGA-LUMES piscando
+    var t4=Date.now()/600;
+    for(var fl=0;fl<12;fl++){
+      var fx=(200+fl*350-camX*0.3)%CW, fy=180+Math.sin(t4+fl*1.5)*50;
+      var fa=0.3+0.6*Math.sin(t4*1.8+fl); ctx.globalAlpha=fa;
+      ctx.fillStyle='#FFFF88'; ctx.beginPath(); ctx.arc(fx,fy,4,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,255,120,0.4)'; ctx.beginPath(); ctx.arc(fx,fy,10,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  } else if(ph===3){
     ctx.fillStyle='rgba(255,255,220,0.92)'; ctx.beginPath(); ctx.arc(CW-80,60,30,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='rgba(255,255,200,0.25)'; ctx.beginPath(); ctx.arc(CW-80,60,45,0,Math.PI*2); ctx.fill();
     var t3=Date.now()/800;
@@ -722,7 +1179,7 @@ function drawBG(){
     }
     ctx.globalAlpha=1;
   }
-  ctx.fillStyle=ph===3?'rgba(100,180,255,0.12)':ph===2?'rgba(200,220,255,0.2)':'rgba(255,255,255,0.82)';
+  ctx.fillStyle=ph===5?'rgba(200,255,200,0.3)':ph===4?'rgba(100,200,150,0.15)':ph===3?'rgba(100,180,255,0.12)':ph===2?'rgba(200,220,255,0.2)':'rgba(255,255,255,0.82)';
   [80,260,500,720,970,1300,1700,2100,2500,2900].forEach(function(cx){
     var sx=cx-camX*0.45; if(sx>-80&&sx<CW+80) cloud(sx,55+(cx%3)*25);
   });
@@ -735,9 +1192,12 @@ function drawGround(){
   for(var gx=startX;gx<camX+CW+38;gx+=38){
     if(!groundAt(gx+19)) continue;
     var sx=gx-camX;
-    ctx.fillStyle=phase===2?'#78909C':'#4CAF50'; ctx.fillRect(sx,GY,38,20);
-    ctx.fillStyle=phase===2?'#90A4AE':'#66BB6A'; ctx.fillRect(sx,GY,38,5);
-    ctx.fillStyle='#795548'; ctx.fillRect(sx,GY+20,38,CH-GY-20);
+    ctx.fillStyle=phase===5?'#76B82A':phase===4?'#2D5A3D':phase===2?'#78909C':'#4CAF50'; // FASE 5: verde floresta
+    ctx.fillRect(sx,GY,38,20);
+    ctx.fillStyle=phase===5?'#9AD35F':phase===4?'#4A7C59':phase===2?'#90A4AE':'#66BB6A'; // FASE 5: verde claro
+    ctx.fillRect(sx,GY,38,5);
+    ctx.fillStyle=phase===4?'#1B4332':'#795548'; // FASE 4: marrom pântano
+    ctx.fillRect(sx,GY+20,38,CH-GY-20);
   }
 }
 function drawPlatforms(){
@@ -745,8 +1205,10 @@ function drawPlatforms(){
   for(var i=0;i<lv.platforms.length;i++){
     var p=lv.platforms[i], sx=p.x-camX;
     if(sx>CW||sx+p.w<0) continue;
-    ctx.fillStyle=phase===2?'#607D8B':'#4CAF50'; ctx.fillRect(sx,p.y,p.w,p.h);
-    ctx.fillStyle=phase===2?'#78909C':'#66BB6A'; ctx.fillRect(sx,p.y,p.w,5);
+    ctx.fillStyle=phase===5?'#76B82A':phase===4?'#2D5A3D':phase===2?'#607D8B':'#4CAF50'; // FASE 5: verde floresta
+    ctx.fillRect(sx,p.y,p.w,p.h);
+    ctx.fillStyle=phase===5?'#9AD35F':phase===4?'#4A7C59':phase===2?'#78909C':'#66BB6A'; // FASE 5: verde claro
+    ctx.fillRect(sx,p.y,p.w,5);
   }
 }
 function drawWalls(){
@@ -938,37 +1400,328 @@ function drawDigTunnel(){
 
 // ── Draw Characters ───────────────────────────────────────────────────────────
 function drawCat(cx,cy,def){
-  ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx,cy+5,16,15,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx,cy-5,14,0,Math.PI*2); ctx.fill();
+  var t=Date.now()/140;
+  var run=Math.sin(t)*5;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(0.85,0.85);
+
+  // ── Rabo (curva elegante, balança) ────────────────────────────────────────
+  var tailCurve=Math.sin(t*0.8)*6;
+  ctx.strokeStyle=def.color; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-16,0);
+  ctx.bezierCurveTo(-28,-4,-32,-16+tailCurve,-24,-26+tailCurve);
+  ctx.stroke();
+  // Pontinha escura do rabo
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(-28,-18+tailCurve); ctx.lineTo(-24,-26+tailCurve);
+  ctx.stroke();
+
+  // ── Patas traseiras ───────────────────────────────────────────────────────
+  ctx.strokeStyle=def.accent; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-10,5); ctx.lineTo(-13,16+run); ctx.lineTo(-16,22+run*0.3); ctx.stroke();
   ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.moveTo(cx-9,cy-12); ctx.lineTo(cx-16,cy-23); ctx.lineTo(cx-3,cy-18); ctx.fill();
-  ctx.beginPath(); ctx.moveTo(cx+9,cy-12); ctx.lineTo(cx+16,cy-23); ctx.lineTo(cx+3,cy-18); ctx.fill();
-  ctx.fillStyle='#111';
-  ctx.beginPath(); ctx.arc(cx-6,cy-7,3,0,Math.PI*2); ctx.arc(cx+6,cy-7,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(-17,22+run*0.3,4,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#FFB74D'; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(-5,5);  ctx.lineTo(-7,16-run);  ctx.lineTo(-9,22-run*0.3); ctx.stroke();
+  ctx.fillStyle='#FFB74D';
+  ctx.beginPath(); ctx.arc(-10,22-run*0.3,4,0,Math.PI*2); ctx.fill();
+
+  // ── Patas dianteiras ──────────────────────────────────────────────────────
+  ctx.strokeStyle=def.accent; ctx.lineWidth=4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(8,4);   ctx.lineTo(9,15-run);  ctx.lineTo(11,22-run*0.3); ctx.stroke();
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.arc(12,22-run*0.3,4,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#FFB74D'; ctx.lineWidth=3.5;
+  ctx.beginPath(); ctx.moveTo(12,4);  ctx.lineTo(15,15+run); ctx.lineTo(18,22+run*0.3); ctx.stroke();
+  ctx.fillStyle='#FFB74D';
+  ctx.beginPath(); ctx.arc(19,22+run*0.3,4,0,Math.PI*2); ctx.fill();
+
+  // ── Corpo ─────────────────────────────────────────────────────────────────
+  ctx.fillStyle=def.accent;
+  ctx.beginPath();
+  ctx.moveTo(-17,5); ctx.bezierCurveTo(-19,-5,-9,-13,5,-10);
+  ctx.bezierCurveTo(15,-7,16,3,13,8);
+  ctx.bezierCurveTo(2,13,-12,11,-17,5);
+  ctx.fill();
+  ctx.fillStyle=def.color;
+  ctx.beginPath();
+  ctx.moveTo(-15,3); ctx.bezierCurveTo(-17,-7,-7,-13,5,-10);
+  ctx.bezierCurveTo(15,-7,15,2,12,7);
+  ctx.bezierCurveTo(1,12,-11,10,-15,3);
+  ctx.fill();
+  // Barriga clara
+  ctx.fillStyle='#FFF8E1';
+  ctx.beginPath();
+  ctx.moveTo(-8,5); ctx.bezierCurveTo(-6,0,2,-3,8,-1);
+  ctx.bezierCurveTo(11,1,9,7,5,8);
+  ctx.bezierCurveTo(-1,10,-7,9,-8,5);
+  ctx.fill();
+
+  // ── Pescoço ───────────────────────────────────────────────────────────────
+  ctx.fillStyle=def.color;
+  ctx.beginPath();
+  ctx.moveTo(9,-9); ctx.bezierCurveTo(11,-20,20,-21,22,-13);
+  ctx.bezierCurveTo(22,-5,16,-4,12,-5);
+  ctx.fill();
+
+  // ── Cabeça ────────────────────────────────────────────────────────────────
+  var hx=22, hy=-16;
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.arc(hx+1,hy+1,12,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.arc(hx,hy,12,0,Math.PI*2); ctx.fill();
+
+  // ── Orelhas pontudas ──────────────────────────────────────────────────────
+  // Orelha traseira
+  ctx.fillStyle=def.accent;
+  ctx.beginPath();
+  ctx.moveTo(hx-6,hy-10); ctx.lineTo(hx-14,hy-24); ctx.lineTo(hx-1,hy-12);
+  ctx.fill();
+  ctx.fillStyle='#FFCCBC';
+  ctx.beginPath();
+  ctx.moveTo(hx-6,hy-11); ctx.lineTo(hx-12,hy-22); ctx.lineTo(hx-2,hy-13);
+  ctx.fill();
+  // Orelha dianteira
+  ctx.fillStyle=def.color;
+  ctx.beginPath();
+  ctx.moveTo(hx+3,hy-10); ctx.lineTo(hx+10,hy-23); ctx.lineTo(hx+14,hy-11);
+  ctx.fill();
+  ctx.fillStyle='#FFCCBC';
+  ctx.beginPath();
+  ctx.moveTo(hx+4,hy-11); ctx.lineTo(hx+10,hy-20); ctx.lineTo(hx+13,hy-12);
+  ctx.fill();
+
+  // ── Focinho ───────────────────────────────────────────────────────────────
+  ctx.fillStyle='#FFF8E1';
+  ctx.beginPath();
+  ctx.moveTo(hx+4,hy+2);
+  ctx.bezierCurveTo(hx+10,hy,hx+15,hy+4,hx+13,hy+9);
+  ctx.bezierCurveTo(hx+9,hy+13,hx+3,hy+11,hx+3,hy+6);
+  ctx.bezierCurveTo(hx+3,hy+3,hx+4,hy+2,hx+4,hy+2);
+  ctx.fill();
+
+  // Narizinho triangular
+  ctx.fillStyle='#E91E63';
+  ctx.beginPath();
+  ctx.moveTo(hx+9,hy+4); ctx.lineTo(hx+12,hy+7); ctx.lineTo(hx+6,hy+7);
+  ctx.fill();
+  // Boca
+  ctx.strokeStyle='#555'; ctx.lineWidth=1; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(hx+9,hy+7); ctx.quadraticCurveTo(hx+7,hy+11,hx+5,hy+10); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+9,hy+7); ctx.quadraticCurveTo(hx+11,hy+11,hx+13,hy+10); ctx.stroke();
+
+  // ── Bigodes ───────────────────────────────────────────────────────────────
+  ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=1; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(hx+3,hy+5); ctx.lineTo(hx-6,hy+3);  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+3,hy+7); ctx.lineTo(hx-6,hy+7);  ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+13,hy+5); ctx.lineTo(hx+20,hy+3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+13,hy+7); ctx.lineTo(hx+20,hy+7); ctx.stroke();
+
+  // ── Olho (amendoado felino) ────────────────────────────────────────────────
   ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(cx-5,cy-8,1.2,0,Math.PI*2); ctx.arc(cx+7,cy-8,1.2,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#555'; ctx.lineWidth=1;
-  [[-12,-3],[12,-3],[-12,0],[12,0]].forEach(function(p){
-    ctx.beginPath(); ctx.moveTo(cx+(p[0]<0?p[0]:-2),cy+p[1]); ctx.lineTo(cx+(p[0]<0?-2:p[0]),cy+p[1]); ctx.stroke();
-  });
-  ctx.strokeStyle=def.color; ctx.lineWidth=3;
-  ctx.beginPath(); ctx.moveTo(cx+14,cy+5); ctx.quadraticCurveTo(cx+26,cy,cx+20,cy-14); ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(hx+2,hy-8); ctx.bezierCurveTo(hx+5,hy-12,hx+10,hy-12,hx+11,hy-8);
+  ctx.bezierCurveTo(hx+10,hy-4,hx+5,hy-4,hx+2,hy-8);
+  ctx.fill();
+  ctx.fillStyle='#33691E'; // Verde gatuno
+  ctx.beginPath();
+  ctx.moveTo(hx+3,hy-8); ctx.bezierCurveTo(hx+5,hy-11,hx+9,hy-11,hx+10,hy-8);
+  ctx.bezierCurveTo(hx+9,hy-5,hx+5,hy-5,hx+3,hy-8);
+  ctx.fill();
+  // Pupila vertical
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.ellipse(hx+6.5,hy-8,1.5,3.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(hx+7,hy-9.5,1,0,Math.PI*2); ctx.fill();
+
+  // ── Sobrancelha ───────────────────────────────────────────────────────────
+  ctx.strokeStyle=def.accent; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(hx+2,hy-13); ctx.quadraticCurveTo(hx+6,hy-15,hx+11,hy-13); ctx.stroke();
+
+  ctx.restore();
 }
+
 function drawDog(cx,cy,def){
-  ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx,cy+5,17,15,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx,cy-4,14,0,Math.PI*2); ctx.fill();
+  var t=Date.now()/110;
+  var run=Math.sin(t)*6;
+  ctx.save();
+  ctx.translate(cx,cy);
+  ctx.scale(0.85,0.85); // Reduzido 15%
+
+  // ── Rabo (balança feliz) ──────────────────────────────────────────────────
+  var tw=Math.sin(t*2.2)*0.5;
+  ctx.strokeStyle=def.color; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(-17,-2);
+  ctx.quadraticCurveTo(-30+tw*4,-12+tw*8,-26+tw*3,-24+tw*10);
+  ctx.stroke();
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2.5;
+  ctx.beginPath();
+  ctx.moveTo(-17,-2);
+  ctx.quadraticCurveTo(-30+tw*4,-12+tw*8,-26+tw*3,-24+tw*10);
+  ctx.stroke();
+
+  // ── Patas traseiras ───────────────────────────────────────────────────────
+  // Pata traseira fundo
+  ctx.strokeStyle=def.accent; ctx.lineWidth=4.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-12,4); ctx.lineTo(-16,14+run); ctx.lineTo(-19,22+run*0.3); ctx.stroke();
   ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.ellipse(cx-13,cy-4,5,11,-0.3,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+13,cy-4,5,11,0.3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#BCAAA4'; ctx.beginPath(); ctx.ellipse(cx,cy-1,8,6,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#111';
-  ctx.beginPath(); ctx.arc(cx,cy-3,3,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx-7,cy-8,3,0,Math.PI*2); ctx.arc(cx+7,cy-8,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(-20,22+run*0.3,5,2.5,0.2,0,Math.PI*2); ctx.fill();
+  // Pata traseira frente
+  ctx.strokeStyle='#A1887F'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(-7,5); ctx.lineTo(-9,15-run); ctx.lineTo(-11,22-run*0.3); ctx.stroke();
+  ctx.fillStyle='#A1887F';
+  ctx.beginPath(); ctx.ellipse(-12,22-run*0.3,5,2.5,0.2,0,Math.PI*2); ctx.fill();
+
+  // ── Patas dianteiras ──────────────────────────────────────────────────────
+  // Pata dianteira fundo
+  ctx.strokeStyle=def.accent; ctx.lineWidth=4.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(9,4); ctx.lineTo(11,14-run); ctx.lineTo(13,22-run*0.3); ctx.stroke();
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.ellipse(14,22-run*0.3,5,2.5,-0.2,0,Math.PI*2); ctx.fill();
+  // Pata dianteira frente
+  ctx.strokeStyle='#A1887F'; ctx.lineWidth=4;
+  ctx.beginPath(); ctx.moveTo(13,4); ctx.lineTo(17,14+run); ctx.lineTo(20,22+run*0.3); ctx.stroke();
+  ctx.fillStyle='#A1887F';
+  ctx.beginPath(); ctx.ellipse(21,22+run*0.3,5,2.5,-0.2,0,Math.PI*2); ctx.fill();
+
+  // ── Corpo ─────────────────────────────────────────────────────────────────
+  // Sombra/profundidade
+  ctx.fillStyle=def.accent;
+  ctx.beginPath();
+  ctx.moveTo(-18,6); ctx.bezierCurveTo(-20,-4,-10,-14,6,-10);
+  ctx.bezierCurveTo(16,-7,18,4,15,9);
+  ctx.bezierCurveTo(2,14,-12,12,-18,6);
+  ctx.fill();
+  // Corpo principal
+  ctx.fillStyle=def.color;
+  ctx.beginPath();
+  ctx.moveTo(-16,4); ctx.bezierCurveTo(-18,-6,-8,-14,6,-10);
+  ctx.bezierCurveTo(16,-7,17,3,14,8);
+  ctx.bezierCurveTo(2,13,-12,11,-16,4);
+  ctx.fill();
+  // Barriga mais clara
+  ctx.fillStyle='#D7CCC8';
+  ctx.beginPath();
+  ctx.moveTo(-10,6); ctx.bezierCurveTo(-8,1,0,-2,8,0);
+  ctx.bezierCurveTo(12,2,10,8,6,9);
+  ctx.bezierCurveTo(0,11,-8,10,-10,6);
+  ctx.fill();
+
+  // ── Pescoço ───────────────────────────────────────────────────────────────
+  ctx.fillStyle=def.color;
+  ctx.beginPath();
+  ctx.moveTo(10,-9); ctx.bezierCurveTo(12,-20,22,-22,24,-14);
+  ctx.bezierCurveTo(24,-6,18,-4,13,-5);
+  ctx.fill();
+  ctx.strokeStyle=def.accent; ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(10,-9); ctx.bezierCurveTo(12,-20,22,-22,24,-14);
+  ctx.bezierCurveTo(24,-6,18,-4,13,-5);
+  ctx.stroke();
+
+  // ── Cabeça ────────────────────────────────────────────────────────────────
+  var hx=24, hy=-17;
+  // Sombra cabeça
+  ctx.fillStyle=def.accent;
+  ctx.beginPath(); ctx.arc(hx+1,hy+1,12,0,Math.PI*2); ctx.fill();
+  // Cabeça
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.arc(hx,hy,12,0,Math.PI*2); ctx.fill();
+
+  // ── Orelha (floppy, caindo) ───────────────────────────────────────────────
+  ctx.fillStyle=def.accent;
+  ctx.beginPath();
+  ctx.moveTo(hx-5,hy-10);
+  ctx.bezierCurveTo(hx-14,hy-10,hx-18,hy+2,hx-16,hy+12);
+  ctx.bezierCurveTo(hx-14,hy+20,hx-7,hy+20,hx-5,hy+13);
+  ctx.bezierCurveTo(hx-4,hy+6,hx-4,hy-2,hx-5,hy-10);
+  ctx.fill();
+  // Interior orelha
+  ctx.fillStyle='#A1887F';
+  ctx.beginPath();
+  ctx.moveTo(hx-6,hy-6);
+  ctx.bezierCurveTo(hx-11,hy-5,hx-13,hy+4,hx-12,hy+10);
+  ctx.bezierCurveTo(hx-11,hy+15,hx-8,hy+15,hx-7,hy+10);
+  ctx.bezierCurveTo(hx-6,hy+4,hx-6,hy-1,hx-6,hy-6);
+  ctx.fill();
+
+  // ── Focinho ───────────────────────────────────────────────────────────────
+  ctx.fillStyle='#BCAAA4';
+  ctx.beginPath();
+  ctx.moveTo(hx+5,hy+1);
+  ctx.bezierCurveTo(hx+12,hy-1,hx+16,hy+4,hx+14,hy+9);
+  ctx.bezierCurveTo(hx+10,hy+14,hx+3,hy+12,hx+3,hy+7);
+  ctx.bezierCurveTo(hx+3,hy+3,hx+5,hy+1,hx+5,hy+1);
+  ctx.fill();
+  ctx.strokeStyle='#8D6E63'; ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(hx+5,hy+1);
+  ctx.bezierCurveTo(hx+12,hy-1,hx+16,hy+4,hx+14,hy+9);
+  ctx.bezierCurveTo(hx+10,hy+14,hx+3,hy+12,hx+3,hy+7);
+  ctx.bezierCurveTo(hx+3,hy+3,hx+5,hy+1,hx+5,hy+1);
+  ctx.stroke();
+
+  // ── Nariz ─────────────────────────────────────────────────────────────────
+  ctx.fillStyle='#1a1a1a';
+  ctx.beginPath(); ctx.arc(hx+14,hy+5,3.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.5)';
+  ctx.beginPath(); ctx.arc(hx+13,hy+4,1.2,0,Math.PI*2); ctx.fill();
+  // Narina
+  ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(hx+12,hy+6); ctx.lineTo(hx+13,hy+7); ctx.stroke();
+
+  // ── Linguinha (balança) ────────────────────────────────────────────────────
+  var tongueWag=Math.sin(t*1.8)*3;
+  ctx.fillStyle='#E91E63';
+  ctx.beginPath();
+  ctx.moveTo(hx+7,hy+11);
+  ctx.bezierCurveTo(hx+5,hy+13,hx+4+tongueWag,hy+19,hx+7+tongueWag,hy+21);
+  ctx.bezierCurveTo(hx+11+tongueWag,hy+23,hx+14+tongueWag,hy+20,hx+13,hy+16);
+  ctx.bezierCurveTo(hx+12,hy+13,hx+9,hy+11,hx+7,hy+11);
+  ctx.fill();
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(hx+7,hy+11);
+  ctx.bezierCurveTo(hx+5,hy+13,hx+4+tongueWag,hy+19,hx+7+tongueWag,hy+21);
+  ctx.bezierCurveTo(hx+11+tongueWag,hy+23,hx+14+tongueWag,hy+20,hx+13,hy+16);
+  ctx.stroke();
+  // Divisão da língua
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.8;
+  ctx.beginPath();
+  ctx.moveTo(hx+10,hy+13); ctx.lineTo(hx+10+tongueWag*0.5,hy+20);
+  ctx.stroke();
+
+  // ── Olho ──────────────────────────────────────────────────────────────────
   ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(cx-6,cy-9,1.2,0,Math.PI*2); ctx.arc(cx+8,cy-9,1.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+4,hy-7,4.5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#5D4037';
+  ctx.beginPath(); ctx.arc(hx+5,hy-7,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(hx+5.5,hy-7,1.8,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(hx+6,hy-8,1,0,Math.PI*2); ctx.fill();
+
+  // ── Sobrancelha expressiva ────────────────────────────────────────────────
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(hx+1,hy-12); ctx.quadraticCurveTo(hx+5,hy-14,hx+9,hy-12);
+  ctx.stroke();
+
+  // ── Coleira ───────────────────────────────────────────────────────────────
+  ctx.strokeStyle='#E53935'; ctx.lineWidth=4; ctx.lineCap='butt';
+  ctx.beginPath();
+  ctx.arc(hx,hy,12,0.4,1.2);
+  ctx.stroke();
+  ctx.fillStyle='#FFD700';
+  ctx.beginPath(); ctx.arc(hx+9,hy+9,2.5,0,Math.PI*2); ctx.fill();
+
+  ctx.restore();
 }
+
 function drawDuck(cx,cy,def){
   // Wing flap animation when duck tries to jump outside water
   var wingAngle=0;
@@ -1183,6 +1936,7 @@ function drawTatu(cx,cy,def){
   }
 }
 function drawFrog(cx,cy,def){
+  ctx.save();
   ctx.fillStyle=def.color;
   ctx.beginPath(); ctx.ellipse(cx,cy+4,15,12,0,0,Math.PI*2); ctx.fill();
   ctx.beginPath(); ctx.arc(cx,cy-6,11,0,Math.PI*2); ctx.fill();
@@ -1201,7 +1955,181 @@ function drawFrog(cx,cy,def){
   }
   ctx.strokeStyle=def.accent; ctx.lineWidth=1.5;
   ctx.beginPath(); ctx.moveTo(cx-8,cy-2); ctx.lineTo(cx+8,cy-2); ctx.stroke();
+  ctx.restore();
 }
+function drawCaterpillar(cx,cy,def){
+  var t=Date.now()/200; // Animação suave do corpo
+  
+  // Corpo virado para DIREITA
+  var numSegments=6;
+  var segmentRadius=6; // AUMENTADO 2x
+  var spacing=6; // AUMENTADO 2x
+  
+  // Desenha os segmentos do corpo com ondulação
+  for(var s=0;s<numSegments;s++){
+    var sx=cx+(s)*spacing; // para DIREITA
+    var wave=Math.sin(t+s*0.4)*2.5; // ondulação aumentada proporcionalmente
+    var sy=cy+2+wave; // posição Y aumentada
+    
+    ctx.fillStyle=def.color;
+    ctx.beginPath(); ctx.arc(sx,sy,segmentRadius,0,Math.PI*2); ctx.fill();
+    // Contorno
+    ctx.strokeStyle='#7CB342'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(sx,sy,segmentRadius,0,Math.PI*2); ctx.stroke();
+    // Franja
+    ctx.strokeStyle='#558B2F'; ctx.lineWidth=0.8;
+    ctx.beginPath(); ctx.moveTo(sx-segmentRadius,sy); ctx.lineTo(sx+segmentRadius,sy); ctx.stroke();
+    
+    // PERNINHAS (4 por segmento, tocando no chão)
+    if(s<numSegments){
+      var legCount=4;
+      var legSpacing=segmentRadius*2/legCount;
+      for(var l=0;l<legCount;l++){
+        var lx=sx-segmentRadius+l*legSpacing+1;
+        var legWave=Math.sin(t+s*0.4+l*0.3)*1;
+        var lyTop=sy+segmentRadius+1+legWave; // acompanha a ondulação do corpo
+        var lyBottom=cy+19; // reduzido para metade novamente (cerca de 10px)
+        
+        ctx.strokeStyle='#558B2F'; ctx.lineWidth=1.2;
+        ctx.beginPath(); ctx.moveTo(lx,lyTop); ctx.lineTo(lx,lyBottom); ctx.stroke();
+        
+        // Pé pequeno na ponta
+        ctx.fillStyle='#558B2F';
+        ctx.beginPath(); ctx.arc(lx,lyBottom,1.2,0,Math.PI*2); ctx.fill();
+      }
+    }
+  }
+  
+  // Cabeça (direita)
+  var headX=cx+(numSegments)*spacing;
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.arc(headX,cy-8,9,0,Math.PI*2); ctx.fill(); // AUMENTADO 2x
+  ctx.strokeStyle='#7CB342'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(headX,cy-8,9,0,Math.PI*2); ctx.stroke();
+  
+  // Antenas (aumentadas)
+  ctx.strokeStyle=def.accent; ctx.lineWidth=1.8; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(headX-4,cy-14); ctx.quadraticCurveTo(headX-7,cy-18,headX-5,cy-22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(headX+4,cy-14); ctx.quadraticCurveTo(headX+7,cy-18,headX+5,cy-22); ctx.stroke();
+  
+  // Olhos
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(headX-4,cy-10,3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(headX+4,cy-10,3,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(headX-3,cy-11,1.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(headX+5,cy-11,1.2,0,Math.PI*2); ctx.fill();
+  
+  // Boca
+  ctx.strokeStyle='#111'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.arc(headX,cy-5,3,0,Math.PI); ctx.stroke();
+}
+// ── Borboleta: visão lateral (cabeça direita, corpo horizontal, asas para cima) ──
+function drawButterfly(cx,cy,def){
+  var t=Date.now()/130;
+  var flapY=Math.abs(Math.sin(t))*14;
+  ctx.save();
+  ctx.translate(cx,cy);
+  // Abdômen fino (segmentos para esquerda)
+  var abdC=['#7B1FA2','#9C27B0','#7B1FA2','#6A1B9A'];
+  for(var s=0;s<4;s++){
+    var bx=-s*7;
+    ctx.fillStyle=abdC[s];
+    ctx.beginPath(); ctx.arc(bx,0,2.5,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.6;
+    ctx.beginPath(); ctx.arc(bx,0,2.5,0,Math.PI*2); ctx.stroke();
+  }
+  // Tórax fino
+  var tx2=4;
+  ctx.fillStyle='#6A1B9A';
+  ctx.beginPath(); ctx.arc(tx2,0,3.5,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.arc(tx2,0,3.5,0,Math.PI*2); ctx.stroke();
+  // Asa sup esquerda — AMPLIADA
+  ctx.fillStyle='rgba(255,105,180,0.92)';
+  ctx.beginPath();
+  ctx.moveTo(tx2,0);
+  ctx.bezierCurveTo(tx2-12,-10-flapY,tx2-44,-18-flapY,tx2-36,-6-flapY*0.3);
+  ctx.bezierCurveTo(tx2-24,5,tx2-8,3,tx2,0);
+  ctx.fill();
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.3;
+  ctx.beginPath();
+  ctx.moveTo(tx2,0);
+  ctx.bezierCurveTo(tx2-12,-10-flapY,tx2-44,-18-flapY,tx2-36,-6-flapY*0.3);
+  ctx.bezierCurveTo(tx2-24,5,tx2-8,3,tx2,0);
+  ctx.stroke();
+  ctx.strokeStyle='rgba(180,0,80,0.3)'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(tx2,0); ctx.quadraticCurveTo(tx2-18,-6-flapY*0.5,tx2-30,-4-flapY*0.3); ctx.stroke();
+  ctx.fillStyle='rgba(255,215,0,0.65)';
+  ctx.beginPath(); ctx.arc(tx2-22,-7-flapY*0.5,5,0,Math.PI*2); ctx.fill();
+
+  // Asa sup direita — AMPLIADA
+  ctx.fillStyle='rgba(255,105,180,0.92)';
+  ctx.beginPath();
+  ctx.moveTo(tx2,0);
+  ctx.bezierCurveTo(tx2+12,-10-flapY,tx2+38,-18-flapY,tx2+30,-6-flapY*0.3);
+  ctx.bezierCurveTo(tx2+20,5,tx2+7,3,tx2,0);
+  ctx.fill();
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.3;
+  ctx.beginPath();
+  ctx.moveTo(tx2,0);
+  ctx.bezierCurveTo(tx2+12,-10-flapY,tx2+38,-18-flapY,tx2+30,-6-flapY*0.3);
+  ctx.bezierCurveTo(tx2+20,5,tx2+7,3,tx2,0);
+  ctx.stroke();
+  ctx.strokeStyle='rgba(180,0,80,0.3)'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(tx2,0); ctx.quadraticCurveTo(tx2+16,-6-flapY*0.5,tx2+25,-4-flapY*0.3); ctx.stroke();
+  ctx.fillStyle='rgba(255,215,0,0.65)';
+  ctx.beginPath(); ctx.arc(tx2+18,-7-flapY*0.5,5,0,Math.PI*2); ctx.fill();
+
+  // Asa inf esquerda — AMPLIADA
+  ctx.fillStyle='rgba(255,140,200,0.82)';
+  ctx.beginPath();
+  ctx.moveTo(tx2-1,2);
+  ctx.bezierCurveTo(tx2-10,-4-flapY*0.6,tx2-30,-8-flapY*0.5,tx2-24,3);
+  ctx.bezierCurveTo(tx2-17,10,tx2-6,8,tx2-1,2);
+  ctx.fill();
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.9;
+  ctx.beginPath();
+  ctx.moveTo(tx2-1,2);
+  ctx.bezierCurveTo(tx2-10,-4-flapY*0.6,tx2-30,-8-flapY*0.5,tx2-24,3);
+  ctx.bezierCurveTo(tx2-17,10,tx2-6,8,tx2-1,2);
+  ctx.stroke();
+
+  // Asa inf direita — AMPLIADA
+  ctx.fillStyle='rgba(255,140,200,0.82)';
+  ctx.beginPath();
+  ctx.moveTo(tx2+1,2);
+  ctx.bezierCurveTo(tx2+10,-4-flapY*0.6,tx2+28,-8-flapY*0.5,tx2+22,3);
+  ctx.bezierCurveTo(tx2+15,10,tx2+5,8,tx2+1,2);
+  ctx.fill();
+  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.9;
+  ctx.beginPath();
+  ctx.moveTo(tx2+1,2);
+  ctx.bezierCurveTo(tx2+10,-4-flapY*0.6,tx2+28,-8-flapY*0.5,tx2+22,3);
+  ctx.bezierCurveTo(tx2+15,10,tx2+5,8,tx2+1,2);
+  ctx.stroke();
+  // Cabeça
+  var hx=14;
+  ctx.fillStyle='#7B1FA2';
+  ctx.beginPath(); ctx.arc(hx,-1,7,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.arc(hx,-1,7,0,Math.PI*2); ctx.stroke();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(hx+3,-3,2.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#111';
+  ctx.beginPath(); ctx.arc(hx+3,-3,1.2,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white';
+  ctx.beginPath(); ctx.arc(hx+3.5,-3.5,0.6,0,Math.PI*2); ctx.fill();
+  // Antenas
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1.4; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(hx+2,-7); ctx.quadraticCurveTo(hx+10,-16,hx+8,-20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+5,-6); ctx.quadraticCurveTo(hx+14,-13,hx+13,-18); ctx.stroke();
+  ctx.fillStyle='#FF69B4';
+  ctx.beginPath(); ctx.arc(hx+8,-20,2.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+13,-18,2.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawFrogGaps(){
   var lv=getLevel(); if(!lv.frogGaps) return;
   for(var i=0;i<lv.frogGaps.length;i++){
@@ -1225,49 +2153,168 @@ function drawFrogGaps(){
   }
 }
 function drawInsects(){
-  if(phase!==3) return;
+  if(phase!==3 && phase!==4 && phase!==5) return; // INCLUIR FASE 5
   var t=Date.now()/120;
-  for(var i=0;i<p3Insects.length;i++){
-    var ins=p3Insects[i]; if(ins.eaten) continue;
-    var sx=ins.x-camX; if(sx>CW+60||sx<-60) continue;
-    if(ins.type==='barata'){
-      ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+8,10,6,0,0,Math.PI*2); ctx.fill();
-      ctx.fillStyle='#6D4C41'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+6,5,4,0,0,Math.PI*2); ctx.fill();
-      ctx.strokeStyle='#222'; ctx.lineWidth=1;
-      for(var lg=-1;lg<=1;lg+=2){
-        ctx.beginPath(); ctx.moveTo(sx+12,ins.y+8); ctx.lineTo(sx+12+lg*14,ins.y+8+Math.sin(t+lg)*3); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(sx+12,ins.y+7); ctx.lineTo(sx+12+lg*12,ins.y+4); ctx.stroke();
+  if(phase===3){
+    for(var i=0;i<p3Insects.length;i++){
+      var ins=p3Insects[i]; if(ins.eaten) continue;
+      var sx=ins.x-camX; if(sx>CW+60||sx<-60) continue;
+      if(ins.type==='barata'){
+        ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+8,10,6,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#6D4C41'; ctx.beginPath(); ctx.ellipse(sx+12,ins.y+6,5,4,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#222'; ctx.lineWidth=1;
+        for(var lg=-1;lg<=1;lg+=2){
+          ctx.beginPath(); ctx.moveTo(sx+12,ins.y+8); ctx.lineTo(sx+12+lg*14,ins.y+8+Math.sin(t+lg)*3); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx+12,ins.y+7); ctx.lineTo(sx+12+lg*12,ins.y+4); ctx.stroke();
+        }
+      } else {
+        for(var seg=0;seg<5;seg++){
+          var bx=sx+seg*9+4, by=ins.y+9+Math.sin(t+seg*0.7)*2;
+          ctx.fillStyle=seg%2===0?'#D84315':'#BF360C';
+          ctx.beginPath(); ctx.arc(bx,by,5,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle='#444'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by+4+Math.sin(t+seg)*2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by-4+Math.sin(t+seg)*2); ctx.stroke();
+        }
       }
-    } else {
-      for(var seg=0;seg<5;seg++){
-        var bx=sx+seg*9+4, by=ins.y+9+Math.sin(t+seg*0.7)*2;
-        ctx.fillStyle=seg%2===0?'#D84315':'#BF360C';
-        ctx.beginPath(); ctx.arc(bx,by,5,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#444'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by+4+Math.sin(t+seg)*2); ctx.stroke();
-        ctx.beginPath(); ctx.moveTo(bx,by); ctx.lineTo(bx-5,by-4+Math.sin(t+seg)*2); ctx.stroke();
-      }
+      var pulse=0.6+0.4*Math.sin(t*3); ctx.globalAlpha=pulse;
+      ctx.fillStyle='#F44336'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+      ctx.fillText('!',sx+ins.w/2,ins.y-6); ctx.globalAlpha=1;
     }
-    var pulse=0.6+0.4*Math.sin(t*3); ctx.globalAlpha=pulse;
-    ctx.fillStyle='#F44336'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
-    ctx.fillText('!',sx+ins.w/2,ins.y-6); ctx.globalAlpha=1;
+  } else if(phase===4){ // INSETOS VOADORES DA FASE 4
+    for(var fi=0;fi<p4FlyingInsects.length;fi++){
+      var fins=p4FlyingInsects[fi]; if(fins.eaten) continue;
+      var sx=fins.x-camX; if(sx>CW+60||sx<-60) continue;
+      if(fins.type==='borboleta'){
+        // Borboleta colorida
+        ctx.fillStyle='#FF6B6B'; ctx.beginPath(); ctx.ellipse(sx+10,fins.y+8,8,6,0.3,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#4ECDC4'; ctx.beginPath(); ctx.ellipse(sx+10,fins.y+8,8,6,-0.3,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#FFE66D'; ctx.beginPath(); ctx.arc(sx+10,fins.y+8,3,0,Math.PI*2); ctx.fill();
+      } else {
+        // Libélula azul
+        ctx.fillStyle='#74B9FF'; ctx.beginPath(); ctx.ellipse(sx+9,fins.y+7,7,5,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#0984E3'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(sx+2,fins.y+7); ctx.lineTo(sx+16,fins.y+7); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx+9,fins.y+2); ctx.lineTo(sx+9,fins.y+12); ctx.stroke();
+      }
+      var pulse=0.5+0.5*Math.sin(t*4+fi); ctx.globalAlpha=pulse;
+      ctx.fillStyle='#FFD700'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
+      ctx.fillText('🐸',sx+fins.w/2,fins.y-4); ctx.globalAlpha=1; // Emoji sapinho indicando que só ele pega
+    }
+  } else if(phase===5){ // INSETOS DA FASE 5
+    for(var ii=0;ii<p5Insects.length;ii++){
+      var inst=p5Insects[ii]; if(inst.eaten) continue;
+      var sx=inst.x-camX; if(sx>CW+60||sx<-60) continue;
+      if(inst.type==='formiga'){
+        // Formiga vermelha
+        ctx.fillStyle='#E53935'; 
+        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+4,4,3,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+10,5,4,0,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+16,6,5,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#B71C1C'; ctx.lineWidth=1;
+        for(var lg=-1;lg<=1;lg+=2){
+          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+10); ctx.lineTo(sx+10+lg*8,inst.y+14); ctx.stroke();
+        }
+      } else if(inst.type==='joaninha'){
+        // Joaninha com pontos
+        ctx.fillStyle='#D32F2F'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,7,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#1B5E20'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,4,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#000';
+        ctx.beginPath(); ctx.arc(sx+7,inst.y+5,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+13,inst.y+5,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+7,inst.y+11,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(sx+13,inst.y+11,1.5,0,Math.PI*2); ctx.fill();
+      } else if(inst.type==='mosca'){
+        // Mosca verde
+        ctx.fillStyle='#7CB342'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+9,6,5,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#558B2F'; ctx.beginPath(); ctx.arc(sx+10,inst.y+6,3,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#33691E'; ctx.lineWidth=1;
+        for(var w=-1;w<=1;w+=2){
+          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+9); ctx.lineTo(sx+10+w*9,inst.y+6); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+9); ctx.lineTo(sx+10+w*8,inst.y+12); ctx.stroke();
+        }
+      } else if(inst.type==='araninha'){
+        // Araninha marrom
+        ctx.fillStyle='#5D4037'; ctx.beginPath(); ctx.arc(sx+10,inst.y+7,4,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#3E2723'; ctx.lineWidth=1;
+        for(var leg=0;leg<8;leg++){
+          var lx=sx+10+Math.cos(leg*Math.PI/4)*6;
+          var ly=inst.y+7+Math.sin(leg*Math.PI/4)*6;
+          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+7); ctx.lineTo(lx,ly); ctx.stroke();
+        }
+      } else if(inst.type==='pulgao'){
+        // Pulgão pequeno verde
+        ctx.fillStyle='#9CCC65'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,3,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#558B2F'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(sx+10,inst.y+5); ctx.lineTo(sx+10,inst.y+2); ctx.stroke();
+      } else {
+        // Barata ou centopeia (padrão)
+        ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+8,8,6,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#6D4C41'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+6,4,3,0,0,Math.PI*2); ctx.fill();
+      }
+      var pulse=0.6+0.4*Math.sin(t*3); ctx.globalAlpha=pulse;
+      ctx.fillStyle='#F44336'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
+      ctx.fillText('!',sx+inst.w/2,inst.y-6); ctx.globalAlpha=1;
+    }
+  }
+}
+function drawWebs(){ // NOVA FUNÇÃO: TEIAS DE ARANHA DA FASE 4
+  if(phase!==4) return;
+  for(var i=0;i<p4Webs.length;i++){
+    var web=p4Webs[i], sx=web.x-camX;
+    if(sx>CW||sx+web.w<0) continue;
+    // Teia circular com fios
+    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(sx+web.w/2,web.y+web.h/2,web.w/2,0,Math.PI*2); ctx.stroke();
+    for(var r=1;r<4;r++){
+      ctx.beginPath(); ctx.arc(sx+web.w/2,web.y+web.h/2,web.w/2*r/4,0,Math.PI*2); ctx.stroke();
+    }
+    // Fios radiais
+    for(var a=0;a<8;a++){
+      var ang=a*Math.PI/4;
+      ctx.beginPath();
+      ctx.moveTo(sx+web.w/2,web.y+web.h/2);
+      ctx.lineTo(sx+web.w/2+Math.cos(ang)*web.w/2,web.y+web.h/2+Math.sin(ang)*web.h/2);
+      ctx.stroke();
+    }
+    // Aranha pequena
+    ctx.fillStyle='#2D3436'; ctx.beginPath(); ctx.arc(sx+web.w/2+5,web.y+web.h/2+5,3,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.7)'; rrect(sx+web.w/2-35,web.y-25,70,20,8); ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=1.5; rrect(sx+web.w/2-35,web.y-25,70,20,8); ctx.stroke();
+    ctx.fillStyle='#FFD700'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('Teia Pegajosa!',sx+web.w/2,web.y-10);
   }
 }
 function drawP3UnlockStars(){
-  if(phase!==3||!isDigging) return;
+  if((phase!==3&&phase!==5)||!isDigging) return;
   var t=Date.now()/350;
-  for(var i=0;i<p3UnlockStars.length;i++){
-    var s=p3UnlockStars[i]; if(s.got) continue;
-    var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
-    var bob=Math.sin(t+s.x)*2;
-    ctx.shadowColor='#FFD700'; ctx.shadowBlur=12;
-    ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
-    ctx.fillStyle='#FFD700'; ctx.fill();
-    ctx.strokeStyle='#FF6F00'; ctx.lineWidth=2; ctx.stroke();
-    ctx.shadowBlur=0;
+  if(phase===3){
+    for(var i=0;i<p3UnlockStars.length;i++){
+      var s=p3UnlockStars[i]; if(s.got) continue;
+      var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
+      var bob=Math.sin(t+s.x)*2;
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=12;
+      ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
+      ctx.fillStyle='#FFD700'; ctx.fill();
+      ctx.strokeStyle='#FF6F00'; ctx.lineWidth=2; ctx.stroke();
+      ctx.shadowBlur=0;
+    }
+  }
+  if(phase===5){
+    for(var i=0;i<p5BarrierStars.length;i++){
+      var s=p5BarrierStars[i]; if(s.got) continue;
+      var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
+      var bob=Math.sin(t+s.x)*2;
+      ctx.shadowColor='#FFD700'; ctx.shadowBlur=12;
+      ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
+      ctx.fillStyle='#FFD700'; ctx.fill();
+      ctx.strokeStyle='#FF6F00'; ctx.lineWidth=2; ctx.stroke();
+      ctx.shadowBlur=0;
+    }
   }
 }
 function drawPlayer(){
+  if(phase===6&&metamorphState!=='none'&&metamorphState!=='done') return;
   var def=CHARS[pl.char], sx=pl.x-camX, sy=pl.y, cx=sx+pl.w/2, cy=sy+pl.h/2;
   switch(pl.char){
     case 'cat':         drawCat(cx,cy,def);         break;
@@ -1276,6 +2323,8 @@ function drawPlayer(){
     case 'bird':        drawBird(cx,cy,def);        break;
     case 'tatu':        drawTatu(cx,cy,def);        break;
     case 'frog':        drawFrog(cx,cy,def);        break;
+    case 'caterpillar': drawCaterpillar(cx,cy,def); break;
+    case 'butterfly':   drawButterfly(cx,cy,def);   break;
   }
   if(!isDigging){
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
@@ -1286,6 +2335,8 @@ function drawPlayer(){
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function drawHUD(){
   var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
+  // Fase 5: adiciona as estrelas escondidas na contagem
+  if(phase===5) got+=p5BarrierStars.filter(function(s){return s.got;}).length;
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,10,145,36,10); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
   ctx.fillText('Pts: '+score,18,31);
@@ -1296,13 +2347,27 @@ function drawHUD(){
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10,170,36,10); ctx.fill();
   ctx.fillStyle='#FFD700'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
   ctx.fillText(def.ability,CW/2,31);
-  var all20=(got>=20);
+  var all20=(phase===5?got>=50:got>=20);
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52,150,26,8); ctx.fill();
   ctx.fillStyle=all20?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
-  ctx.fillText('Estrelas: '+got+'/20'+(all20?' OK!':''),18,68);
+  ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68);
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-  ctx.fillText('Fase '+phase+' de 3',CW/2,68);
+  ctx.fillText('Fase '+phase+' de 6',CW/2,68); // ATUALIZADO PARA 5 FASES
+  if(phase===6&&metamorphState!=='burst'){
+    var ld=leavesEaten>=TOTAL_LEAVES;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84,205,26,8); ctx.fill();
+    ctx.strokeStyle=ld?'#FFD700':'#7FFF00'; ctx.lineWidth=1.5; rrect(10,84,205,26,8); ctx.stroke();
+    ctx.fillStyle=ld?'#FFD700':'#7FFF00'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('🍃 Folhas: '+leavesEaten+'/'+TOTAL_LEAVES+(ld?' 🐛 Metamorfose!':' (colete todas!)'),18,100);
+  }
+  if(phase===5){
+    var bg=p5BarrierStars.filter(function(s){return s.got;}).length, bd=bg>=20;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84,210,26,8); ctx.fill();
+    ctx.strokeStyle=bd?'#FFD700':'rgba(174,238,174,0.6)'; ctx.lineWidth=1.5; rrect(10,84,210,26,8); ctx.stroke();
+    ctx.fillStyle=bd?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('⭐ Barreira: '+bg+'/20'+(bd?' 🦋 Desbloqueada!':' (Tatuzinho cava!)'),18,100);
+  }
   if(pl.char==='tatu'){
     ctx.fillStyle='rgba(102,187,106,0.88)'; rrect(10,CH-30,250,20,8); ctx.fill();
     ctx.fillStyle='#1a1a1a'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
@@ -1314,6 +2379,75 @@ function drawHUD(){
 }
 
 // ── Screens ───────────────────────────────────────────────────────────────────
+function drawP6Leaves(){
+  if(phase!==6) return;
+  var t=Date.now()/600;
+  for(var i=0;i<p6Leaves.length;i++){
+    var lf=p6Leaves[i]; if(lf.eaten) continue;
+    var sx2=lf.x-camX, sy2=lf.y+Math.sin(t+(lf.wobble||0))*3;
+    ctx.fillStyle='#4CAF50';
+    ctx.beginPath(); ctx.arc(sx2,sy2,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#81C784';
+    ctx.beginPath(); ctx.arc(sx2,sy2,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#2E7D32'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx2-6,sy2); ctx.lineTo(sx2+6,sy2); ctx.stroke();
+  }
+}
+function drawMetamorph(){
+  if(phase!==6||metamorphState==='none'||metamorphState==='done') return;
+  var sx2=pl.x-camX+pl.w/2, sy2=pl.y+pl.h/2;
+  if(metamorphState==='cocooning'||metamorphState==='countdown'){
+    var prog=metamorphState==='cocooning'?(metamorphTimer/80):1;
+    var pulse=Math.sin(Date.now()/200)*4*prog;
+    ctx.fillStyle='rgba(210,180,140,'+(0.6+prog*0.35)+')';
+    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#A0522D'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(sx2,sy2,(26+pulse)*prog,0,Math.PI*2); ctx.stroke();
+    if(metamorphState==='countdown'){
+      ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,CW,CH);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 90px Arial'; ctx.textAlign='center';
+      ctx.shadowColor='#FF6347'; ctx.shadowBlur=35;
+      ctx.fillText(metamorphCountdown>0?metamorphCountdown:'✨',CW/2,CH/2+25);
+      ctx.shadowBlur=0;
+      ctx.fillStyle='white'; ctx.font='bold 20px Arial';
+      ctx.fillText('Metamorfose em andamento...',CW/2,CH/2+85);
+    }
+  }else if(metamorphState==='burst'){
+    var fa=Math.max(0,1-(metamorphTimer/100));
+    ctx.fillStyle='rgba(200,255,150,'+fa*0.55+')'; ctx.fillRect(0,0,CW,CH);
+    if(metamorphTimer<55){
+      ctx.globalAlpha=fa;
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      rrect(CW/2-245,CH/2-58,490,116,18); ctx.fill();
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
+      rrect(CW/2-245,CH/2-58,490,116,18); ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 32px Arial'; ctx.textAlign='center';
+      ctx.shadowColor='#FF1493'; ctx.shadowBlur=25;
+      ctx.fillText('🦋 BORBOLETA DESBLOQUEADA! 🦋',CW/2,CH/2+5);
+      ctx.shadowBlur=0;
+      ctx.fillStyle='white'; ctx.font='15px Arial';
+      ctx.fillText('Pressione [7] para usar a Borboleta!',CW/2,CH/2+36);
+      ctx.globalAlpha=1;
+    }
+  }
+}
+function drawPhase6Intro(){
+  ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
+  ctx.fillStyle='#7FFF00'; ctx.font='bold 32px Arial'; ctx.textAlign='center';
+  ctx.fillText('🐛 FASE 6 — JARDIM DA METAMORFOSE 🦋',CW/2,120);
+  ctx.fillStyle='white'; ctx.font='17px Arial';
+  ctx.fillText('A Lagartinha deve comer 20 folhinhas verdes',CW/2,175);
+  ctx.fillText('para iniciar sua transformação em Borboleta!',CW/2,202);
+  ctx.fillStyle='#FFD700'; ctx.font='bold 14px Arial';
+  ctx.fillText('Após comer todas as folhas, aguarde a metamorfose...',CW/2,248);
+  ctx.fillStyle='#7FFF00'; ctx.font='14px Arial';
+  ctx.fillText('🦋 Borboleta: Pulo Alto + Pairar (segure ↑ no ar)',CW/2,282);
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='13px Arial';
+  ctx.fillText('Pressione ESPAÇO ou clique para começar',CW/2,330);
+}
+
 function drawMenu(){
   var mg=ctx.createLinearGradient(0,0,0,CH);
   mg.addColorStop(0,'#1565C0'); mg.addColorStop(1,'#0D47A1');
@@ -1329,10 +2463,12 @@ function drawMenu(){
     {n:'Cachorrinho',a:'Corrida',    c:'#8D6E63'},
     {n:'Patinho',    a:'Nada',       c:'#FDD835'},
     {n:'Passarinho', a:'Voa',        c:'#29B6F6'},
-    {n:'Tatuzinho',  a:'Cavar',      c:'#8D6E63',locked:true}
+    {n:'Tatuzinho',  a:'Cavar',      c:'#8D6E63',locked:true},
+    {n:'Sapinho',    a:'Pulo Duplo', c:'#4CAF50',locked:true} // ADICIONADO SAPINHO NO MENU
   ];
   cards.forEach(function(cd,i){
-    var bx=78+i*132, by=198;
+    var row = Math.floor(i/3), col = i%3; // 3 COLUNAS, 2 LINHAS
+    var bx=120+col*180, by=198+row*120; // AJUSTADO PARA GRADE 3x2
     ctx.fillStyle='rgba(255,255,255,0.1)'; rrect(bx-50,by-15,100,108,12); ctx.fill();
     ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=2; rrect(bx-50,by-15,100,108,12); ctx.stroke();
     if(cd.locked){
@@ -1347,9 +2483,9 @@ function drawMenu(){
     }
   });
   var pulse=Math.sin(Date.now()/380)*4;
-  ctx.fillStyle='#43A047'; rrect(CW/2-125,368-pulse/2,250,48+pulse,28); ctx.fill();
+  ctx.fillStyle='#43A047'; rrect(CW/2-125,420-pulse/2,250,48+pulse,28); ctx.fill(); // MOVIDO PARA BAIXO
   ctx.fillStyle='white'; ctx.font='bold 21px Arial'; ctx.textAlign='center';
-  ctx.fillText('JOGAR AGORA!',CW/2,399);
+  ctx.fillText('JOGAR AGORA!',CW/2,451); // AJUSTADO
   ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
   ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
 }
@@ -1360,7 +2496,7 @@ function drawPhase2Intro(){
   if(allGot){
     var t=Date.now()/500;
     ctx.fillStyle='#FFD700'; ctx.font='bold 40px Arial'; ctx.textAlign='center';
-    ctx.shadowColor='#FF6F00'; ctx.shadowBlur=28; ctx.fillText('LAGARTINHA DESBLOQUEADA!',CW/2,115); ctx.shadowBlur=0;
+    ctx.shadowColor='#FF6F00'; ctx.shadowBlur=28; ctx.fillText('TATUZINHO DESBLOQUEADO!',CW/2,115); ctx.shadowBlur=0;
     for(var i=0;i<10;i++){
       var a=t+i*(Math.PI*2/10), rx=CW/2+Math.cos(a)*95, ry=185+Math.sin(a)*35;
       ctx.fillStyle='#FFD700'; ctx.font='16px Arial'; ctx.fillText('*',rx,ry);
@@ -1417,14 +2553,66 @@ function drawPhase3Intro(){
   ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
   ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
 }
+function drawPhase4Intro(){ // NOVA TELA DE INTRODUÇÃO DA FASE 4
+  ctx.fillStyle='rgba(13,27,42,0.9)'; ctx.fillRect(0,0,CW,CH);
+  var t=Date.now()/500;
+  ctx.fillStyle='#4CAF50'; ctx.font='bold 36px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#1B5E20'; ctx.shadowBlur=25; ctx.fillText('FASE 3 CONCLUIDA!',CW/2,95); ctx.shadowBlur=0;
+  ctx.fillStyle='#FFD700'; ctx.font='bold 22px Arial'; ctx.fillText('Pântano da Lua Cheia!',CW/2,145);
+  ctx.fillStyle='white'; ctx.font='16px Arial';
+  ctx.fillText('Insetos voadores + Pulo duplo do Sapinho!',CW/2,185);
+  ctx.fillText('Teias de aranha desaceleram o jogador',CW/2,210);
+  ctx.fillText('Língua estendida para insetos aéreos',CW/2,235);
+  ctx.fillStyle='rgba(76,175,80,0.2)'; ctx.beginPath(); ctx.arc(CW/2,290,55,0,Math.PI*2); ctx.fill();
+  ctx.font='60px Arial'; ctx.textAlign='center'; ctx.fillText('🐸',CW/2,310);
+  // Vaga-lumes na tela de introdução
+  for(var i=0;i<6;i++){
+    var a=t+i*(Math.PI*2/6), rx=CW/2+Math.cos(a)*120, ry=290+Math.sin(a)*40;
+    var fa=0.4+0.6*Math.sin(t*2+i); ctx.globalAlpha=fa;
+    ctx.fillStyle='#FFFF88'; ctx.beginPath(); ctx.arc(rx,ry,3,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.fillStyle='#2E7D32'; rrect(CW/2-140,368,280,48,28); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+  ctx.fillText('Entrar no Pântano!',CW/2,399);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
+  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+}
+function drawPhase5Intro(){ // NOVA TELA DE INTRODUÇÃO DA FASE 5
+  ctx.fillStyle='rgba(0,20,0,0.9)'; ctx.fillRect(0,0,CW,CH);
+  var t=Date.now()/500;
+  ctx.fillStyle='#76B82A'; ctx.font='bold 36px Arial'; ctx.textAlign='center';
+  ctx.shadowColor='#2E5C0E'; ctx.shadowBlur=25; ctx.fillText('FASE 4 CONCLUIDA!',CW/2,95); ctx.shadowBlur=0;
+  ctx.fillStyle='#FFD700'; ctx.font='bold 22px Arial'; ctx.fillText('Floresta Encantada!',CW/2,145);
+  ctx.fillStyle='white'; ctx.font='16px Arial';
+  ctx.fillText('Sapinho come insetos no início',CW/2,185);
+  ctx.fillText('Tatuzinho escava a barreira (x~3000)',CW/2,210);
+  ctx.fillText('Cole 20 estrelas dentro da barreira!',CW/2,235);
+  ctx.fillStyle='rgba(118,184,42,0.2)'; ctx.beginPath(); ctx.arc(CW/2,290,55,0,Math.PI*2); ctx.fill();
+  ctx.font='60px Arial'; ctx.textAlign='center'; ctx.fillText('🌳',CW/2,310);
+  // Flores caindo na tela de introdução
+  for(var i=0;i<6;i++){
+    var a=t+i*(Math.PI*2/6), rx=CW/2+Math.cos(a)*120, ry=290+Math.sin(a)*40;
+    var fa=0.4+0.6*Math.sin(t*2+i); ctx.globalAlpha=fa;
+    ctx.fillStyle=i%2===0?'#FF69B4':'#FF1493'; ctx.beginPath(); 
+    ctx.moveTo(rx,ry); ctx.lineTo(rx-3,ry+5); ctx.lineTo(rx,ry+6); ctx.lineTo(rx+3,ry+5); ctx.closePath();
+    ctx.fill();
+    ctx.globalAlpha=1;
+  }
+  ctx.fillStyle='#2E5C0E'; rrect(CW/2-140,368,280,48,28); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+  ctx.fillText('Entrar na Floresta!',CW/2,399);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
+  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+}
 function drawWin(){
   ctx.fillStyle='rgba(0,0,0,0.65)'; ctx.fillRect(0,0,CW,CH);
   ctx.fillStyle='#FFD700'; ctx.font='bold 52px Arial'; ctx.textAlign='center';
   ctx.shadowColor='#FF6F00'; ctx.shadowBlur=22; ctx.fillText('PARABENS!',CW/2,140); ctx.shadowBlur=0;
   ctx.fillStyle='white'; ctx.font='22px Arial'; ctx.fillText('Voce zerou o AnimalChoice!',CW/2,192);
   ctx.fillStyle='#FFD700'; ctx.font='bold 20px Arial'; ctx.fillText('Pontuacao Final: '+score+' pontos',CW/2,238);
-  var total=p1Stars.filter(function(s){return s.got;}).length+p2Stars.filter(function(s){return s.got;}).length+p3Stars.filter(function(s){return s.got;}).length;
-  ctx.fillStyle='#aef'; ctx.font='17px Arial'; ctx.fillText('Estrelas: '+total+'/60',CW/2,278);
+  var total=p1Stars.filter(function(s){return s.got;}).length+p2Stars.filter(function(s){return s.got;}).length+p3Stars.filter(function(s){return s.got;}).length+p3UnlockStars.filter(function(s){return s.got;}).length+p4Stars.filter(function(s){return s.got;}).length+p5Stars.filter(function(s){return s.got;}).length+p5BarrierStars.filter(function(s){return s.got;}).length+p6Stars.filter(function(s){return s.got;}).length; // TODAS AS FASES
+  ctx.fillStyle='#aef'; ctx.font='17px Arial'; ctx.fillText('Estrelas: '+total+'/160',CW/2,278); // 160 ESTRELAS (20+20+20+10+20+30+20+20)
   ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,355);
 }
 function drawGameOver(){
@@ -1444,16 +2632,70 @@ function loop(){
     update();
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
     drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
-    drawSpeedGates(); drawStars(); drawInsects(); drawFinish();
-    drawDigTunnel(); drawP3UnlockStars(); drawPlayer(); drawParticles(); drawHUD();
+    drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
+    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD();
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
   else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
+  else if(state==='phase4intro'){ drawBG(); drawGround(); drawPhase4Intro(); } // ADICIONADO
+  else if(state==='phase5intro'){ drawBG(); drawGround(); drawPhase5Intro(); }
+  else if(state==='phase6intro'){ drawBG(); drawGround(); drawPhase6Intro(); }
   else if(state==='win')        { drawBG(); drawGround(); drawWin(); }
   else if(state==='gameover')   { drawBG(); drawGround(); drawGameOver(); }
   requestAnimationFrame(loop);
 }
 loop();
+
+// ── TOUCH CONTROLS ─────────────────────────────────────────────────────────
+function touchStart(key){
+  K[key] = true;
+  var btnMap = {'ArrowLeft':'tbtn-left','ArrowRight':'tbtn-right','ArrowUp':'tbtn-up','ArrowDown':'tbtn-down'};
+  var el = document.getElementById(btnMap[key]);
+  if(el) el.classList.add('pressed');
+  // Simula keydown para ações únicas (pulo, cavar, avançar de fase, iniciar jogo)
+  var ev = new KeyboardEvent('keydown', {key: key, bubbles: true});
+  document.dispatchEvent(ev);
+}
+function touchEnd(key){
+  K[key] = false;
+  var btnMap = {'ArrowLeft':'tbtn-left','ArrowRight':'tbtn-right','ArrowUp':'tbtn-up','ArrowDown':'tbtn-down'};
+  var el = document.getElementById(btnMap[key]);
+  if(el) el.classList.remove('pressed');
+  var ev = new KeyboardEvent('keyup', {key: key, bubbles: true});
+  document.dispatchEvent(ev);
+}
+// Evita scroll da página durante o jogo no mobile
+document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {passive: false});
+
+// ── CANVAS RESPONSIVO ──────────────────────────────────────────────────────
+function resizeCanvas(){
+  var wrapper = document.getElementById('gameWrapper');
+  var canvas  = document.getElementById('gameCanvas');
+  var maxW = Math.min(window.innerWidth, 800);
+  if(maxW < 800){
+    wrapper.style.width = maxW + 'px';
+    canvas.style.width  = maxW + 'px';
+    canvas.style.height = Math.round(maxW * 440 / 800) + 'px';
+  } else {
+    wrapper.style.width = '800px';
+    canvas.style.width  = '800px';
+    canvas.style.height = '440px';
+  }
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
 </script>
+
+  <!-- ── TOUCH D-PAD ── -->
+  <div id="touchControls">
+    <div class="tpad-left">
+      <button class="tbtn" id="tbtn-left"  ontouchstart="touchStart('ArrowLeft')"  ontouchend="touchEnd('ArrowLeft')"  onmousedown="touchStart('ArrowLeft')"  onmouseup="touchEnd('ArrowLeft')">◀</button>
+      <button class="tbtn" id="tbtn-right" ontouchstart="touchStart('ArrowRight')" ontouchend="touchEnd('ArrowRight')" onmousedown="touchStart('ArrowRight')" onmouseup="touchEnd('ArrowRight')">▶</button>
+    </div>
+    <div class="tpad-right">
+      <button class="tbtn tbtn-dig"  id="tbtn-down" ontouchstart="touchStart('ArrowDown')"  ontouchend="touchEnd('ArrowDown')"  onmousedown="touchStart('ArrowDown')"  onmouseup="touchEnd('ArrowDown')">⬇️</button>
+      <button class="tbtn tbtn-jump" id="tbtn-up"   ontouchstart="touchStart('ArrowUp')"    ontouchend="touchEnd('ArrowUp')"    onmousedown="touchStart('ArrowUp')"    onmouseup="touchEnd('ArrowUp')">🔼</button>
+    </div>
+  </div>
 </body>
 </html>
