@@ -2814,7 +2814,30 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     }
   }
 
-  window.addEventListener('resize', applyScale);
+  
+    // ── FULLSCREEN API ──────────────────────────────────────────────────────
+    // Remove barra do navegador no mobile
+    function requestFullscreen(){
+      var doc = document.documentElement;
+      if(doc.requestFullscreen) doc.requestFullscreen();
+      else if(doc.webkitRequestFullscreen) doc.webkitRequestFullscreen();
+      else if(doc.mozRequestFullScreen) doc.mozRequestFullScreen();
+      else if(doc.msRequestFullscreen) doc.msRequestFullscreen();
+    }
+
+    // Chama fullscreen no primeiro toque (desbloqueia permissões)
+    document.addEventListener('touchstart', function firstTouch(e){
+      if(e.target.tagName !== 'BUTTON') requestFullscreen();
+      document.removeEventListener('touchstart', firstTouch);
+    }, {once: true});
+
+    // Também no primeiro clique do mouse
+    document.addEventListener('click', function firstClick(e){
+      if(e.target.tagName !== 'BUTTON') requestFullscreen();
+      document.removeEventListener('click', firstClick);
+    }, {once: true});
+
+window.addEventListener('resize', applyScale);
   window.addEventListener('orientationchange', function(){ setTimeout(applyScale,300); });
 
   if(document.readyState==='loading'){
