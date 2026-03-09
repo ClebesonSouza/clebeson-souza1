@@ -427,7 +427,9 @@ function sndPhase6Start(){// Jardim da Metamorfose - mágico, especial
 "use strict";// Ativa o modo estrito para evitar erros silenciosos e impor boas práticas de codificação
 var canvas = document.getElementById('gameCanvas');// Obtém o elemento canvas do DOM para desenhar o jogo
 var ctx = canvas.getContext('2d');// Obtém o contexto 2D do canvas, que é usado para desenhar formas, imagens e texto no canvas
-var CW=800, CH=440, GY=370, GRAV=0.55;// Define constantes para a largura do canvas (CW), altura do canvas (CH), posição do chão (GY) e gravidade (GRAV) que afeta a física do jogo
+var CW=800, CH=440, GY=370, GRAV=0.55;
+var mobileViewOffsetY = 0; // offset de renderização para mobile
+// Define constantes para a largura do canvas (CW), altura do canvas (CH), posição do chão (GY) e gravidade (GRAV) que afeta a física do jogo
 function rrect(x,y,w,h,r){
   ctx.beginPath();
   ctx.moveTo(x+r,y); ctx.lineTo(x+w-r,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r);
@@ -2384,6 +2386,9 @@ function drawPlayer(){
 }
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
+
+  ctx.translate(0, -mobileViewOffsetY);
+
 function drawHUD(){
   var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
   // Fase 5: adiciona as estrelas escondidas na contagem
@@ -2678,7 +2683,11 @@ function drawGameOver(){
 // ── Game Loop ─────────────────────────────────────────────────────────────────
 function loop(){
   ctx.clearRect(0,0,CW,CH);
-  if(state==='menu') drawMenu();
+  
+  // Mobile offset: sobe o mundo
+  ctx.translate(0, mobileViewOffsetY);
+
+if(state==='menu') drawMenu();
   else if(state==='playing'){
     update();
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
@@ -2775,7 +2784,16 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
 
     // Escala por LARGURA: preenche 100% da tela sem barras laterais
     // O canvas pode ultrapassar levemente a altura (overflow hidden oculta)
-    var scale = vw / GW;
+    
+    // Offset para mobile: sobe o mundo 40px para chão aparecer na tela
+    var isTouch = ('ontouchstart' in window) || (navigator.maxTouchPoints > 0);
+    if(isTouch && !isPortrait){
+      mobileViewOffsetY = 40; // sobe 40px
+    } else {
+      mobileViewOffsetY = 0;
+    }
+
+var scale = vw / GW;
     var scaledW = GW * scale; // = vw (100% da largura)
     var scaledH = GH * scale;
     var offX = 0; // sem margem lateral
