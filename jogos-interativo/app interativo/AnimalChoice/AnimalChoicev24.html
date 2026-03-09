@@ -51,27 +51,6 @@
   }
   #muteBtn:hover { background: rgba(0,0,0,0.8); }
 
-    /* ── RESPONSIVIDADE MOBILE ── */
-    @media (max-width: 820px) {
-      body { justify-content: flex-start; padding-top: 8px; }
-      #gameWrapper { width: 100vw; }
-      #gameCanvas {
-        width: 100vw !important;
-        height: auto !important;
-        border-radius: 0;
-      }
-      #ui {
-        flex-wrap: wrap;
-        gap: 4px;
-        padding: 6px 4px;
-        justify-content: center;
-      }
-      .cbtn { min-width: 70px; padding: 4px 6px; }
-      .cbtn .em { font-size: 22px; }
-      .cbtn .cn { font-size: 10px; }
-      .cbtn .ca, .cbtn .ck { display: none; }
-      #muteBtn { top: 6px; right: 6px; width: 32px; height: 32px; font-size: 15px; }
-    }
 
     /* ── TOUCH D-PAD ── */
     #touchControls {
@@ -88,7 +67,6 @@
     }
     @media (max-width: 820px) {
       #touchControls { display: flex; }
-      body { padding-bottom: 140px; }
     }
     .tpad-left, .tpad-right {
       display: flex;
@@ -120,6 +98,28 @@
     .tbtn-dig  { width: 56px; height: 56px; font-size: 22px; background: rgba(100,200,100,0.18); border-color: rgba(100,200,100,0.5); }
     .tbtn-jump.pressed { background: rgba(255,100,100,0.5); border-color: #FF6464; }
     .tbtn-dig.pressed  { background: rgba(100,200,100,0.5); border-color: #64FF64; }
+
+    /* ── RESPONSIVIDADE TOTAL (scale proporcional) ── */
+    html, body {
+      overflow: hidden;
+      width: 100%;
+      height: 100%;
+      touch-action: none;
+    }
+    body {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      padding-top: 0 !important;
+    }
+    #gameWrapper {
+      transform-origin: top center;
+      /* scale definido via JS */
+    }
+    @media (max-width: 820px) {
+      #muteBtn { top: 4px; right: 4px; width: 30px; height: 30px; font-size: 14px; }
+    }
 </style>
 </head>
 <body>
@@ -2667,23 +2667,57 @@ function touchEnd(key){
 // Evita scroll da página durante o jogo no mobile
 document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {passive: false});
 
-// ── CANVAS RESPONSIVO ──────────────────────────────────────────────────────
-function resizeCanvas(){
-  var wrapper = document.getElementById('gameWrapper');
-  var canvas  = document.getElementById('gameCanvas');
-  var maxW = Math.min(window.innerWidth, 800);
-  if(maxW < 800){
-    wrapper.style.width = maxW + 'px';
-    canvas.style.width  = maxW + 'px';
-    canvas.style.height = Math.round(maxW * 440 / 800) + 'px';
-  } else {
-    wrapper.style.width = '800px';
-    canvas.style.width  = '800px';
-    canvas.style.height = '440px';
+// ── RESPONSIVIDADE TOTAL ───────────────────────────────────────────────────
+// Escala o wrapper inteiro (canvas + UI de personagens) proporcionalmente
+// para caber em qualquer tela, mantendo tudo visível.
+(function(){
+  var GAME_W = 800;   // largura interna do jogo
+  var TOUCH_H = 130;  // altura reservada pro D-pad touch
+
+  function scaleGame(){
+    var wrapper = document.getElementById('gameWrapper');
+    if(!wrapper) return;
+
+    var availW = window.innerWidth;
+    var isMobile = availW <= 820;
+    var reservedH = isMobile ? TOUCH_H + 10 : 0;
+    var availH = window.innerHeight - reservedH;
+
+    // Calcula a altura total do wrapper (canvas 440 + ui ~100)
+    var GAME_H = 540;
+
+    var scaleX = availW  / GAME_W;
+    var scaleY = availH  / GAME_H;
+    var scale  = Math.min(scaleX, scaleY);
+    // Não deixa ficar maior que 1 em telas grandes
+    // (remova essa linha se quiser upscale em monitores grandes)
+    // scale = Math.min(scale, 1);
+
+    wrapper.style.transform = 'scale(' + scale + ')';
+    wrapper.style.transformOrigin = 'top center';
+
+    // Ajusta a margem do body para o wrapper escalado não sobrar
+    var scaledH = GAME_H * scale;
+    document.body.style.height = (scaledH + reservedH + 10) + 'px';
+    document.body.style.minHeight = '0';
+
+    // Reposiciona o D-pad acima do fundo da tela
+    var tpad = document.getElementById('touchControls');
+    if(tpad && isMobile){
+      tpad.style.bottom = '0px';
+    }
   }
-}
-window.addEventListener('resize', resizeCanvas);
-resizeCanvas();
+
+  window.addEventListener('resize', scaleGame);
+  window.addEventListener('orientationchange', function(){ setTimeout(scaleGame, 200); });
+  // Aguarda o DOM estar pronto
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', scaleGame);
+  } else {
+    scaleGame();
+    setTimeout(scaleGame, 100); // garante após render
+  }
+})();
 </script>
 
   <!-- ── TOUCH D-PAD ── -->
