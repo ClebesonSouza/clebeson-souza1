@@ -108,7 +108,10 @@
       overflow: hidden;
       background: #0d1b2a;
       touch-action: none;
+      -webkit-touch-callout: none;
     }
+    /* Garante que canvas escalado não cause scroll */
+    #gameWrapper { overflow: hidden; }
 
     /* Wrapper fixo e escalado via JS */
     #gameWrapper {
@@ -2770,12 +2773,14 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
         screen.orientation.lock('landscape').catch(function(){});
     }catch(e){}
 
-    // Escala canvas para preencher a tela toda
-    var scale = Math.min(vw / GW, vh / GH);
-    var scaledW = GW * scale;
+    // Escala por LARGURA: preenche 100% da tela sem barras laterais
+    // O canvas pode ultrapassar levemente a altura (overflow hidden oculta)
+    var scale = vw / GW;
+    var scaledW = GW * scale; // = vw (100% da largura)
     var scaledH = GH * scale;
-    var offX = Math.round((vw - scaledW) / 2);
-    var offY = Math.round((vh - scaledH) / 2);
+    var offX = 0; // sem margem lateral
+    // Centraliza verticalmente; se canvas for maior que vh, alinha no topo
+    var offY = scaledH <= vh ? Math.round((vh - scaledH) / 2) : 0;
 
     wrapper.style.position       = 'fixed';
     wrapper.style.top            = '0';
