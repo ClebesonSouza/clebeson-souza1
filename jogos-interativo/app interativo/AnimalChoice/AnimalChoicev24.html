@@ -2385,39 +2385,44 @@ function drawPlayer(){
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function drawHUD(){
+  // No mobile landscape o canvas é deslocado para cima — HUD desce 50px para ficar visível
+  var isTouch=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+  var isMob=isTouch||window.innerWidth<=900;
+  var isPort=window.innerHeight>window.innerWidth;
+  var oy=(isMob&&!isPort)?50:0; // offset vertical do HUD no mobile landscape
+
   var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
-  // Fase 5: adiciona as estrelas escondidas na contagem
   if(phase===5) got+=p5BarrierStars.filter(function(s){return s.got;}).length;
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,10,145,36,10); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,10+oy,145,36,10); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
-  ctx.fillText('Pts: '+score,18,31);
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW-118,10,108,36,10); ctx.fill();
+  ctx.fillText('Pts: '+score,18,31+oy);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW-118,10+oy,108,36,10); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='right';
-  ctx.fillText('Vidas: '+lives,CW-14,31);
+  ctx.fillText('Vidas: '+lives,CW-14,31+oy);
   var def=CHARS[pl.char];
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10,170,36,10); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10+oy,170,36,10); ctx.fill();
   ctx.fillStyle='#FFD700'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
-  ctx.fillText(def.ability,CW/2,31);
+  ctx.fillText(def.ability,CW/2,31+oy);
   var all20=(phase===5?got>=50:got>=20);
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52,150,26,8); ctx.fill();
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52+oy,150,26,8); ctx.fill();
   ctx.fillStyle=all20?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
-  ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68);
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52,84,26,8); ctx.fill();
+  ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68+oy);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52+oy,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-  ctx.fillText('Fase '+phase+' de 6',CW/2,68); // ATUALIZADO PARA 5 FASES
+  ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy);
   if(phase===6&&metamorphState!=='burst'){
     var ld=leavesEaten>=TOTAL_LEAVES;
-    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84,205,26,8); ctx.fill();
-    ctx.strokeStyle=ld?'#FFD700':'#7FFF00'; ctx.lineWidth=1.5; rrect(10,84,205,26,8); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,205,26,8); ctx.fill();
+    ctx.strokeStyle=ld?'#FFD700':'#7FFF00'; ctx.lineWidth=1.5; rrect(10,84+oy,205,26,8); ctx.stroke();
     ctx.fillStyle=ld?'#FFD700':'#7FFF00'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
-    ctx.fillText('🍃 Folhas: '+leavesEaten+'/'+TOTAL_LEAVES+(ld?' 🐛 Metamorfose!':' (colete todas!)'),18,100);
+    ctx.fillText('🍃 Folhas: '+leavesEaten+'/'+TOTAL_LEAVES+(ld?' 🐛 Metamorfose!':' (colete todas!)'),18,100+oy);
   }
   if(phase===5){
     var bg=p5BarrierStars.filter(function(s){return s.got;}).length, bd=bg>=20;
-    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84,210,26,8); ctx.fill();
-    ctx.strokeStyle=bd?'#FFD700':'rgba(174,238,174,0.6)'; ctx.lineWidth=1.5; rrect(10,84,210,26,8); ctx.stroke();
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,210,26,8); ctx.fill();
+    ctx.strokeStyle=bd?'#FFD700':'rgba(174,238,174,0.6)'; ctx.lineWidth=1.5; rrect(10,84+oy,210,26,8); ctx.stroke();
     ctx.fillStyle=bd?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
-    ctx.fillText('⭐ Barreira: '+bg+'/20'+(bd?' 🦋 Desbloqueada!':' (Tatuzinho cava!)'),18,100);
+    ctx.fillText('⭐ Barreira: '+bg+'/20'+(bd?' 🦋 Desbloqueada!':' (Tatuzinho cava!)'),18,100+oy);
   }
   if(pl.char==='tatu'){
     ctx.fillStyle='rgba(102,187,106,0.88)'; rrect(10,CH-30,250,20,8); ctx.fill();
@@ -2799,7 +2804,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Reposiciona botão mute no canto superior direito do canvas
     if(mute){
       mute.style.position = 'fixed';
-      mute.style.top   = (offY + 8) + 'px';
+      mute.style.top   = (offY + 8 + 50) + 'px'; // +50 para alinhar com HUD deslocado
       mute.style.right = (vw - offX - scaledW + 8) + 'px';
     }
   }
