@@ -147,6 +147,33 @@
       font: 14px Arial;
       text-align: center;
     }
+    @keyframes unlockPulse {
+      0%   { box-shadow: 0 0 0px #FFD700; transform: scale(1); }
+      50%  { box-shadow: 0 0 18px 6px #FFD700; transform: scale(1.18); }
+      100% { box-shadow: 0 0 0px #FFD700; transform: scale(1); }
+    }
+    .tbtn-unlocked {
+      animation: unlockPulse 0.6s ease-in-out infinite;
+      border-color: #FFD700 !important;
+      background: rgba(255,215,0,0.3) !important;
+    }
+    #unlockToast {
+      display: none;
+      position: fixed;
+      bottom: 200px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: linear-gradient(135deg, #1a1a2e, #16213e);
+      border: 2.5px solid #FFD700;
+      border-radius: 16px;
+      padding: 10px 22px;
+      color: #FFD700;
+      font: bold 15px Arial Rounded MT Bold, Arial, sans-serif;
+      text-align: center;
+      z-index: 2000;
+      white-space: nowrap;
+      box-shadow: 0 0 24px rgba(255,215,0,0.5);
+    }
     @keyframes rotAnim {
       0%   { transform: rotate(0deg); }
       40%  { transform: rotate(90deg); }
@@ -827,12 +854,14 @@ function unlockCaterpillar(){ sndUnlock();
   var btn=document.getElementById('btn-tatu');
   btn.classList.remove('locked');
   document.getElementById('cat-lock').style.display='none';
+  showMobileUnlock('Tatuzinho','🦔','mpanel-tatu');
 }
 function unlockCaterpillarButterfly(){ sndUnlock();
   caterpillarUnlocked=true;
   var btn=document.getElementById('btn-caterpillar');
   btn.classList.remove('locked');
   document.getElementById('caterpillar-lock').style.display='none';
+  showMobileUnlock('Lagartinha','🐛','mpanel-caterpillar');
 }
 function beginPhase2(){ sndPhase2Start();//
   phase=2; state='playing';
@@ -850,6 +879,7 @@ function unlockFrog(){ sndUnlock();
   var btn=document.getElementById('btn-frog');
   btn.classList.remove('locked');
   document.getElementById('frog-lock').style.display='none';
+  showMobileUnlock('Sapinho','🐸','mpanel-frog');
 }
 function beginPhase3(){ sndPhase3Start();
   phase=3; state='playing';
@@ -2868,6 +2898,31 @@ function toggleCharPanel(){
   else{ p.style.display='flex'; refreshLockState(); }
 }
 
+function showMobileUnlock(charName, emoji, panelId){
+  var isTouch=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
+  var isMob=isTouch||window.innerWidth<=900;
+  var isPort=window.innerHeight>window.innerWidth;
+  if(!isMob||isPort) return; // só no mobile landscape
+  // Abre o charPanel
+  var p=document.getElementById('charPanel');
+  if(p){ p.style.display='flex'; refreshLockState(); }
+  // Pulsa o botão desbloqueado
+  var btn=document.getElementById(panelId);
+  if(btn){ btn.classList.add('tbtn-unlocked'); }
+  // Mostra toast
+  var toast=document.getElementById('unlockToast');
+  if(toast){
+    toast.innerHTML='🔓 '+emoji+' '+charName+' desbloqueado!';
+    toast.style.display='block';
+  }
+  // Remove após 3 segundos
+  setTimeout(function(){
+    if(btn) btn.classList.remove('tbtn-unlocked');
+    if(toast) toast.style.display='none';
+    if(p) p.style.display='none';
+  }, 3000);
+}
+
 function refreshLockState(){
   // Desktop cards
   var btnTatu=document.getElementById('btn-tatu'), lockTatu=document.getElementById('cat-lock');
@@ -2886,6 +2941,9 @@ function refreshLockState(){
 }
 </script>
 
+
+  <!-- Toast de desbloqueio mobile -->
+  <div id="unlockToast"></div>
 
   <!-- OVERLAY: girar celular -->
   <div id="rotateOverlay">
