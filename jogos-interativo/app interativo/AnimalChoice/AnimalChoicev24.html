@@ -514,6 +514,8 @@ var pl={x:100,y:GY-40,vx:0,vy:0,w:38,h:38,onGround:false,char:'cat',inWaterPit:f
 function switchChar(c){
   if(c==='caterpillar'&&butterflyUnlocked) c='butterfly';
   if(c==='tatu'&&!catUnlocked) return;
+  if(c==='frog'&&!frogUnlocked) return;
+  if((c==='caterpillar'||c==='butterfly')&&!caterpillarUnlocked) return;
   if(isDigging&&c!=='tatu') stopDig();
   pl.char=c;
   
