@@ -843,7 +843,6 @@ function beginPhase2(){ sndPhase2Start();//
   // Atualiza botão ativo para o Gatinho
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
-  refreshLockState();
 }
 
 function unlockFrog(){ sndUnlock();
@@ -860,7 +859,6 @@ function beginPhase3(){ sndPhase3Start();
   p3Insects.forEach(function(ins){ins.eaten=false;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
-  refreshLockState();
 }
 function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   sndPhase4Start();
@@ -871,7 +869,6 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
-  refreshLockState();
 }
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   sndPhase5Start();
@@ -2390,13 +2387,12 @@ function drawPlayer(){
 
 // ── HUD ───────────────────────────────────────────────────────────────────────
 function drawHUD(){
-  // No mobile landscape o canvas é deslocado para cima — HUD desce 50px para ficar visível
   var isTouch=('ontouchstart' in window)||(navigator.maxTouchPoints>0);
   var isMob=isTouch||window.innerWidth<=900;
   var isPort=window.innerHeight>window.innerWidth;
-  var oy=(isMob&&!isPort)?50:0; // offset vertical do HUD no mobile landscape
-
+  var oy=(isMob&&!isPort)?50:0;
   var sts=getStars(), got=sts.filter(function(s){return s.got;}).length;
+  // Fase 5: adiciona as estrelas escondidas na contagem
   if(phase===5) got+=p5BarrierStars.filter(function(s){return s.got;}).length;
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,10+oy,145,36,10); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='left';
@@ -2414,7 +2410,7 @@ function drawHUD(){
   ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68+oy);
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52+oy,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-  ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy);
+  ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy); // ATUALIZADO PARA 5 FASES
   if(phase===6&&metamorphState!=='burst'){
     var ld=leavesEaten>=TOTAL_LEAVES;
     ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,205,26,8); ctx.fill();
@@ -2759,7 +2755,6 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
       if(tpad)    tpad.style.display    = 'none';
       if(ui)      ui.style.display      = '';
       if(mute)  { mute.style.top = ''; mute.style.right = ''; }
-      refreshLockState();
       return;
     }
 
@@ -2791,9 +2786,8 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     var scaledH = GH * scale;
     var offX = 0; // sem margem lateral
     // Centraliza verticalmente; se canvas for maior que vh, alinha no topo
-    // Desloca canvas para cima quando maior que viewport, garantindo que chão/buracos/tatuzinho apareçam
-    var groundScreenY = GY * scale; // posição do chão em pixels de tela
-    var desiredGroundY = vh - 55;   // queremos o chão a 55px do fundo da tela
+    var groundScreenY = GY * scale;
+    var desiredGroundY = vh - 55;
     var offY = scaledH <= vh
         ? Math.round((vh - scaledH) / 2)
         : Math.round(desiredGroundY - groundScreenY);
@@ -2810,7 +2804,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Reposiciona botão mute no canto superior direito do canvas
     if(mute){
       mute.style.position = 'fixed';
-      mute.style.top   = (offY + 8 + 50) + 'px'; // +50 para alinhar com HUD deslocado
+      mute.style.top   = (offY + 8 + 50) + 'px';
       mute.style.right = (vw - offX - scaledW + 8) + 'px';
     }
   }
@@ -2873,6 +2867,23 @@ function toggleCharPanel(){
   if(p.style.display==='flex'){ p.style.display='none'; }
   else{ p.style.display='flex'; refreshLockState(); }
 }
+
+function refreshLockState(){
+  // Desktop cards
+  var btnTatu=document.getElementById('btn-tatu'), lockTatu=document.getElementById('cat-lock');
+  if(btnTatu&&lockTatu){ if(catUnlocked){btnTatu.classList.remove('locked');lockTatu.style.display='none';}else{btnTatu.classList.add('locked');lockTatu.style.display='';} }
+  var btnFrog=document.getElementById('btn-frog'), lockFrog=document.getElementById('frog-lock');
+  if(btnFrog&&lockFrog){ if(frogUnlocked){btnFrog.classList.remove('locked');lockFrog.style.display='none';}else{btnFrog.classList.add('locked');lockFrog.style.display='';} }
+  var btnCat=document.getElementById('btn-caterpillar'), lockCat=document.getElementById('caterpillar-lock');
+  if(btnCat&&lockCat){ if(caterpillarUnlocked){btnCat.classList.remove('locked');lockCat.style.display='none';}else{btnCat.classList.add('locked');lockCat.style.display='';} }
+  // Mobile charPanel
+  var mlTatu=document.getElementById('mpanel-tatu-lock');
+  if(mlTatu) mlTatu.style.display=catUnlocked?'none':'block';
+  var mlFrog=document.getElementById('mpanel-frog-lock');
+  if(mlFrog) mlFrog.style.display=frogUnlocked?'none':'block';
+  var mlCat=document.getElementById('mpanel-caterpillar-lock');
+  if(mlCat) mlCat.style.display=caterpillarUnlocked?'none':'block';
+}
 </script>
 
 
@@ -2902,39 +2913,9 @@ function toggleCharPanel(){
     <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('dog');toggleCharPanel()">🐶</button>
     <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('duck');toggleCharPanel()">🦆</button>
     <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('bird');toggleCharPanel()">🐦</button>
-    <button id="mpanel-tatu" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('tatu');toggleCharPanel()">🦔<span id="mpanel-tatu-lock" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
-    <button id="mpanel-frog" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('frog');toggleCharPanel()">🐸<span id="mpanel-frog-lock" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
-    <button id="mpanel-caterpillar" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('caterpillar');toggleCharPanel()">🐛<span id="mpanel-caterpillar-lock" style="display:none;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
+    <button id="mpanel-tatu" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('tatu');toggleCharPanel()">🦔<span id="mpanel-tatu-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
+    <button id="mpanel-frog" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('frog');toggleCharPanel()">🐸<span id="mpanel-frog-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
+    <button id="mpanel-caterpillar" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('caterpillar');toggleCharPanel()">🐛<span id="mpanel-caterpillar-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
   </div>
 </body>
-</html
-// Reaplica estado visual de bloqueio dos cards sempre que a UI ficar visível
-function refreshLockState(){
-  // ── Desktop cards ──
-  var btnTatu = document.getElementById('btn-tatu');
-  var lockTatu = document.getElementById('cat-lock');
-  if(btnTatu && lockTatu){
-    if(catUnlocked){ btnTatu.classList.remove('locked'); lockTatu.style.display='none'; }
-    else           { btnTatu.classList.add('locked');    lockTatu.style.display='';    }
-  }
-  var btnFrog = document.getElementById('btn-frog');
-  var lockFrog = document.getElementById('frog-lock');
-  if(btnFrog && lockFrog){
-    if(frogUnlocked){ btnFrog.classList.remove('locked'); lockFrog.style.display='none'; }
-    else            { btnFrog.classList.add('locked');    lockFrog.style.display='';    }
-  }
-  var btnCat = document.getElementById('btn-caterpillar');
-  var lockCat = document.getElementById('caterpillar-lock');
-  if(btnCat && lockCat){
-    if(caterpillarUnlocked){ btnCat.classList.remove('locked'); lockCat.style.display='none'; }
-    else                   { btnCat.classList.add('locked');    lockCat.style.display='';    }
-  }
-  // ── Mobile charPanel cadeados ──
-  var mlTatu = document.getElementById('mpanel-tatu-lock');
-  if(mlTatu) mlTatu.style.display = catUnlocked ? 'none' : 'block';
-  var mlFrog = document.getElementById('mpanel-frog-lock');
-  if(mlFrog) mlFrog.style.display = frogUnlocked ? 'none' : 'block';
-  var mlCat = document.getElementById('mpanel-caterpillar-lock');
-  if(mlCat) mlCat.style.display = caterpillarUnlocked ? 'none' : 'block';
-}
->
+</html>
