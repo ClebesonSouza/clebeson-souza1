@@ -2782,7 +2782,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Centraliza verticalmente; se canvas for maior que vh, alinha no topo
     // Desloca canvas para cima quando maior que viewport, garantindo que chão/buracos/tatuzinho apareçam
     var groundScreenY = GY * scale; // posição do chão em pixels de tela
-    var desiredGroundY = vh - 75;   // queremos o chão a 75px do fundo da tela
+    var desiredGroundY = vh - 55;   // queremos o chão a 55px do fundo da tela
     var offY = scaledH <= vh
         ? Math.round((vh - scaledH) / 2)
         : Math.round(desiredGroundY - groundScreenY);
