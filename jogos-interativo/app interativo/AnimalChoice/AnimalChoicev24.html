@@ -843,6 +843,7 @@ function beginPhase2(){ sndPhase2Start();//
   // Atualiza botão ativo para o Gatinho
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
+  refreshLockState();
 }
 
 function unlockFrog(){ sndUnlock();
@@ -859,6 +860,7 @@ function beginPhase3(){ sndPhase3Start();
   p3Insects.forEach(function(ins){ins.eaten=false;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
+  refreshLockState();
 }
 function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   sndPhase4Start();
@@ -869,6 +871,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
+  refreshLockState();
 }
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   sndPhase5Start();
@@ -2756,6 +2759,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
       if(tpad)    tpad.style.display    = 'none';
       if(ui)      ui.style.display      = '';
       if(mute)  { mute.style.top = ''; mute.style.right = ''; }
+      refreshLockState();
       return;
     }
 
@@ -2902,4 +2906,29 @@ function toggleCharPanel(){
     <button class="tbtn" style="width:44px;height:44px;font-size:22px;" onclick="switchChar('caterpillar');toggleCharPanel()">🐛</button>
   </div>
 </body>
-</html>
+</html
+// Reaplica estado visual de bloqueio dos cards sempre que a UI ficar visível
+function refreshLockState(){
+  // Tatu
+  var btnTatu = document.getElementById('btn-tatu');
+  var lockTatu = document.getElementById('cat-lock');
+  if(btnTatu && lockTatu){
+    if(catUnlocked){ btnTatu.classList.remove('locked'); lockTatu.style.display='none'; }
+    else           { btnTatu.classList.add('locked');    lockTatu.style.display='';    }
+  }
+  // Sapinho
+  var btnFrog = document.getElementById('btn-frog');
+  var lockFrog = document.getElementById('frog-lock');
+  if(btnFrog && lockFrog){
+    if(frogUnlocked){ btnFrog.classList.remove('locked'); lockFrog.style.display='none'; }
+    else            { btnFrog.classList.add('locked');    lockFrog.style.display='';    }
+  }
+  // Lagartinha/Borboleta
+  var btnCat = document.getElementById('btn-caterpillar');
+  var lockCat = document.getElementById('caterpillar-lock');
+  if(btnCat && lockCat){
+    if(caterpillarUnlocked){ btnCat.classList.remove('locked'); lockCat.style.display='none'; }
+    else                   { btnCat.classList.add('locked');    lockCat.style.display='';    }
+  }
+}
+>
