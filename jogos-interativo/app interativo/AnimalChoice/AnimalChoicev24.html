@@ -187,7 +187,19 @@
     @media (max-width: 820px) {
       #muteBtn { top: 4px; right: 4px; width: 30px; height: 30px; font-size: 14px; }
     }
-</style>
+
+    /* Evitar flash do #ui HTML antes de applyScale() rodar */
+    @media (max-width: 900px) and (orientation: landscape) {
+      #ui { display: none !important; }
+    }
+    /* No menu mobile, garantir que o canvas ocupe toda a tela */
+    @media (max-width: 900px) {
+      #gameWrapper {
+        overflow: hidden;
+      }
+    }
+
+  </style>
 </head>
 <body>
 <div id="gameWrapper">
@@ -2851,8 +2863,8 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     wrapper.style.transformOrigin = 'top left';
     wrapper.style.transform      = 'translate('+offX+'px,'+offY+'px) scale('+scale+')';
 
-    // Mostra D-pad
-    if(tpad) tpad.style.display = 'flex';
+    // Mostra D-pad apenas durante o jogo (não no menu/gameover/intro)
+    if(tpad) tpad.style.display = (typeof state !== 'undefined' && state === 'playing') ? 'flex' : 'none';
 
     // Reposiciona botão mute no canto superior direito do canvas
     if(mute){
@@ -2963,26 +2975,9 @@ function refreshLockState(){
   if(mlCat) mlCat.style.display=caterpillarUnlocked?'none':'block';
 }
 
-// ── DETECÇÃO DE ORIENTAÇÃO MOBILE ───────────────────────────────────────────
-function checkOrientation(){
-  var isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||window.innerWidth<=820;
-  var overlay=document.getElementById('rotateOverlay');
-  if(!overlay) return;
-  if(isMobile && window.innerHeight>window.innerWidth){
-    overlay.style.display='flex';
-  } else {
-    overlay.style.display='none';
-  }
-}
-window.addEventListener('orientationchange',function(){setTimeout(checkOrientation,150);});
-window.addEventListener('resize', checkOrientation);
-// ── FIM ORIENTAÇÃO ───────────────────────────────────────────────────────────
-
-
-// ── INIT ─────────────────────────────────────────────────────────────────────
+// ── INIT ───────────────────────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', function(){
   loadProgress();      // restaura personagens salvos
-  checkOrientation();  // verifica orientação ao abrir
 });
 // ── FIM INIT ─────────────────────────────────────────────────────────────────
 </script>
