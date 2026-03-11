@@ -856,7 +856,7 @@ function loadProgress(){
 
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
-  state='playing'; phase=1; tutorialTimer=300;// reseta tudo para o inicio da fase 1
+  state='playing'; phase=1; tutorialTimer=420;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
   camX=0; score=0; lives=3; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
@@ -903,7 +903,7 @@ function unlockCaterpillarButterfly(){ sndUnlock();
 }
 function beginPhase2(){ sndPhase2Start();//
   phase=2; state='playing';
-  tutorialTimer=300;
+  tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0;
   pl.char='cat'; // reseta personagem para o Gatinho
   camX=0; isDigging=false;
@@ -922,7 +922,7 @@ function unlockFrog(){ sndUnlock();
 }
 function beginPhase3(){ sndPhase3Start();
   phase=3; state='playing';
-  tutorialTimer=300;
+  tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
   camX=0; isDigging=false; frogLongJump=false;
   p3.speedGates.forEach(function(g){g.passed=false;});
@@ -933,7 +933,7 @@ function beginPhase3(){ sndPhase3Start();
 function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   sndPhase4Start();
   phase=4; state='playing';
-  tutorialTimer=300;
+  tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
   camX=0; isDigging=false; frogLongJump=0;
   p4.speedGates.forEach(function(g){g.passed=false;});
@@ -944,7 +944,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   sndPhase5Start();
   phase=5; state='playing';
-  tutorialTimer=300;
+  tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='frog'; // Começa com Sapinho
   camX=0; isDigging=false; frogLongJump=0;
   p5.speedGates.forEach(function(g){g.passed=false;});
@@ -957,7 +957,7 @@ function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
 function beginPhase6(){
   sndPhase6Start();
   phase=6; state='playing';
-  tutorialTimer=300;
+  tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='caterpillar'; pl.w=48; pl.h=52;
   camX=0; isDigging=false; frogLongJump=0;
   metamorphState='none'; metamorphTimer=0; metamorphCountdown=3;
@@ -2808,47 +2808,97 @@ function drawGameOver(){
 function drawTutorialBanner(){
   if(tutorialTimer<=0) return;
 
-  var msgs = {
-    1: { line1:'⭐  Colete as 20 estrelas para desbloquear', line2:'o Tatuzinho 🦔 e avançar para a Fase 2!', color:'#FFD700' },
-    2: { line1:'🦔  Use o Tatuzinho para cavar a Mega Barreira!', line2:'Desbloqueie o Sapinho coletando as estrelas especiais!', color:'#A5D6A7' },
-    3: { line1:'🐸  Colete as estrelas especiais no início da fase', line2:'para desbloquear o Sapinho e avançar!', color:'#80CBC4' },
-    4: { line1:'🐸  Sapinho come insetos voadores para recuperar vida!', line2:'Desbloqueie a Lagartinha pelas estrelas da barreira!', color:'#C5E1A5' },
-    5: { line1:'🦔  Use o Tatuzinho para cavar a barreira', line2:'e coletar as 20 estrelas escondidas para desbloquear a Lagartinha!', color:'#C1FF00' },
-    6: { line1:'🐛  Colete 20 folhinhas com a Lagartinha', line2:'para se transformar em Borboleta 🦋!', color:'#F48FB1' }
+  var tips = {
+    1: { icon:'⭐', title:'Colete todas as 20 estrelas!', sub:'Desbloqueie o Tatuzinho 🦔 para avançar à Fase 2', color1:'#FFD700', color2:'#FF8F00' },
+    2: { icon:'🦔', title:'Use o Tatuzinho para cavar!',  sub:'Passe pela Mega Barreira e desbloqueie o Sapinho 🐸', color1:'#A5D6A7', color2:'#388E3C' },
+    3: { icon:'🐸', title:'Colete as estrelas especiais!', sub:'Desbloqueie o Sapinho no início da fase para avançar', color1:'#80DEEA', color2:'#00838F' },
+    4: { icon:'🐸', title:'Sapinho come insetos voadores!', sub:'Recupera vida ao comer — desbloqueie a Lagartinha 🐛', color1:'#C5E1A5', color2:'#558B2F' },
+    5: { icon:'🦔', title:'Cave a barreira com o Tatuzinho!', sub:'Colete as 20 estrelas escondidas para desbloquear a Lagartinha', color1:'#C1FF00', color2:'#76FF03' },
+    6: { icon:'🐛', title:'Colete 20 folhinhas!',           sub:'A Lagartinha se transforma em Borboleta 🦋 ao completar!', color1:'#F48FB1', color2:'#E91E63' }
   };
 
-  var m = msgs[phase];
-  if(!m) return;
+  var t = tips[phase];
+  if(!t) return;
 
-  // Fade-out nos últimos 80 frames
-  var alpha = tutorialTimer > 80 ? 0.92 : (tutorialTimer/80)*0.92;
+  // Alpha: fade-in rápido (30f), estável, fade-out (90f)
+  var alpha;
+  var fadeIn  = 30, fadeOut = 90;
+  if(tutorialTimer > 420-fadeIn)       alpha = ((420-tutorialTimer)/fadeIn)*0.96;
+  else if(tutorialTimer < fadeOut)     alpha = (tutorialTimer/fadeOut)*0.96;
+  else                                 alpha = 0.96;
 
-  var bw=580, bh=64, bx=(CW-bw)/2, by=14;
+  var bw=580, bh=94;
+  var bx=(CW-bw)/2;
+  var by=(CH-bh)/2 - 10; // centro vertical do canvas, levemente acima do meio
 
-  // Fundo do banner
   ctx.save();
   ctx.globalAlpha = alpha;
-  ctx.fillStyle='rgba(10,20,50,0.88)';
-  rrect(bx, by, bw, bh, 14); ctx.fill();
-  ctx.strokeStyle = m.color;
-  ctx.lineWidth = 2;
-  rrect(bx, by, bw, bh, 14); ctx.stroke();
 
-  // Ícone lateral esquerdo
-  ctx.font='20px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
-  ctx.textAlign='center';
-  ctx.fillStyle='white';
+  // Sombra externa (glow)
+  ctx.shadowColor = t.color1;
+  ctx.shadowBlur  = 22;
 
-  // Linha 1
-  ctx.fillStyle = m.color;
-  ctx.font = 'bold 13px Arial';
+  // Fundo com gradiente escuro
+  var grad = ctx.createLinearGradient(bx, by, bx, by+bh);
+  grad.addColorStop(0, 'rgba(5,15,40,0.97)');
+  grad.addColorStop(1, 'rgba(10,28,72,0.97)');
+  ctx.fillStyle = grad;
+  rrect(bx, by, bw, bh, 16); ctx.fill();
+  ctx.shadowBlur = 0;
+
+  // Borda gradiente colorida
+  var borderGrad = ctx.createLinearGradient(bx, by, bx+bw, by+bh);
+  borderGrad.addColorStop(0,   t.color1);
+  borderGrad.addColorStop(0.5, t.color2);
+  borderGrad.addColorStop(1,   t.color1);
+  ctx.strokeStyle = borderGrad;
+  ctx.lineWidth   = 2.5;
+  rrect(bx, by, bw, bh, 16); ctx.stroke();
+
+  // Linha decorativa superior colorida (barra fina)
+  var barGrad = ctx.createLinearGradient(bx+16, by+2, bx+bw-16, by+2);
+  barGrad.addColorStop(0, 'transparent');
+  barGrad.addColorStop(0.3, t.color1);
+  barGrad.addColorStop(0.7, t.color2);
+  barGrad.addColorStop(1, 'transparent');
+  ctx.fillStyle = barGrad;
+  ctx.fillRect(bx+16, by+2, bw-32, 3);
+
+  // Ícone emoji grande à esquerda
+  ctx.font = '36px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
   ctx.textAlign = 'center';
-  ctx.fillText(m.line1, CW/2, by+26);
+  ctx.fillStyle = 'white';
+  ctx.shadowColor = t.color1; ctx.shadowBlur = 10;
+  ctx.fillText(t.icon, bx+44, by+56);
+  ctx.shadowBlur = 0;
 
-  // Linha 2
-  ctx.fillStyle = 'rgba(255,255,255,0.88)';
-  ctx.font = '12px Arial';
-  ctx.fillText(m.line2, CW/2, by+46);
+  // Separador vertical
+  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
+  ctx.lineWidth = 1;
+  ctx.beginPath(); ctx.moveTo(bx+78, by+14); ctx.lineTo(bx+78, by+bh-14); ctx.stroke();
+
+  // Título (linha 1)
+  ctx.textAlign  = 'left';
+  ctx.font       = 'bold 15px Arial';
+  ctx.fillStyle  = t.color1;
+  ctx.shadowColor = t.color1; ctx.shadowBlur = 8;
+  ctx.fillText(t.title, bx+90, by+36);
+  ctx.shadowBlur = 0;
+
+  // Subtítulo (linha 2)
+  ctx.font      = '12px Arial';
+  ctx.fillStyle = 'rgba(220,230,255,0.92)';
+  ctx.fillText(t.sub, bx+90, by+60);
+
+  // Barra de progresso do timer no fundo
+  var barW = (bw-32) * (tutorialTimer/420);
+  ctx.fillStyle = 'rgba(255,255,255,0.06)';
+  ctx.fillRect(bx+16, by+bh-10, bw-32, 6);
+  var progGrad = ctx.createLinearGradient(bx+16, 0, bx+16+barW, 0);
+  progGrad.addColorStop(0, t.color1);
+  progGrad.addColorStop(1, t.color2);
+  ctx.fillStyle = progGrad;
+  ctx.fillRect(bx+16, by+bh-10, barW, 6);
 
   ctx.restore();
 }
