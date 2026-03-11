@@ -830,10 +830,20 @@ function saveProgress(){
     localStorage.setItem('ac_butterfly', butterflyUnlocked?'1':'0');
     var best=parseInt(localStorage.getItem('ac_best')||'0');
     if(score>best) localStorage.setItem('ac_best', score);
+    localStorage.setItem('ac_version','v4');
   }catch(e){}
 }
 function loadProgress(){
   try{
+    // Versao do save — se mudar, reseta progresso automaticamente
+    var SAVE_VERSION = 'v4';
+    if(localStorage.getItem('ac_version') !== SAVE_VERSION){
+      ['ac_tatu','ac_frog','ac_caterpillar','ac_butterfly','ac_best'].forEach(function(k){
+        localStorage.removeItem(k);
+      });
+      localStorage.setItem('ac_version', SAVE_VERSION);
+      return; // personagens ficam bloqueados
+    }
     catUnlocked        = localStorage.getItem('ac_tatu')==='1';
     frogUnlocked       = localStorage.getItem('ac_frog')==='1';
     caterpillarUnlocked= localStorage.getItem('ac_caterpillar')==='1';
@@ -2809,100 +2819,81 @@ function drawTutorialBanner(){
   if(tutorialTimer<=0) return;
 
   var tips = {
-    1: { icon:'⭐', title:'Colete todas as 20 estrelas!', sub:'Desbloqueie o Tatuzinho 🦔 para avançar à Fase 2', color1:'#FFD700', color2:'#FF8F00' },
-    2: { icon:'🦔', title:'Use o Tatuzinho para cavar!',  sub:'Passe pela Mega Barreira e desbloqueie o Sapinho 🐸', color1:'#A5D6A7', color2:'#388E3C' },
-    3: { icon:'🐸', title:'Colete as estrelas especiais!', sub:'Desbloqueie o Sapinho no início da fase para avançar', color1:'#80DEEA', color2:'#00838F' },
-    4: { icon:'🐸', title:'Sapinho come insetos voadores!', sub:'Recupera vida ao comer — desbloqueie a Lagartinha 🐛', color1:'#C5E1A5', color2:'#558B2F' },
-    5: { icon:'🦔', title:'Cave a barreira com o Tatuzinho!', sub:'Colete as 20 estrelas escondidas para desbloquear a Lagartinha', color1:'#C1FF00', color2:'#76FF03' },
-    6: { icon:'🐛', title:'Colete 20 folhinhas!',           sub:'A Lagartinha se transforma em Borboleta 🦋 ao completar!', color1:'#F48FB1', color2:'#E91E63' }
+    1:{ icon:'⭐', title:'Colete todas as 20 estrelas!',       sub:'Desbloqueie o Tatuzinho 🦔 para avançar à Fase 2!',         c1:'#FFD700',c2:'#FF8F00' },
+    2:{ icon:'🦔', title:'Use o Tatuzinho para cavar!',         sub:'Passe pela Mega Barreira e desbloqueie o Sapinho 🐸!',       c1:'#A5D6A7',c2:'#388E3C' },
+    3:{ icon:'🐸', title:'Colete as estrelas especiais!',       sub:'Desbloqueie o Sapinho no início da fase para avançar!',      c1:'#80DEEA',c2:'#0097A7' },
+    4:{ icon:'🐸', title:'Sapinho come insetos voadores!',      sub:'Recupera vida ao comer — desbloqueie a Lagartinha 🐛!',      c1:'#C5E1A5',c2:'#558B2F' },
+    5:{ icon:'🦔', title:'Cave a barreira com o Tatuzinho!',    sub:'Colete as 20 estrelas escondidas para desbloquear a Lagartinha!', c1:'#C1FF00',c2:'#76FF03' },
+    6:{ icon:'🐛', title:'Colete 20 folhinhas com a Lagartinha!',sub:'Complete a metamorfose e vire Borboleta 🦋!',                c1:'#F48FB1',c2:'#E91E63' }
   };
+  var t=tips[phase]; if(!t) return;
 
-  var t = tips[phase];
-  if(!t) return;
-
-  // Alpha: fade-in rápido (30f), estável, fade-out (90f)
+  // Alpha: fade-in 30f | estável | fade-out 90f
   var alpha;
-  var fadeIn  = 30, fadeOut = 90;
-  if(tutorialTimer > 420-fadeIn)       alpha = ((420-tutorialTimer)/fadeIn)*0.96;
-  else if(tutorialTimer < fadeOut)     alpha = (tutorialTimer/fadeOut)*0.96;
-  else                                 alpha = 0.96;
+  if(tutorialTimer > 390)      alpha = ((420-tutorialTimer)/30)*0.95;
+  else if(tutorialTimer < 90)  alpha = (tutorialTimer/90)*0.95;
+  else                         alpha = 0.95;
 
-  var bw=580, bh=94;
-  var bx=(CW-bw)/2;
-  var by=(CH-bh)/2 - 10; // centro vertical do canvas, levemente acima do meio
+  var bw=580, bh=96, bx=(CW-bw)/2, by=(CH-bh)/2-8;
 
   ctx.save();
-  ctx.globalAlpha = alpha;
+  ctx.globalAlpha=alpha;
 
-  // Sombra externa (glow)
-  ctx.shadowColor = t.color1;
-  ctx.shadowBlur  = 22;
+  // Glow externo
+  ctx.shadowColor=t.c1; ctx.shadowBlur=28;
+  // Fundo gradiente escuro
+  var bg=ctx.createLinearGradient(bx,by,bx,by+bh);
+  bg.addColorStop(0,'rgba(4,12,38,0.97)');
+  bg.addColorStop(1,'rgba(8,22,62,0.97)');
+  ctx.fillStyle=bg; rrect(bx,by,bw,bh,16); ctx.fill();
+  ctx.shadowBlur=0;
 
-  // Fundo com gradiente escuro
-  var grad = ctx.createLinearGradient(bx, by, bx, by+bh);
-  grad.addColorStop(0, 'rgba(5,15,40,0.97)');
-  grad.addColorStop(1, 'rgba(10,28,72,0.97)');
-  ctx.fillStyle = grad;
-  rrect(bx, by, bw, bh, 16); ctx.fill();
-  ctx.shadowBlur = 0;
+  // Borda colorida gradiente
+  var bd=ctx.createLinearGradient(bx,by,bx+bw,by+bh);
+  bd.addColorStop(0,t.c1); bd.addColorStop(0.5,t.c2); bd.addColorStop(1,t.c1);
+  ctx.strokeStyle=bd; ctx.lineWidth=2.5;
+  rrect(bx,by,bw,bh,16); ctx.stroke();
 
-  // Borda gradiente colorida
-  var borderGrad = ctx.createLinearGradient(bx, by, bx+bw, by+bh);
-  borderGrad.addColorStop(0,   t.color1);
-  borderGrad.addColorStop(0.5, t.color2);
-  borderGrad.addColorStop(1,   t.color1);
-  ctx.strokeStyle = borderGrad;
-  ctx.lineWidth   = 2.5;
-  rrect(bx, by, bw, bh, 16); ctx.stroke();
+  // Barra decorativa topo
+  var tb=ctx.createLinearGradient(bx+16,0,bx+bw-16,0);
+  tb.addColorStop(0,'transparent'); tb.addColorStop(0.3,t.c1);
+  tb.addColorStop(0.7,t.c2); tb.addColorStop(1,'transparent');
+  ctx.fillStyle=tb; ctx.fillRect(bx+16,by+3,bw-32,3);
 
-  // Linha decorativa superior colorida (barra fina)
-  var barGrad = ctx.createLinearGradient(bx+16, by+2, bx+bw-16, by+2);
-  barGrad.addColorStop(0, 'transparent');
-  barGrad.addColorStop(0.3, t.color1);
-  barGrad.addColorStop(0.7, t.color2);
-  barGrad.addColorStop(1, 'transparent');
-  ctx.fillStyle = barGrad;
-  ctx.fillRect(bx+16, by+2, bw-32, 3);
+  // Emoji ícone grande à esquerda
+  ctx.shadowColor=t.c1; ctx.shadowBlur=12;
+  ctx.font='38px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
+  ctx.textAlign='center'; ctx.fillStyle='white';
+  ctx.fillText(t.icon,bx+46,by+58);
+  ctx.shadowBlur=0;
 
-  // Ícone emoji grande à esquerda
-  ctx.font = '36px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
-  ctx.textAlign = 'center';
-  ctx.fillStyle = 'white';
-  ctx.shadowColor = t.color1; ctx.shadowBlur = 10;
-  ctx.fillText(t.icon, bx+44, by+56);
-  ctx.shadowBlur = 0;
+  // Divisor vertical
+  ctx.strokeStyle='rgba(255,255,255,0.18)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(bx+82,by+14); ctx.lineTo(bx+82,by+bh-14); ctx.stroke();
 
-  // Separador vertical
-  ctx.strokeStyle = 'rgba(255,255,255,0.15)';
-  ctx.lineWidth = 1;
-  ctx.beginPath(); ctx.moveTo(bx+78, by+14); ctx.lineTo(bx+78, by+bh-14); ctx.stroke();
+  // Linha 1 — título destacado
+  ctx.textAlign='left';
+  ctx.shadowColor=t.c1; ctx.shadowBlur=8;
+  ctx.font='bold 15px Arial'; ctx.fillStyle=t.c1;
+  ctx.fillText(t.title,bx+92,by+36);
+  ctx.shadowBlur=0;
 
-  // Título (linha 1)
-  ctx.textAlign  = 'left';
-  ctx.font       = 'bold 15px Arial';
-  ctx.fillStyle  = t.color1;
-  ctx.shadowColor = t.color1; ctx.shadowBlur = 8;
-  ctx.fillText(t.title, bx+90, by+36);
-  ctx.shadowBlur = 0;
+  // Linha 2 — subtítulo
+  ctx.font='12px Arial'; ctx.fillStyle='rgba(210,225,255,0.92)';
+  ctx.fillText(t.sub,bx+92,by+60);
 
-  // Subtítulo (linha 2)
-  ctx.font      = '12px Arial';
-  ctx.fillStyle = 'rgba(220,230,255,0.92)';
-  ctx.fillText(t.sub, bx+90, by+60);
-
-  // Barra de progresso do timer no fundo
-  var barW = (bw-32) * (tutorialTimer/420);
-  ctx.fillStyle = 'rgba(255,255,255,0.06)';
-  ctx.fillRect(bx+16, by+bh-10, bw-32, 6);
-  var progGrad = ctx.createLinearGradient(bx+16, 0, bx+16+barW, 0);
-  progGrad.addColorStop(0, t.color1);
-  progGrad.addColorStop(1, t.color2);
-  ctx.fillStyle = progGrad;
-  ctx.fillRect(bx+16, by+bh-10, barW, 6);
+  // Barra de progresso no rodapé
+  var pw=(bw-32)*(tutorialTimer/420);
+  ctx.fillStyle='rgba(255,255,255,0.07)';
+  rrect(bx+16,by+bh-12,bw-32,7,4); ctx.fill();
+  var pg=ctx.createLinearGradient(bx+16,0,bx+16+pw,0);
+  pg.addColorStop(0,t.c1); pg.addColorStop(1,t.c2);
+  ctx.fillStyle=pg;
+  rrect(bx+16,by+bh-12,pw,7,4); ctx.fill();
 
   ctx.restore();
 }
-// ── FIM BANNER TUTORIAL ───────────────────────────────────────────────────────
+// ── FIM BANNER TUTORIAL
 
 function loop(){
   ctx.clearRect(0,0,CW,CH);
