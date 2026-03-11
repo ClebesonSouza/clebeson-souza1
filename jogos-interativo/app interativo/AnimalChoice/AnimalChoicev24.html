@@ -188,15 +188,17 @@
       #muteBtn { top: 4px; right: 4px; width: 30px; height: 30px; font-size: 14px; }
     }
 
-    /* Evitar flash do #ui HTML antes de applyScale() rodar */
-    @media (max-width: 900px) and (orientation: landscape) {
-      #ui { display: none !important; }
+
+  
+    /* ── PORTRAIT MOBILE: esconde jogo, mostra overlay ─────────── */
+    @media screen and (max-width: 900px) and (orientation: portrait) {
+      #gameWrapper { display: none !important; }
+      #rotateOverlay { display: flex !important; }
+      #touchControls { display: none !important; }
     }
-    /* No menu mobile, garantir que o canvas ocupe toda a tela */
-    @media (max-width: 900px) {
-      #gameWrapper {
-        overflow: hidden;
-      }
+    /* ── Garante que a body não role no mobile ──────────────────── */
+    @media screen and (max-width: 900px) {
+      html, body { overflow: hidden; }
     }
 
   </style>
@@ -2571,45 +2573,92 @@ function drawPhase6Intro(){
 }
 
 function drawMenu(){
+  // Fundo gradiente
   var mg=ctx.createLinearGradient(0,0,0,CH);
-  mg.addColorStop(0,'#1565C0'); mg.addColorStop(1,'#0D47A1');
+  mg.addColorStop(0,'#1a237e'); mg.addColorStop(1,'#0D47A1');
   ctx.fillStyle=mg; ctx.fillRect(0,0,CW,CH);
-  ctx.fillStyle='rgba(255,255,255,0.22)';
-  [[80,75],[300,55],[560,80],[720,60]].forEach(function(p){cloud(p[0],p[1]);});
-  ctx.fillStyle='#FFD700'; ctx.font='bold 58px Arial'; ctx.textAlign='center';
-  ctx.shadowColor='#FF6F00'; ctx.shadowBlur=25; ctx.fillText('AnimalChoice',CW/2,108); ctx.shadowBlur=0;
-  ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='15px Arial';
-  ctx.fillText('Escolha o animal certo para superar cada obstaculo!',CW/2,142);
+
+  // Nuvens decorativas
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  [[80,65],[290,48],[530,70],[710,52],[170,38],[650,42]].forEach(function(p){cloud(p[0],p[1]);});
+
+  // Título principal
+  ctx.textAlign='center';
+  ctx.font='bold 62px Arial';
+  ctx.shadowColor='#FF6F00'; ctx.shadowBlur=30;
+  ctx.fillStyle='#FFD700';
+  ctx.fillText('AnimalChoice',CW/2,78);
+  ctx.shadowBlur=0;
+
+  // Subtítulo
+  ctx.fillStyle='rgba(255,255,255,0.88)'; ctx.font='14px Arial';
+  ctx.fillText('Escolha o animal certo para superar cada obstaculo!',CW/2,104);
+
+  // === CARDS CENTRALIZADOS ===
+  // 3 colunas × 2 linhas — centralizados no canvas 800px
+  var cardW=130, cardH=115, colGap=160, rowGap=126;
+  var totalW = 3*cardW + 2*(colGap-cardW); // = 3*130 + 2*30 = 450
+  var startX = (CW - (2*colGap + cardW)) / 2; // centro do primeiro card
+
+  var emojis=['🐱','🐶','🦆','🐦','🦔','🐸'];
   var cards=[
-    {n:'Gatinho',    a:'Pulo Alto',  c:'#FF9800'},
-    {n:'Cachorrinho',a:'Corrida',    c:'#8D6E63'},
-    {n:'Patinho',    a:'Nada',       c:'#FDD835'},
-    {n:'Passarinho', a:'Voa',        c:'#29B6F6'},
-    {n:'Tatuzinho',  a:'Cavar',      c:'#8D6E63',locked:true},
-    {n:'Sapinho',    a:'Pulo Duplo', c:'#4CAF50',locked:true} // ADICIONADO SAPINHO NO MENU
+    {n:'Gatinho',    a:'Pulo Alto',   c:'#FF9800', e:'🐱'},
+    {n:'Cachorrinho',a:'Corrida',     c:'#8D6E63', e:'🐶'},
+    {n:'Patinho',    a:'Nada',        c:'#FDD835', e:'🦆'},
+    {n:'Passarinho', a:'Voa',         c:'#29B6F6', e:'🐦'},
+    {n:'Tatuzinho',  a:'Cavar',       c:'#8D6E63', e:'🦔', locked:true},
+    {n:'Sapinho',    a:'Pulo Duplo',  c:'#4CAF50', e:'🐸', locked:true}
   ];
+
   cards.forEach(function(cd,i){
-    var row = Math.floor(i/3), col = i%3; // 3 COLUNAS, 2 LINHAS
-    var bx=120+col*180, by=198+row*120; // AJUSTADO PARA GRADE 3x2
-    ctx.fillStyle='rgba(255,255,255,0.1)'; rrect(bx-50,by-15,100,108,12); ctx.fill();
-    ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=2; rrect(bx-50,by-15,100,108,12); ctx.stroke();
+    var col=i%3, row=Math.floor(i/3);
+    var bx = startX + col*colGap + cardW/2; // centro horizontal do card
+    var by = 128 + row*rowGap;              // centro vertical do card
+
+    // Fundo do card
     if(cd.locked){
-      ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(bx-50,by-15,100,108,12); ctx.fill();
-      ctx.fillStyle='#aaa'; ctx.font='22px Arial'; ctx.textAlign='center'; ctx.fillText('?',bx,by+42);
-      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='9px Arial';
-      ctx.fillText('Colete todas',bx,by+62); ctx.fillText('as estrelas!',bx,by+74);
+      ctx.fillStyle='rgba(0,0,0,0.45)';
     } else {
-      ctx.fillStyle='white'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
-      ctx.fillText(cd.n,bx,by+42);
-      ctx.fillStyle=cd.c; ctx.font='11px Arial'; ctx.fillText(cd.a,bx,by+60);
+      ctx.fillStyle='rgba(255,255,255,0.12)';
+    }
+    rrect(bx-cardW/2, by, cardW, cardH, 14); ctx.fill();
+
+    // Borda
+    ctx.strokeStyle = cd.locked ? 'rgba(255,255,255,0.15)' : 'rgba(255,255,255,0.3)';
+    ctx.lineWidth=1.5;
+    rrect(bx-cardW/2, by, cardW, cardH, 14); ctx.stroke();
+
+    if(cd.locked){
+      // Card bloqueado
+      ctx.fillStyle='rgba(255,255,255,0.5)'; ctx.font='28px Arial';
+      ctx.fillText('🔒',bx, by+44);
+      ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='bold 10px Arial';
+      ctx.fillText('Desbloqueie jogando!',bx, by+70);
+    } else {
+      // Emoji do animal
+      ctx.font='32px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
+      ctx.fillStyle='white';
+      ctx.fillText(cd.e, bx, by+40);
+      // Nome
+      ctx.fillStyle='white'; ctx.font='bold 13px Arial';
+      ctx.fillText(cd.n, bx, by+62);
+      // Habilidade
+      ctx.fillStyle=cd.c; ctx.font='11px Arial';
+      ctx.fillText(cd.a, bx, by+80);
     }
   });
-  var pulse=Math.sin(Date.now()/380)*4;
-  ctx.fillStyle='#43A047'; rrect(CW/2-125,420-pulse/2,250,48+pulse,28); ctx.fill(); // MOVIDO PARA BAIXO
-  ctx.fillStyle='white'; ctx.font='bold 21px Arial'; ctx.textAlign='center';
-  ctx.fillText('JOGAR AGORA!',CW/2,451); // AJUSTADO
-  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='12px Arial';
-  ctx.fillText('Clique ou pressione ESPACO',CW/2,CH-8);
+
+  // Botão JOGAR — centralizado, com pulsação
+  var pulse=Math.sin(Date.now()/380)*3;
+  var btnY = 128 + 2*rowGap + 18; // logo abaixo dos cards
+  ctx.fillStyle='#43A047';
+  rrect(CW/2-130, btnY-pulse/2, 260, 44+pulse, 22); ctx.fill();
+  ctx.fillStyle='white'; ctx.font='bold 20px Arial'; ctx.textAlign='center';
+  ctx.fillText('▶  JOGAR AGORA!', CW/2, btnY+29+pulse/2);
+
+  // Rodapé
+  ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='11px Arial';
+  ctx.fillText('Toque na tela ou pressione ESPAÇO', CW/2, CH-10);
 }
 function drawPhase2Intro(){
   var allGot=p1Stars.every(function(s){return s.got;});
@@ -2816,6 +2865,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // ── Desktop: tudo original ────────────────────────────────
     if(!isMobile){
       wrapper.style.cssText    = '';
+      wrapper.style.display    = '';
       if(overlay) overlay.style.display = 'none';
       if(tpad)    tpad.style.display    = 'none';
       if(ui)      ui.style.display      = '';
@@ -2826,13 +2876,16 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // ── Mobile Portrait: overlay "gire o celular" ─────────────
     if(isPortrait){
       if(overlay) overlay.style.display = 'flex';
-      wrapper.style.visibility = 'hidden';
+      wrapper.style.display    = 'none'; // esconde canvas + ui
+      wrapper.style.visibility = 'visible'; // reset visibility
       if(tpad) tpad.style.display = 'none';
+      if(ui)   ui.style.display   = 'none';
       return;
     }
 
     // ── Mobile Landscape: canvas fullscreen ───────────────────
     if(overlay) overlay.style.display = 'none';
+    wrapper.style.display    = '';        // restaura display
     wrapper.style.visibility = 'visible';
 
     // Oculta botões de personagem — D-pad substitui no mobile
