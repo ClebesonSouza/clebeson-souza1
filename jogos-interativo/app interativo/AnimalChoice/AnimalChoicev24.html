@@ -53,18 +53,7 @@
 
 
     /* ── TOUCH D-PAD ── */
-    #touchControls {
-      display: none;
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      height: 130px;
-      pointer-events: none;
-      z-index: 100;
-      padding: 0 12px 10px;
-      box-sizing: border-box;
-      justify-content: space-between;
-      align-items: flex-end;
-    }
+    
 
     .tpad-left, .tpad-right {
       display: flex;
@@ -816,6 +805,40 @@ function groundAt(x){// funcao para verificar se tem chao em determinada posicao
 
                     //FASE 2 AQUI EU DEFINO EM QUAL FASE QUE TRABALHAR AO INICIAR O JOGO
 // ── Game functions ────────────────────────────────────────────────────────────
+
+// ── LOCALSTORAGE ────────────────────────────────────────────────────────────
+function saveProgress(){
+  try{
+    localStorage.setItem('ac_tatu', catUnlocked?'1':'0');
+    localStorage.setItem('ac_frog', frogUnlocked?'1':'0');
+    localStorage.setItem('ac_caterpillar', caterpillarUnlocked?'1':'0');
+    localStorage.setItem('ac_butterfly', butterflyUnlocked?'1':'0');
+    var best=parseInt(localStorage.getItem('ac_best')||'0');
+    if(score>best) localStorage.setItem('ac_best', score);
+  }catch(e){}
+}
+function loadProgress(){
+  try{
+    catUnlocked        = localStorage.getItem('ac_tatu')==='1';
+    frogUnlocked       = localStorage.getItem('ac_frog')==='1';
+    caterpillarUnlocked= localStorage.getItem('ac_caterpillar')==='1';
+    butterflyUnlocked  = localStorage.getItem('ac_butterfly')==='1';
+    if(catUnlocked){
+      var bt=document.getElementById('btn-tatu'); if(bt) bt.classList.remove('locked');
+      var lt=document.getElementById('cat-lock'); if(lt) lt.style.display='none';
+    }
+    if(frogUnlocked){
+      var bf=document.getElementById('btn-frog'); if(bf) bf.classList.remove('locked');
+      var lf=document.getElementById('frog-lock'); if(lf) lf.style.display='none';
+    }
+    if(caterpillarUnlocked){
+      var bc=document.getElementById('btn-caterpillar'); if(bc) bc.classList.remove('locked');
+      var lc=document.getElementById('caterpillar-lock'); if(lc) lc.style.display='none';
+    }
+  }catch(e){}
+}
+// ── FIM LOCALSTORAGE ─────────────────────────────────────────────────────────
+
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
   state='playing'; phase=1;// reseta tudo para o inicio da fase 1
@@ -850,14 +873,14 @@ function respawn(){
   pl.x=Math.max(60,camX+80); pl.y=GY-50; pl.vy=0;
 }
 function unlockCaterpillar(){ sndUnlock();
-  catUnlocked=true;
+  catUnlocked=true; saveProgress();
   var btn=document.getElementById('btn-tatu');
   btn.classList.remove('locked');
   document.getElementById('cat-lock').style.display='none';
   showMobileUnlock('Tatuzinho','🦔','mpanel-tatu');
 }
 function unlockCaterpillarButterfly(){ sndUnlock();
-  caterpillarUnlocked=true;
+  caterpillarUnlocked=true; saveProgress();
   var btn=document.getElementById('btn-caterpillar');
   btn.classList.remove('locked');
   document.getElementById('caterpillar-lock').style.display='none';
@@ -875,7 +898,7 @@ function beginPhase2(){ sndPhase2Start();//
 }
 
 function unlockFrog(){ sndUnlock();
-  frogUnlocked=true;
+  frogUnlocked=true; saveProgress();
   var btn=document.getElementById('btn-frog');
   btn.classList.remove('locked');
   document.getElementById('frog-lock').style.display='none';
@@ -1147,7 +1170,7 @@ function update(){
           var bC=['#FF69B4','#FFD700','#7FFF00','#00BFFF','#FF6347','#DA70D6','#fff'];
           for(var bi=0;bi<70;bi++) particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h/2,vx:(Math.random()-0.5)*10,vy:-Math.random()*8-1,life:100,color:bC[Math.floor(Math.random()*bC.length)],type:'burst'});
           sndVictory();
-          pl.char='butterfly'; pl.w=38; pl.h=38; butterflyUnlocked=true;
+          pl.char='butterfly'; pl.w=38; pl.h=38; butterflyUnlocked=true; saveProgress();
           document.querySelector('#btn-caterpillar .em').textContent='🦋';
           document.querySelector('#btn-caterpillar .cn').textContent='Borboleta!';
           document.querySelector('#btn-caterpillar .ca').textContent='Pairar';
@@ -2939,6 +2962,29 @@ function refreshLockState(){
   var mlCat=document.getElementById('mpanel-caterpillar-lock');
   if(mlCat) mlCat.style.display=caterpillarUnlocked?'none':'block';
 }
+
+// ── DETECÇÃO DE ORIENTAÇÃO MOBILE ───────────────────────────────────────────
+function checkOrientation(){
+  var isMobile=/Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent)||window.innerWidth<=820;
+  var overlay=document.getElementById('rotateOverlay');
+  if(!overlay) return;
+  if(isMobile && window.innerHeight>window.innerWidth){
+    overlay.style.display='flex';
+  } else {
+    overlay.style.display='none';
+  }
+}
+window.addEventListener('orientationchange',function(){setTimeout(checkOrientation,150);});
+window.addEventListener('resize', checkOrientation);
+// ── FIM ORIENTAÇÃO ───────────────────────────────────────────────────────────
+
+
+// ── INIT ─────────────────────────────────────────────────────────────────────
+document.addEventListener('DOMContentLoaded', function(){
+  loadProgress();      // restaura personagens salvos
+  checkOrientation();  // verifica orientação ao abrir
+});
+// ── FIM INIT ─────────────────────────────────────────────────────────────────
 </script>
 
 
