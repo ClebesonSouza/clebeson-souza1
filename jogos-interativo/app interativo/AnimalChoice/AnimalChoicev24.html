@@ -488,6 +488,7 @@ var frogUnlocked=false, frogLongJump=false, frogTongue=0;
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var metamorphState='none', metamorphTimer=0, metamorphCountdown=3;
+var tutorialTimer=0; // frames do banner tutorial (300 = ~5s)
 var p6Leaves=[], leavesEaten=0, TOTAL_LEAVES=20;
 
 // ── Input ────────────────────────────────────────────────────────────────────
@@ -855,7 +856,7 @@ function loadProgress(){
 
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
-  state='playing'; phase=1;// reseta tudo para o inicio da fase 1
+  state='playing'; phase=1; tutorialTimer=300;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
   camX=0; score=0; lives=3; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
@@ -902,6 +903,7 @@ function unlockCaterpillarButterfly(){ sndUnlock();
 }
 function beginPhase2(){ sndPhase2Start();//
   phase=2; state='playing';
+  tutorialTimer=300;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0;
   pl.char='cat'; // reseta personagem para o Gatinho
   camX=0; isDigging=false;
@@ -920,6 +922,7 @@ function unlockFrog(){ sndUnlock();
 }
 function beginPhase3(){ sndPhase3Start();
   phase=3; state='playing';
+  tutorialTimer=300;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
   camX=0; isDigging=false; frogLongJump=false;
   p3.speedGates.forEach(function(g){g.passed=false;});
@@ -930,6 +933,7 @@ function beginPhase3(){ sndPhase3Start();
 function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   sndPhase4Start();
   phase=4; state='playing';
+  tutorialTimer=300;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
   camX=0; isDigging=false; frogLongJump=0;
   p4.speedGates.forEach(function(g){g.passed=false;});
@@ -940,6 +944,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   sndPhase5Start();
   phase=5; state='playing';
+  tutorialTimer=300;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='frog'; // Começa com Sapinho
   camX=0; isDigging=false; frogLongJump=0;
   p5.speedGates.forEach(function(g){g.passed=false;});
@@ -952,6 +957,7 @@ function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
 function beginPhase6(){
   sndPhase6Start();
   phase=6; state='playing';
+  tutorialTimer=300;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='caterpillar'; pl.w=48; pl.h=52;
   camX=0; isDigging=false; frogLongJump=0;
   metamorphState='none'; metamorphTimer=0; metamorphCountdown=3;
@@ -967,6 +973,7 @@ function beginPhase6(){
 
 function update(){
   if(state!=='playing') return;
+  if(tutorialTimer>0) tutorialTimer--; // decrementa banner tutorial
   var def=CHARS[pl.char], lv=getLevel(), sts=getStars(), i;
 
   // Duck flap timer
@@ -2796,6 +2803,57 @@ function drawGameOver(){
 }
 
 // ── Game Loop ─────────────────────────────────────────────────────────────────
+
+// ── BANNER TUTORIAL POR FASE ─────────────────────────────────────────────────
+function drawTutorialBanner(){
+  if(tutorialTimer<=0) return;
+
+  var msgs = {
+    1: { line1:'⭐  Colete as 20 estrelas para desbloquear', line2:'o Tatuzinho 🦔 e avançar para a Fase 2!', color:'#FFD700' },
+    2: { line1:'🦔  Use o Tatuzinho para cavar a Mega Barreira!', line2:'Desbloqueie o Sapinho coletando as estrelas especiais!', color:'#A5D6A7' },
+    3: { line1:'🐸  Colete as estrelas especiais no início da fase', line2:'para desbloquear o Sapinho e avançar!', color:'#80CBC4' },
+    4: { line1:'🐸  Sapinho come insetos voadores para recuperar vida!', line2:'Desbloqueie a Lagartinha pelas estrelas da barreira!', color:'#C5E1A5' },
+    5: { line1:'🦔  Use o Tatuzinho para cavar a barreira', line2:'e coletar as 20 estrelas escondidas para desbloquear a Lagartinha!', color:'#C1FF00' },
+    6: { line1:'🐛  Colete 20 folhinhas com a Lagartinha', line2:'para se transformar em Borboleta 🦋!', color:'#F48FB1' }
+  };
+
+  var m = msgs[phase];
+  if(!m) return;
+
+  // Fade-out nos últimos 80 frames
+  var alpha = tutorialTimer > 80 ? 0.92 : (tutorialTimer/80)*0.92;
+
+  var bw=580, bh=64, bx=(CW-bw)/2, by=14;
+
+  // Fundo do banner
+  ctx.save();
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle='rgba(10,20,50,0.88)';
+  rrect(bx, by, bw, bh, 14); ctx.fill();
+  ctx.strokeStyle = m.color;
+  ctx.lineWidth = 2;
+  rrect(bx, by, bw, bh, 14); ctx.stroke();
+
+  // Ícone lateral esquerdo
+  ctx.font='20px "Segoe UI Emoji","Noto Color Emoji","Apple Color Emoji",Arial';
+  ctx.textAlign='center';
+  ctx.fillStyle='white';
+
+  // Linha 1
+  ctx.fillStyle = m.color;
+  ctx.font = 'bold 13px Arial';
+  ctx.textAlign = 'center';
+  ctx.fillText(m.line1, CW/2, by+26);
+
+  // Linha 2
+  ctx.fillStyle = 'rgba(255,255,255,0.88)';
+  ctx.font = '12px Arial';
+  ctx.fillText(m.line2, CW/2, by+46);
+
+  ctx.restore();
+}
+// ── FIM BANNER TUTORIAL ───────────────────────────────────────────────────────
+
 function loop(){
   ctx.clearRect(0,0,CW,CH);
   if(state==='menu') drawMenu();
@@ -2804,7 +2862,7 @@ function loop(){
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
     drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
     drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
-    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD();
+    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD(); drawTutorialBanner();
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
   else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
