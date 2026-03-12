@@ -1172,10 +1172,7 @@ function update(){
     for(var wi=0;wi<p4Webs.length;wi++){
       var web=p4Webs[wi];
       if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
-        if(webStuck === 0){
-          webStuck = 90;
-          sndHit();
-        }
+        if(webStuck === 0){ webStuck = 90; sndHit(); }
       }
     }
   }
@@ -2535,16 +2532,6 @@ function drawHUD(){
     ctx.strokeStyle='rgba(200,200,200,0.8)'; ctx.lineWidth=1.5; rrect(CW/2-100,CH-58+oy,200,28,10); ctx.stroke();
     ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
     ctx.fillText('🕸️ Preso na teia! '+Math.ceil(webStuck/60)+'s', CW/2, CH-40+oy);
-  }
-  // Indicador de folhas comidas (Fase 6)
-  if(phase===6 && pl.char==='caterpillar' && metamorphState==='none'){
-    var leafPct=leavesEaten/TOTALLEAVES;
-    var barW=160,barH=14,barX=CW/2-barW/2,barY=52+oy;
-    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(barX-10,barY-2,barW+20,barH+20,10); ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.15)'; rrect(barX,barY+8,barW,barH,6); ctx.fill();
-    ctx.fillStyle=leafPct>=1?'#FFD700':'#7FFF00'; rrect(barX,barY+8,barW*leafPct,barH,6); ctx.fill();
-    ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-    ctx.fillText('🍃 Folhas: '+leavesEaten+' / '+TOTALLEAVES, CW/2, barY+6);
   }
 }
 
