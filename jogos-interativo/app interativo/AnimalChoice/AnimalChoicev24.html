@@ -879,9 +879,7 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   p3Insects.forEach(function(ins){ins.eaten=false;});
   p4Stars.forEach(function(s){s.got=false;}); // RESET FASE 4
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;}); // RESET INSETOS VOADORES FASE 4
-  webStuck = 0; // RESET TEIA FASE 4
   p4.speedGates.forEach(function(g){g.passed=false;}); // RESET PORTÕES FASE 4
-  p4Webs.forEach(function(web){ web.stuck = false; }); // RESET TEIAS FASE 4
   p5Stars.forEach(function(s){s.got=false;}); // RESET FASE 5
   p5BarrierStars.forEach(function(s){s.got=false;}); // RESET ESTRELAS ESCONDIDAS FASE 5
   p5Insects.forEach(function(ins){ins.eaten=false;}); // RESET INSETOS FASE 5
@@ -891,9 +889,17 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   p6.speedGates.forEach(function(g){g.passed=false;});
   butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;// reseta os portoes de velocidade da fase 2 para nao passados
-  webStuck = 0; // RESET TEIA FASE 4
+
+  // ── RESET DESBLOQUEIOS (nova partida começa do zero) ──────────────────────
+  catUnlocked=false;
+  frogUnlocked=false;
+  caterpillarUnlocked=false;
+
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});// reseta os botoes de escolha de personagem para nao ativos
   document.getElementById('btn-cat').classList.add('active');// define o botao do gatinho como ativo, ja que o gatinho é o personagem inicial
+
+  // Atualiza visual dos locks nos cards (desktop + mobile)
+  refreshLockState();
 }
 function respawn(){
   lives--; if(isDigging) stopDig();
@@ -1161,18 +1167,13 @@ function update(){
         } else { sndHit(); respawn(); }
       }
     }
-    // // Teias de aranha - webStuck prende o jogador por 90 frames (~1.5s)
-    if(webStuck > 0){
-      webStuck--;
-      pl.vx *= 0.25;
-      if(Math.random() < 0.15){
-        particles.push({x:pl.x+pl.w/2, y:pl.y+pl.h/2, vx:(Math.random()-0.5)*2, vy:-Math.random()*1.5, life:25, color:'rgba(200,200,200,0.7)', type:'web'});
-      }
-    }
+    // Teias de aranha como obstáculos - colisão com jogador
     for(var wi=0;wi<p4Webs.length;wi++){
       var web=p4Webs[wi];
       if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
-        if(webStuck === 0){ webStuck = 90; sndHit(); }
+        // Teia desacelera o jogador e pode prender por um momento
+        pl.vx *= 0.7; // Reduz velocidade horizontal
+        if(Math.random()<0.3) pl.vy = Math.min(pl.vy, -2); // Pode dar um pequeno impulso para cima
       }
     }
   }
@@ -2524,14 +2525,6 @@ function drawHUD(){
   } else {
     ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='10px Arial'; ctx.textAlign='left';
     ctx.fillText('Setas: Mover | Espaco/Cima: Pular | 1-6: Trocar animal',12,CH-8);
-  }
-
-  // Indicador de teia ativa (Fase 4)
-  if(phase===4 && webStuck>0){
-    ctx.fillStyle='rgba(0,0,0,0.6)'; rrect(CW/2-100,CH-58+oy,200,28,10); ctx.fill();
-    ctx.strokeStyle='rgba(200,200,200,0.8)'; ctx.lineWidth=1.5; rrect(CW/2-100,CH-58+oy,200,28,10); ctx.stroke();
-    ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-    ctx.fillText('🕸️ Preso na teia! '+Math.ceil(webStuck/60)+'s', CW/2, CH-40+oy);
   }
 }
 
