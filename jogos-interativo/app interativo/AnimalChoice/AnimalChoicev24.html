@@ -888,17 +888,10 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
   p6.speedGates.forEach(function(g){g.passed=false;});
   butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
-  frogLongJump=false;// reseta os portoes de velocidade da fase 2 para nao passados
-
-  // ── RESET DESBLOQUEIOS (nova partida começa do zero) ──────────────────────
-  catUnlocked=false;
-  frogUnlocked=false;
-  caterpillarUnlocked=false;
-
-  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});// reseta os botoes de escolha de personagem para nao ativos
-  document.getElementById('btn-cat').classList.add('active');// define o botao do gatinho como ativo, ja que o gatinho é o personagem inicial
-
-  // Atualiza visual dos locks nos cards (desktop + mobile)
+  frogLongJump=false;
+  catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false;
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-cat').classList.add('active');
   refreshLockState();
 }
 function respawn(){
@@ -1167,15 +1160,16 @@ function update(){
         } else { sndHit(); respawn(); }
       }
     }
-    // Teias de aranha como obstáculos - colisão com jogador
+    // Teias de aranha como obstáculos
     for(var wi=0;wi<p4Webs.length;wi++){
       var web=p4Webs[wi];
       if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
-        // Teia desacelera o jogador e pode prender por um momento
-        pl.vx *= 0.7; // Reduz velocidade horizontal
-        if(Math.random()<0.3) pl.vy = Math.min(pl.vy, -2); // Pode dar um pequeno impulso para cima
+        if(webStuck===0){ webStuck=90; sndHit();
+          for(var si=0;si<12;si++) particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h/2,vx:(Math.random()-0.5)*3,vy:-Math.random()*3,life:35,color:'rgba(200,230,255,0.9)',type:'web'});
+        }
       }
     }
+    if(webStuck>0){ webStuck--; pl.vx*=0.05; pl.vy*=0.15; }
   }
 
   // P5 insects + barrier logic (Sapinho come insetos, Tatuzinho entra na barreira)
@@ -2404,31 +2398,62 @@ function drawInsects(){
     }
   }
 }
-function drawWebs(){ // NOVA FUNÇÃO: TEIAS DE ARANHA DA FASE 4
+function drawWebs(){
   if(phase!==4) return;
+  var t=Date.now()/800;
   for(var i=0;i<p4Webs.length;i++){
     var web=p4Webs[i], sx=web.x-camX;
     if(sx>CW||sx+web.w<0) continue;
-    // Teia circular com fios
-    ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.arc(sx+web.w/2,web.y+web.h/2,web.w/2,0,Math.PI*2); ctx.stroke();
-    for(var r=1;r<4;r++){
-      ctx.beginPath(); ctx.arc(sx+web.w/2,web.y+web.h/2,web.w/2*r/4,0,Math.PI*2); ctx.stroke();
+    var cx2=sx+web.w/2, cy2=web.y+web.h/2, rx=web.w/2, ry=web.h/2;
+    var RADIOS=8, RINGS=5;
+    ctx.save(); ctx.shadowColor='rgba(180,220,255,0.7)'; ctx.shadowBlur=18;
+    ctx.strokeStyle='rgba(210,235,255,0.55)'; ctx.lineWidth=1.1;
+    for(var a=0;a<RADIOS;a++){
+      var ang=a*Math.PI/RADIOS;
+      ctx.beginPath(); ctx.moveTo(cx2+Math.cos(ang)*rx*0.08,cy2+Math.sin(ang)*ry*0.08);
+      ctx.lineTo(cx2+Math.cos(ang)*rx,cy2+Math.sin(ang)*ry); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(cx2-Math.cos(ang)*rx*0.08,cy2-Math.sin(ang)*ry*0.08);
+      ctx.lineTo(cx2-Math.cos(ang)*rx,cy2-Math.sin(ang)*ry); ctx.stroke();
     }
-    // Fios radiais
-    for(var a=0;a<8;a++){
-      var ang=a*Math.PI/4;
+    for(var r=1;r<=RINGS;r++){
+      var fr=r/RINGS, alpha=0.25+fr*0.35;
+      ctx.strokeStyle='rgba(200,230,255,'+alpha.toFixed(2)+')'; ctx.lineWidth=0.8+fr*0.5;
       ctx.beginPath();
-      ctx.moveTo(sx+web.w/2,web.y+web.h/2);
-      ctx.lineTo(sx+web.w/2+Math.cos(ang)*web.w/2,web.y+web.h/2+Math.sin(ang)*web.h/2);
-      ctx.stroke();
+      for(var s=0;s<=RADIOS*2;s++){
+        var sang=s*Math.PI*2/(RADIOS*2);
+        var px2=cx2+Math.cos(sang)*rx*fr, py2=cy2+Math.sin(sang)*ry*fr;
+        if(s===0) ctx.moveTo(px2,py2); else ctx.lineTo(px2,py2);
+      }
+      ctx.closePath(); ctx.stroke();
     }
-    // Aranha pequena
-    ctx.fillStyle='#2D3436'; ctx.beginPath(); ctx.arc(sx+web.w/2+5,web.y+web.h/2+5,3,0,Math.PI*2); ctx.fill();
-    ctx.fillStyle='rgba(0,0,0,0.7)'; rrect(sx+web.w/2-35,web.y-25,70,20,8); ctx.fill();
-    ctx.strokeStyle='#FFD700'; ctx.lineWidth=1.5; rrect(sx+web.w/2-35,web.y-25,70,20,8); ctx.stroke();
-    ctx.fillStyle='#FFD700'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
-    ctx.fillText('Teia Pegajosa!',sx+web.w/2,web.y-10);
+    ctx.shadowBlur=0;
+    for(var a=0;a<RADIOS;a++){
+      for(var r=1;r<=RINGS;r++){
+        var fr=r/RINGS, ang=a*Math.PI/RADIOS;
+        var shimmer=0.55+0.45*Math.sin(t*1.7+a*1.3+r);
+        ctx.globalAlpha=shimmer*0.9; ctx.fillStyle='rgba(220,245,255,0.95)';
+        ctx.beginPath(); ctx.arc(cx2+Math.cos(ang)*rx*fr,cy2+Math.sin(ang)*ry*fr,1.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx2-Math.cos(ang)*rx*fr,cy2-Math.sin(ang)*ry*fr,1.5,0,Math.PI*2); ctx.fill();
+      }
+    }
+    ctx.globalAlpha=1;
+    var spiderY=cy2-ry*0.3+Math.sin(t*1.2+i)*ry*0.25, spiderX=cx2+rx*0.1;
+    ctx.strokeStyle='rgba(200,220,255,0.5)'; ctx.lineWidth=0.9;
+    ctx.beginPath(); ctx.moveTo(spiderX,web.y); ctx.lineTo(spiderX,spiderY+6); ctx.stroke();
+    ctx.fillStyle='#1a1a2e'; ctx.shadowColor='rgba(0,0,0,0.8)'; ctx.shadowBlur=4;
+    ctx.beginPath(); ctx.arc(spiderX,spiderY,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#c0392b'; ctx.beginPath(); ctx.arc(spiderX,spiderY,3,0,Math.PI*2); ctx.fill();
+    ctx.shadowBlur=0; ctx.strokeStyle='rgba(180,180,200,0.85)'; ctx.lineWidth=0.9;
+    for(var lg=0;lg<4;lg++){
+      var legAng=(lg-1.5)*0.45;
+      ctx.beginPath(); ctx.moveTo(spiderX-5,spiderY); ctx.lineTo(spiderX-10-lg*1.5,spiderY+Math.sin(legAng+t)*4); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(spiderX+5,spiderY); ctx.lineTo(spiderX+10+lg*1.5,spiderY+Math.sin(legAng+t+1)*4); ctx.stroke();
+    }
+    ctx.restore();
+    ctx.fillStyle='rgba(0,0,0,0.65)'; rrect(cx2-36,web.y-26,72,20,8); ctx.fill();
+    ctx.strokeStyle='rgba(180,220,255,0.6)'; ctx.lineWidth=1.2; rrect(cx2-36,web.y-26,72,20,8); ctx.stroke();
+    ctx.fillStyle='rgba(200,235,255,0.95)'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('🕸️ Teia!',cx2,web.y-11);
   }
 }
 function drawP3UnlockStars(){
@@ -2504,6 +2529,12 @@ function drawHUD(){
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52+oy,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
   ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy); // ATUALIZADO PARA 5 FASES
+  if(phase===4&&webStuck>0){
+    ctx.fillStyle='rgba(0,0,0,0.6)'; rrect(CW/2-70,84+oy,140,26,8); ctx.fill();
+    ctx.strokeStyle='rgba(180,220,255,0.7)'; ctx.lineWidth=1.5; rrect(CW/2-70,84+oy,140,26,8); ctx.stroke();
+    ctx.fillStyle='rgba(200,235,255,0.95)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('🕸️ Preso! '+Math.ceil(webStuck/60)+'s',CW/2,100+oy);
+  }
   if(phase===6&&metamorphState!=='burst'){
     var ld=leavesEaten>=TOTAL_LEAVES;
     ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,205,26,8); ctx.fill();
@@ -2546,41 +2577,188 @@ function drawP6Leaves(){
 function drawMetamorph(){
   if(phase!==6||metamorphState==='none'||metamorphState==='done') return;
   var sx2=pl.x-camX+pl.w/2, sy2=pl.y+pl.h/2;
+  var now=Date.now();
+
+  // ── CASULO (cocooning + countdown) ──────────────────────────────────────
   if(metamorphState==='cocooning'||metamorphState==='countdown'){
     var prog=metamorphState==='cocooning'?(metamorphTimer/80):1;
-    var pulse=Math.sin(Date.now()/200)*4*prog;
-    ctx.fillStyle='rgba(210,180,140,'+(0.6+prog*0.35)+')';
-    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#A0522D'; ctx.lineWidth=2;
-    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.stroke();
-    ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.arc(sx2,sy2,(26+pulse)*prog,0,Math.PI*2); ctx.stroke();
+    var rw=18*prog, rh=28*prog; // oval: mais alto que largo
+
+    ctx.save();
+
+    // Galhos finos saindo do topo (aparecem cedo)
+    if(prog>0.25){
+      ctx.strokeStyle='#6D4C41'; ctx.lineWidth=2*prog; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sx2,sy2-rh);
+      ctx.lineTo(sx2-9*prog, sy2-rh-16*prog); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(sx2,sy2-rh);
+      ctx.lineTo(sx2+7*prog, sy2-rh-12*prog); ctx.stroke();
+      // Fio de seda preso ao galho
+      ctx.strokeStyle='rgba(210,180,140,0.6)'; ctx.lineWidth=1.2*prog;
+      ctx.beginPath(); ctx.moveTo(sx2,sy2-rh); ctx.lineTo(sx2,sy2-rh-9*prog); ctx.stroke();
+    }
+
+    // Glow pulsante externo (aura mágica)
+    var glowPulse=0.18+0.10*Math.sin(now/180);
+    var glowGrad=ctx.createRadialGradient(sx2,sy2,rw*0.4,sx2,sy2,rw*3.2);
+    glowGrad.addColorStop(0,'rgba(255,220,80,'+(0.40*prog)+')');
+    glowGrad.addColorStop(0.5,'rgba(255,160,20,'+(0.18*prog)+')');
+    glowGrad.addColorStop(1,'rgba(255,100,0,0)');
+    ctx.fillStyle=glowGrad;
+    ctx.beginPath(); ctx.ellipse(sx2,sy2,rw*3.2,rh*2.8,0,0,Math.PI*2); ctx.fill();
+
+    // Corpo oval do casulo — gradiente radial realista
+    var bodyGrad=ctx.createRadialGradient(sx2-rw*0.3,sy2-rh*0.3,rw*0.1,sx2,sy2,rh*1.1);
+    bodyGrad.addColorStop(0,'rgba(255,245,200,'+(0.95*prog)+')');
+    bodyGrad.addColorStop(0.4,'rgba(210,175,110,'+(0.97*prog)+')');
+    bodyGrad.addColorStop(0.8,'rgba(155,110,65,'+(0.95*prog)+')');
+    bodyGrad.addColorStop(1,'rgba(110,70,30,'+(0.9*prog)+')');
+    ctx.fillStyle=bodyGrad;
+    ctx.beginPath(); ctx.ellipse(sx2,sy2,rw,rh,0,0,Math.PI*2); ctx.fill();
+
+    // Textura de seda — linhas diagonais enroladas (só quando prog>0.5)
+    if(prog>0.5){
+      ctx.save(); ctx.globalAlpha=0.18*prog;
+      ctx.strokeStyle='#8B5E3C'; ctx.lineWidth=1;
+      ctx.beginPath(); ctx.ellipse(sx2,sy2,rw,rh,0,0,Math.PI*2); ctx.clip();
+      for(var si=-4;si<=5;si++){
+        var lx=sx2-rw+si*rw*0.45;
+        ctx.beginPath(); ctx.moveTo(lx-rh,sy2-rh*1.5); ctx.lineTo(lx+rh,sy2+rh*1.5); ctx.stroke();
+      }
+      ctx.restore();
+    }
+
+    // Borda marrom suave
+    ctx.strokeStyle='rgba(101,67,33,'+(0.85*prog)+')'; ctx.lineWidth=1.8;
+    ctx.beginPath(); ctx.ellipse(sx2,sy2,rw,rh,0,0,Math.PI*2); ctx.stroke();
+
+    // Reflexo de luz — ponto brilhante no topo-esquerdo
+    if(prog>0.55){
+      var shineGrad=ctx.createRadialGradient(sx2-rw*0.25,sy2-rh*0.38,0,sx2-rw*0.25,sy2-rh*0.38,rw*0.55);
+      shineGrad.addColorStop(0,'rgba(255,255,255,'+(0.65*prog)+')');
+      shineGrad.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=shineGrad;
+      ctx.beginPath(); ctx.ellipse(sx2-rw*0.18,sy2-rh*0.32,rw*0.42,rh*0.26,0,0,Math.PI*2); ctx.fill();
+    }
+
+    // Anel dourado pulsante externo
+    var pulse=Math.sin(now/160)*4*prog;
+    ctx.strokeStyle='rgba(255,215,0,'+(0.55*prog)+')'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.ellipse(sx2,sy2,rw+6+pulse,rh+8+pulse,0,0,Math.PI*2); ctx.stroke();
+
+    // Partículas de brilho orbitando (só no countdown)
     if(metamorphState==='countdown'){
-      ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,CW,CH);
-      ctx.fillStyle='#FFD700'; ctx.font='bold 90px Arial'; ctx.textAlign='center';
-      ctx.shadowColor='#FF6347'; ctx.shadowBlur=35;
-      ctx.fillText(metamorphCountdown>0?metamorphCountdown:'✨',CW/2,CH/2+25);
-      ctx.shadowBlur=0;
-      ctx.fillStyle='white'; ctx.font='bold 20px Arial';
-      ctx.fillText('Metamorfose em andamento...',CW/2,CH/2+85);
+      for(var ki=0;ki<10;ki++){
+        var kang=now/600+ki*(Math.PI*2/10);
+        var kr=rw+14+Math.sin(now/250+ki*0.6)*5;
+        var sparkA=0.45+0.55*Math.sin(now/180+ki);
+        ctx.fillStyle='rgba(255,230,60,'+sparkA.toFixed(2)+')';
+        ctx.beginPath(); ctx.arc(sx2+Math.cos(kang)*kr*1.0, sy2+Math.sin(kang)*kr*1.55, 2.5,0,Math.PI*2); ctx.fill();
+      }
     }
-  }else if(metamorphState==='burst'){
+
+    ctx.restore();
+
+    // ── TELA DE CONTAGEM REGRESSIVA ─────────────────────────────────────────
+    if(metamorphState==='countdown'){
+      // Fundo escuro dramático
+      var bgGrad=ctx.createRadialGradient(CW/2,CH/2,20,CW/2,CH/2,CW*0.7);
+      bgGrad.addColorStop(0,'rgba(30,0,60,0.82)'); bgGrad.addColorStop(1,'rgba(0,0,20,0.88)');
+      ctx.fillStyle=bgGrad; ctx.fillRect(0,0,CW,CH);
+
+      // Raios de luz saindo do centro
+      ctx.save(); ctx.globalAlpha=0.10+0.06*Math.sin(now/300);
+      for(var ri=0;ri<12;ri++){
+        var rayAng=now/2000+ri*(Math.PI*2/12);
+        ctx.strokeStyle='#FFD700'; ctx.lineWidth=18;
+        ctx.beginPath(); ctx.moveTo(CW/2,CH/2);
+        ctx.lineTo(CW/2+Math.cos(rayAng)*CW, CH/2+Math.sin(rayAng)*CH); ctx.stroke();
+      }
+      ctx.restore();
+
+      // Número pulsante
+      var numScale=1+Math.sin(now/120)*0.12;
+      ctx.save(); ctx.translate(CW/2,CH/2-10); ctx.scale(numScale,numScale);
+      ctx.textAlign='center';
+      if(metamorphCountdown>0){
+        var colors2=['','#FF6B6B','#FFD700','#7FFF00'];
+        ctx.font='bold 100px Arial';
+        ctx.shadowColor=colors2[metamorphCountdown]||'#FFD700'; ctx.shadowBlur=50;
+        ctx.fillStyle=colors2[metamorphCountdown]||'#FFD700';
+        ctx.fillText(metamorphCountdown,0,38); ctx.shadowBlur=0;
+      } else {
+        ctx.font='bold 72px Arial';
+        ctx.shadowColor='#FF1493'; ctx.shadowBlur=40;
+        ctx.fillStyle='#FFD700'; ctx.fillText('✨',0,28); ctx.shadowBlur=0;
+      }
+      ctx.restore();
+
+      // Textos descritivos
+      ctx.textAlign='center';
+      ctx.font='bold 17px Arial'; ctx.shadowColor='#C1FF00'; ctx.shadowBlur=12;
+      ctx.fillStyle='#C1FF00';
+      ctx.fillText('✨ Metamorfose em andamento... ✨',CW/2,CH/2+75); ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(200,220,255,0.75)'; ctx.font='13px Arial';
+      ctx.fillText('A Lagartinha está se transformando!',CW/2,CH/2+100);
+
+      // Casulo grande centralizado na tela de countdown
+      var csx=CW/2, csy=CH/2-10, crw=28, crh=44;
+      var cGrad=ctx.createRadialGradient(csx-crw*0.3,csy-crh*0.3,crw*0.1,csx,csy,crh*1.1);
+      cGrad.addColorStop(0,'rgba(255,245,200,0.98)'); cGrad.addColorStop(0.45,'rgba(210,175,110,0.97)');
+      cGrad.addColorStop(0.85,'rgba(145,100,55,0.95)'); cGrad.addColorStop(1,'rgba(100,60,25,0.9)');
+      ctx.fillStyle=cGrad;
+      ctx.beginPath(); ctx.ellipse(csx,csy,crw,crh,0,0,Math.PI*2); ctx.fill();
+      var cShine=ctx.createRadialGradient(csx-crw*0.25,csy-crh*0.35,0,csx-crw*0.25,csy-crh*0.35,crw*0.55);
+      cShine.addColorStop(0,'rgba(255,255,255,0.6)'); cShine.addColorStop(1,'rgba(255,255,255,0)');
+      ctx.fillStyle=cShine;
+      ctx.beginPath(); ctx.ellipse(csx-crw*0.18,csy-crh*0.3,crw*0.4,crh*0.25,0,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(101,67,33,0.85)'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.ellipse(csx,csy,crw,crh,0,0,Math.PI*2); ctx.stroke();
+      // Galhos do casulo central
+      ctx.strokeStyle='#6D4C41'; ctx.lineWidth=2.5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(csx,csy-crh); ctx.lineTo(csx-10,csy-crh-18); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(csx,csy-crh); ctx.lineTo(csx+8,csy-crh-14); ctx.stroke();
+    }
+  }
+
+  // ── BURST — nascimento da borboleta ────────────────────────────────────────
+  else if(metamorphState==='burst'){
     var fa=Math.max(0,1-(metamorphTimer/100));
-    ctx.fillStyle='rgba(200,255,150,'+fa*0.55+')'; ctx.fillRect(0,0,CW,CH);
-    if(metamorphTimer<55){
-      ctx.globalAlpha=fa;
-      ctx.fillStyle='rgba(0,0,0,0.6)';
-      rrect(CW/2-245,CH/2-58,490,116,18); ctx.fill();
-      ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
-      rrect(CW/2-245,CH/2-58,490,116,18); ctx.stroke();
-      ctx.fillStyle='#FFD700'; ctx.font='bold 32px Arial'; ctx.textAlign='center';
-      ctx.shadowColor='#FF1493'; ctx.shadowBlur=25;
-      ctx.fillText('🦋 BORBOLETA DESBLOQUEADA! 🦋',CW/2,CH/2+5);
-      ctx.shadowBlur=0;
-      ctx.fillStyle='white'; ctx.font='15px Arial';
-      ctx.fillText('Pressione [7] para usar a Borboleta!',CW/2,CH/2+36);
-      ctx.globalAlpha=1;
+    // Flash de luz branca expansivo
+    if(metamorphTimer<20){
+      ctx.fillStyle='rgba(255,255,255,'+(1-metamorphTimer/20)*0.85+')';
+      ctx.fillRect(0,0,CW,CH);
     }
+    // Onda de energia circular
+    var waveR=metamorphTimer*8, waveA=Math.max(0,0.6-metamorphTimer/60);
+    if(waveA>0){
+      ctx.strokeStyle='rgba(255,215,0,'+waveA+')'; ctx.lineWidth=4;
+      ctx.beginPath(); ctx.arc(CW/2,CH/2,waveR,0,Math.PI*2); ctx.stroke();
+      ctx.strokeStyle='rgba(255,100,200,'+(waveA*0.6)+')'; ctx.lineWidth=2;
+      ctx.beginPath(); ctx.arc(CW/2,CH/2,waveR*0.7,0,Math.PI*2); ctx.stroke();
+    }
+    // Painel de desbloqueio com fade
+    if(metamorphTimer>15&&metamorphTimer<80){
+      ctx.save(); ctx.globalAlpha=Math.min(1,(metamorphTimer-15)/15)*fa;
+      // Fundo do painel
+      var pGrad=ctx.createLinearGradient(CW/2-260,CH/2-72,CW/2+260,CH/2+72);
+      pGrad.addColorStop(0,'rgba(30,0,60,0.92)'); pGrad.addColorStop(1,'rgba(0,20,50,0.92)');
+      ctx.fillStyle=pGrad; rrect(CW/2-265,CH/2-76,530,152,22); ctx.fill();
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
+      rrect(CW/2-265,CH/2-76,530,152,22); ctx.stroke();
+      // Texto de desbloqueio
+      ctx.textAlign='center';
+      ctx.fillStyle='#FFD700'; ctx.font='bold 30px Arial';
+      ctx.shadowColor='#FF1493'; ctx.shadowBlur=22;
+      ctx.fillText('🦋 BORBOLETA DESBLOQUEADA! 🦋',CW/2,CH/2+2); ctx.shadowBlur=0;
+      ctx.fillStyle='rgba(200,255,200,0.9)'; ctx.font='bold 15px Arial';
+      ctx.fillText('Pressione [7] para usar a Borboleta!',CW/2,CH/2+32);
+      ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='13px Arial';
+      ctx.fillText('Pulo mais alto • Paira no ar segurando ↑',CW/2,CH/2+58);
+      ctx.restore();
+    }
+    // Flash verde final
+    ctx.fillStyle='rgba(200,255,150,'+fa*0.4+')'; ctx.fillRect(0,0,CW,CH);
   }
 }
 function drawPhase6Intro(){
