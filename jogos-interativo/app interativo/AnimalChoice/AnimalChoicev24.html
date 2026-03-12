@@ -2536,226 +2536,44 @@ function drawP6Leaves(){
 }
 function drawMetamorph(){
   if(phase!==6||metamorphState==='none'||metamorphState==='done') return;
-  var sx=pl.x-camX+pl.w/2, sy=pl.y+pl.h/2;
-  var now=Date.now();
-
-  // ── CASULO (cocooning + countdown) ──────────────────────────────────────────
+  var sx2=pl.x-camX+pl.w/2, sy2=pl.y+pl.h/2;
   if(metamorphState==='cocooning'||metamorphState==='countdown'){
-    var prog = metamorphState==='cocooning' ? (metamorphTimer/80) : 1;
-    var pulse = Math.sin(now/180)*3*prog;
-    var rw=20*prog, rh=30*prog; // oval: largura e altura
-
-    ctx.save();
-
-    // ── Galho fino saindo do topo do casulo ─────────────────────────────────
-    if(prog>0.3){
-      ctx.strokeStyle='#6D4C41'; ctx.lineWidth=3*prog;
-      ctx.beginPath(); ctx.moveTo(sx, sy-rh); ctx.lineTo(sx-8*prog, sy-rh-18*prog); ctx.stroke();
-      ctx.beginPath(); ctx.moveTo(sx, sy-rh); ctx.lineTo(sx+6*prog, sy-rh-14*prog); ctx.stroke();
-    }
-
-    // ── Fio de seda pendurado ────────────────────────────────────────────────
-    if(prog>0.4){
-      ctx.strokeStyle='rgba(210,180,140,0.7)'; ctx.lineWidth=1.5*prog;
-      ctx.beginPath(); ctx.moveTo(sx, sy-rh); ctx.lineTo(sx, sy-rh-10*prog); ctx.stroke();
-    }
-
-    // ── Glow externo pulsante ────────────────────────────────────────────────
-    var glowR=rw+14+pulse;
-    var glowGrad=ctx.createRadialGradient(sx,sy,rw*0.5,sx,sy,glowR*1.8);
-    glowGrad.addColorStop(0,'rgba(255,230,100,'+(0.35*prog)+')');
-    glowGrad.addColorStop(0.5,'rgba(255,180,50,'+(0.18*prog)+')');
-    glowGrad.addColorStop(1,'rgba(255,150,0,0)');
-    ctx.fillStyle=glowGrad;
-    ctx.beginPath(); ctx.ellipse(sx,sy,glowR*1.8,glowR*2.2,0,0,Math.PI*2); ctx.fill();
-
-    // ── Corpo oval do casulo ─────────────────────────────────────────────────
-    var bodyGrad=ctx.createRadialGradient(sx-rw*0.3,sy-rh*0.3,rw*0.1,sx,sy,rh*1.1);
-    bodyGrad.addColorStop(0,'rgba(255,245,200,'+( 0.95*prog)+')'); // centro claro
-    bodyGrad.addColorStop(0.4,'rgba(222,184,135,'+(0.97*prog)+')');
-    bodyGrad.addColorStop(0.8,'rgba(160,120,80,'+(0.95*prog)+')'); // borda escura
-    bodyGrad.addColorStop(1,'rgba(120,80,40,'+(0.9*prog)+')');
-    ctx.fillStyle=bodyGrad;
-    ctx.beginPath(); ctx.ellipse(sx,sy,rw,rh,0,0,Math.PI*2); ctx.fill();
-
-    // ── Textura de seda — linhas diagonais enroladas ─────────────────────────
-    if(prog>0.5){
-      ctx.save();
-      ctx.globalAlpha=0.22*prog;
-      ctx.strokeStyle='#A0522D'; ctx.lineWidth=1;
-      ctx.beginPath(); ctx.ellipse(sx,sy,rw,rh,0,0,Math.PI*2); ctx.clip();
-      for(var si=-4;si<=5;si++){
-        var lx=sx-rw+si*(rw*0.45);
-        ctx.beginPath(); ctx.moveTo(lx-rh,sy-rh*1.5); ctx.lineTo(lx+rh,sy+rh*1.5); ctx.stroke();
-      }
-      ctx.restore();
-    }
-
-    // ── Borda marrom suave ───────────────────────────────────────────────────
-    ctx.strokeStyle='rgba(101,67,33,'+(0.85*prog)+')';
-    ctx.lineWidth=1.8;
-    ctx.beginPath(); ctx.ellipse(sx,sy,rw,rh,0,0,Math.PI*2); ctx.stroke();
-
-    // ── Reflexo de luz (ponto brilhante no topo) ─────────────────────────────
-    if(prog>0.6){
-      var shineGrad=ctx.createRadialGradient(sx-rw*0.25,sy-rh*0.4,0,sx-rw*0.25,sy-rh*0.4,rw*0.55);
-      shineGrad.addColorStop(0,'rgba(255,255,255,'+(0.6*prog)+')');
-      shineGrad.addColorStop(1,'rgba(255,255,255,0)');
-      ctx.fillStyle=shineGrad;
-      ctx.beginPath(); ctx.ellipse(sx-rw*0.2,sy-rh*0.35,rw*0.45,rh*0.28,0,0,Math.PI*2); ctx.fill();
-    }
-
-    // ── Anel dourado pulsante externo ────────────────────────────────────────
-    ctx.strokeStyle='rgba(255,215,0,'+(0.55*prog)+')';
-    ctx.lineWidth=1.5;
-    ctx.beginPath(); ctx.ellipse(sx,sy,rw+6+pulse,rh+8+pulse,0,0,Math.PI*2); ctx.stroke();
-
-    // ── Partículas de brilho ao redor do casulo ──────────────────────────────
+    var prog=metamorphState==='cocooning'?(metamorphTimer/80):1;
+    var pulse=Math.sin(Date.now()/200)*4*prog;
+    ctx.fillStyle='rgba(210,180,140,'+(0.6+prog*0.35)+')';
+    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#A0522D'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(sx2,sy2,22*prog,0,Math.PI*2); ctx.stroke();
+    ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(sx2,sy2,(26+pulse)*prog,0,Math.PI*2); ctx.stroke();
     if(metamorphState==='countdown'){
-      var numSparks=8;
-      for(var ki=0;ki<numSparks;ki++){
-        var ang=((now/600)+(ki/numSparks)*Math.PI*2);
-        var sr=(rw+18+Math.sin(now/300+ki)*6);
-        var sparkX=sx+Math.cos(ang)*sr*1.0;
-        var sparkY=sy+Math.sin(ang)*sr*1.5;
-        var sparkA=0.5+Math.sin(now/200+ki)*0.4;
-        ctx.fillStyle='rgba(255,230,50,'+sparkA+')';
-        ctx.beginPath(); ctx.arc(sparkX,sparkY,2.5,0,Math.PI*2); ctx.fill();
-      }
-    }
-
-    ctx.restore();
-
-    // ── TELA DE CONTAGEM REGRESSIVA ──────────────────────────────────────────
-    if(metamorphState==='countdown'){
-      // Fundo escuro dramático com gradiente radial
-      var bgGrad=ctx.createRadialGradient(CW/2,CH/2,20,CW/2,CH/2,CW*0.7);
-      bgGrad.addColorStop(0,'rgba(30,0,60,0.82)');
-      bgGrad.addColorStop(1,'rgba(0,0,20,0.88)');
-      ctx.fillStyle=bgGrad; ctx.fillRect(0,0,CW,CH);
-
-      // Raios de luz saindo do centro
-      ctx.save();
-      ctx.globalAlpha=0.12+Math.sin(now/300)*0.06;
-      var numRays=12;
-      for(var ri=0;ri<numRays;ri++){
-        var rayAng=(now/2000)+(ri/numRays)*Math.PI*2;
-        ctx.strokeStyle='#FFD700'; ctx.lineWidth=18;
-        ctx.beginPath();
-        ctx.moveTo(CW/2,CH/2);
-        ctx.lineTo(CW/2+Math.cos(rayAng)*CW,CH/2+Math.sin(rayAng)*CH);
-        ctx.stroke();
-      }
-      ctx.restore();
-
-      // Número da contagem — escala pulsante
-      var numScale=1+Math.sin(now/120)*0.12;
-      ctx.save();
-      ctx.translate(CW/2, CH/2-10);
-      ctx.scale(numScale,numScale);
-      ctx.textAlign='center';
-      if(metamorphCountdown>0){
-        var colors=['','#FF6B6B','#FFD700','#7FFF00'];
-        ctx.font='bold 100px Arial';
-        ctx.shadowColor=colors[metamorphCountdown]||'#FFD700';
-        ctx.shadowBlur=50;
-        ctx.fillStyle=colors[metamorphCountdown]||'#FFD700';
-        ctx.fillText(metamorphCountdown,0,38);
-        ctx.shadowBlur=0;
-      } else {
-        ctx.font='bold 72px Arial';
-        ctx.shadowColor='#FF1493'; ctx.shadowBlur=40;
-        ctx.fillStyle='#FFD700';
-        ctx.fillText('✨',0,28);
-        ctx.shadowBlur=0;
-      }
-      ctx.restore();
-
-      // Texto descritivo
-      ctx.textAlign='center';
-      ctx.font='bold 17px Arial';
-      ctx.shadowColor='#C1FF00'; ctx.shadowBlur=12;
-      ctx.fillStyle='#C1FF00';
-      ctx.fillText('🐛  Metamorfose em andamento...  🦋',CW/2,CH/2+75);
+      ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.fillRect(0,0,CW,CH);
+      ctx.fillStyle='#FFD700'; ctx.font='bold 90px Arial'; ctx.textAlign='center';
+      ctx.shadowColor='#FF6347'; ctx.shadowBlur=35;
+      ctx.fillText(metamorphCountdown>0?metamorphCountdown:'✨',CW/2,CH/2+25);
       ctx.shadowBlur=0;
-      ctx.fillStyle='rgba(200,220,255,0.75)'; ctx.font='13px Arial';
-      ctx.fillText('A Lagartinha está se transformando!',CW/2,CH/2+100);
+      ctx.fillStyle='white'; ctx.font='bold 20px Arial';
+      ctx.fillText('Metamorfose em andamento...',CW/2,CH/2+85);
     }
-
-  // ── BURST — nascimento da borboleta ─────────────────────────────────────────
   }else if(metamorphState==='burst'){
     var fa=Math.max(0,1-(metamorphTimer/100));
-
-    // Flash de luz expansivo no início
-    if(metamorphTimer<20){
-      var flashA=(1-(metamorphTimer/20))*0.85;
-      ctx.fillStyle='rgba(255,255,255,'+flashA+')';
-      ctx.fillRect(0,0,CW,CH);
-    }
-
-    // Onda de energia circular expandindo
-    var waveR=metamorphTimer*8;
-    var waveA=Math.max(0,0.6-(metamorphTimer/60));
-    if(waveA>0){
-      ctx.strokeStyle='rgba(255,215,0,'+waveA+')';
-      ctx.lineWidth=4;
-      ctx.beginPath(); ctx.arc(CW/2,CH/2,waveR,0,Math.PI*2); ctx.stroke();
-      ctx.strokeStyle='rgba(255,100,200,'+(waveA*0.6)+')';
-      ctx.lineWidth=2;
-      ctx.beginPath(); ctx.arc(CW/2,CH/2,waveR*0.7,0,Math.PI*2); ctx.stroke();
-    }
-
-    // Painel de desbloqueio com fade elegante
-    if(metamorphTimer<70){
-      ctx.save();
-      ctx.globalAlpha=metamorphTimer<15?(metamorphTimer/15)*fa:fa;
-
-      // Fundo do painel
-      var panelGrad=ctx.createLinearGradient(CW/2-260,CH/2-72,CW/2+260,CH/2+72);
-      panelGrad.addColorStop(0,'rgba(60,0,80,0.95)');
-      panelGrad.addColorStop(0.5,'rgba(10,0,30,0.97)');
-      panelGrad.addColorStop(1,'rgba(60,0,80,0.95)');
-      ctx.fillStyle=panelGrad;
-      rrect(CW/2-260,CH/2-72,520,144,22); ctx.fill();
-
-      // Borda gradiente rosa/dourado
-      var bGrad=ctx.createLinearGradient(CW/2-260,CH/2,CW/2+260,CH/2);
-      bGrad.addColorStop(0,'#FFD700');
-      bGrad.addColorStop(0.5,'#FF69B4');
-      bGrad.addColorStop(1,'#FFD700');
-      ctx.strokeStyle=bGrad; ctx.lineWidth=3;
-      rrect(CW/2-260,CH/2-72,520,144,22); ctx.stroke();
-
-      // Barra decorativa topo
-      var topBar=ctx.createLinearGradient(CW/2-240,0,CW/2+240,0);
-      topBar.addColorStop(0,'transparent');
-      topBar.addColorStop(0.3,'#FFD700');
-      topBar.addColorStop(0.7,'#FF69B4');
-      topBar.addColorStop(1,'transparent');
-      ctx.fillStyle=topBar; ctx.fillRect(CW/2-240,CH/2-69,480,4);
-
-      // Título principal
-      ctx.textAlign='center';
-      ctx.shadowColor='#FF1493'; ctx.shadowBlur=30;
-      ctx.font='bold 30px Arial'; ctx.fillStyle='#FFD700';
-      ctx.fillText('🦋  BORBOLETA DESBLOQUEADA!  🦋',CW/2,CH/2+4);
+    ctx.fillStyle='rgba(200,255,150,'+fa*0.55+')'; ctx.fillRect(0,0,CW,CH);
+    if(metamorphTimer<55){
+      ctx.globalAlpha=fa;
+      ctx.fillStyle='rgba(0,0,0,0.6)';
+      rrect(CW/2-245,CH/2-58,490,116,18); ctx.fill();
+      ctx.strokeStyle='#FFD700'; ctx.lineWidth=3;
+      rrect(CW/2-245,CH/2-58,490,116,18); ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 32px Arial'; ctx.textAlign='center';
+      ctx.shadowColor='#FF1493'; ctx.shadowBlur=25;
+      ctx.fillText('🦋 BORBOLETA DESBLOQUEADA! 🦋',CW/2,CH/2+5);
       ctx.shadowBlur=0;
-
-      // Subtítulo
-      ctx.shadowColor='#C1FF00'; ctx.shadowBlur=8;
-      ctx.font='bold 14px Arial'; ctx.fillStyle='#C1FF00';
-      ctx.fillText('A metamorfose foi completada com sucesso!',CW/2,CH/2+32);
-      ctx.shadowBlur=0;
-
-      // Instrução
-      ctx.font='13px Arial'; ctx.fillStyle='rgba(200,210,255,0.85)';
-      ctx.fillText('Toque em  🐛  ou pressione [7] para usar a Borboleta',CW/2,CH/2+56);
-
-      ctx.restore();
+      ctx.fillStyle='white'; ctx.font='15px Arial';
+      ctx.fillText('Pressione [7] para usar a Borboleta!',CW/2,CH/2+36);
+      ctx.globalAlpha=1;
     }
   }
 }
-
 function drawPhase6Intro(){
   ctx.fillStyle='rgba(0,0,0,0.6)'; ctx.fillRect(0,0,CW,CH);
   ctx.fillStyle='#7FFF00'; ctx.font='bold 32px Arial'; ctx.textAlign='center';
