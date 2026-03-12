@@ -379,6 +379,13 @@ function sndSpeedGate(){//
   setTimeout(function(){ playTone(900,'sine',0.1,0.10); },80);// Tom de passagem rápida, mais curto e agudo para dar sensação de velocidade sendo alcançada
 }
                                     //NOTAS MUSICAIS UTILIZADAS:
+function sndExtraLife(){
+  // Fanfarra ascendente de 4 notas — sensação de presente especial
+  playTone(523,'sine',0.10,0.18);
+  setTimeout(function(){ playTone(659,'sine',0.10,0.18); },100);
+  setTimeout(function(){ playTone(784,'sine',0.10,0.18); },200);
+  setTimeout(function(){ playTone(1047,'sine',0.20,0.22); },300);
+}
 function sndUnlock(){// Som de desbloqueio — acorde maior simples para sensação de conquista
   playTone(523,'sine',0.12,0.18);// Dó5 — nota base do acorde
   setTimeout(function(){ playTone(659,'sine',0.12,0.18); },120);// Mi5 — terceira maior para dar sensação de felicidade
@@ -481,6 +488,7 @@ var CHARS = {
 
 // ── State ────────────────────────────────────────────────────────────────────
 var state='menu', phase=1, camX=0, score=0, lives=3, webStuck=0;
+var nextBonusLife=20; // próxima marca de moedas para ganhar vida
 var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
@@ -489,6 +497,7 @@ var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var metamorphState='none', metamorphTimer=0, metamorphCountdown=3;
 var tutorialTimer=0; // frames do banner tutorial (300 = ~5s)
+var extraLifeTimer=0; // frames do popup +1 vida
 var p6Leaves=[], leavesEaten=0, TOTAL_LEAVES=20;
 
 // ── Input ────────────────────────────────────────────────────────────────────
@@ -868,7 +877,7 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
 
   state='playing'; phase=1; tutorialTimer=420;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
-  camX=0; score=0; lives=3; isDigging=false;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
+  camX=0; score=0; lives=3; isDigging=false; nextBonusLife=20; extraLifeTimer=0;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
   p2Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 2 para nao coletadas
   p1.speedGates.forEach(function(g){g.passed=false;});// reseta os portoes de velocidade da fase 1 para nao passados
@@ -986,6 +995,7 @@ function beginPhase6(){
 function update(){
   if(state!=='playing') return;
   if(tutorialTimer>0) tutorialTimer--; // decrementa banner tutorial
+  if(extraLifeTimer>0) extraLifeTimer--;
   var def=CHARS[pl.char], lv=getLevel(), sts=getStars(), i;
 
   // Duck flap timer
@@ -1109,6 +1119,11 @@ function update(){
     var s=sts[i];
     if(!s.got&&Math.abs(pl.x+pl.w/2-s.x)<s.r+14&&Math.abs(pl.y+pl.h/2-s.y)<s.r+14){
       s.got=true; score+=10; sndStar();
+      // Verifica se atingiu marca de 20 moedas para +1 vida
+      if(score>=nextBonusLife*10){
+        lives++; nextBonusLife+=20; extraLifeTimer=180; sndExtraLife();
+        for(var ei=0;ei<18;ei++) particles.push({x:pl.x+pl.w/2+Math.cos(ei)*22,y:pl.y,vx:(Math.random()-0.5)*5,vy:-Math.random()*5,life:60,color:'#FF6B6B',type:'life'});
+      }
     }
   }
   
@@ -1118,6 +1133,7 @@ function update(){
       var bs=p5BarrierStars[i2];
       if(!bs.got&&Math.abs(pl.x+pl.w/2-bs.x)<bs.r+16&&Math.abs(pl.y+pl.h/2-bs.y)<bs.r+16){
         bs.got=true; score+=10; sndStar();
+        if(score>=nextBonusLife*10){ lives++; nextBonusLife+=20; extraLifeTimer=180; sndExtraLife(); }
         var allBarrier=p5BarrierStars.every(function(s){return s.got;});
         if(allBarrier&&!caterpillarUnlocked) unlockCaterpillarButterfly();
       }
@@ -2518,6 +2534,14 @@ function drawHUD(){
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW-118,10+oy,108,36,10); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 14px Arial'; ctx.textAlign='right';
   ctx.fillText('Vidas: '+lives,CW-14,31+oy);
+  // Mini barra de progresso até próxima vida
+  var coinsNow=Math.floor(score/10), coinsPrev=(nextBonusLife-20), coinsNext=nextBonusLife;
+  var prog2=Math.min(1,(coinsNow-coinsPrev)/20);
+  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW-118,50+oy,108,14,6); ctx.fill();
+  ctx.fillStyle='rgba(255,107,107,0.85)'; rrect(CW-118,50+oy,Math.round(108*prog2),14,6); ctx.fill();
+  ctx.strokeStyle='rgba(255,215,0,0.55)'; ctx.lineWidth=1; rrect(CW-118,50+oy,108,14,6); ctx.stroke();
+  ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='9px Arial'; ctx.textAlign='center';
+  ctx.fillText('❤️ '+(coinsNow-coinsPrev)+'/20 moedas',CW-64,61+oy);
   var def=CHARS[pl.char];
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10+oy,170,36,10); ctx.fill();
   ctx.fillStyle='#FFD700'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
@@ -2529,6 +2553,29 @@ function drawHUD(){
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52+oy,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
   ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy); // ATUALIZADO PARA 5 FASES
+  // Popup +1 vida
+  if(extraLifeTimer>0){
+    var fa2=extraLifeTimer>120?1:extraLifeTimer/120;
+    var scl=1+0.25*Math.max(0,(extraLifeTimer-150)/30); // pula no início
+    ctx.save();
+    ctx.globalAlpha=fa2;
+    ctx.translate(CW/2, CH/2-60+oy);
+    ctx.scale(scl,scl);
+    ctx.textAlign='center';
+    // Fundo
+    var lifeGrad=ctx.createLinearGradient(-90,-22,90,22);
+    lifeGrad.addColorStop(0,'rgba(180,0,40,0.92)');
+    lifeGrad.addColorStop(1,'rgba(255,80,80,0.92)');
+    ctx.fillStyle=lifeGrad; rrect(-90,-24,180,48,14); ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2.5; rrect(-90,-24,180,48,14); ctx.stroke();
+    // Texto
+    ctx.fillStyle='#FFD700'; ctx.font='bold 22px Arial';
+    ctx.shadowColor='#FF0000'; ctx.shadowBlur=14;
+    ctx.fillText('❤️ +1 VIDA!',0,8); ctx.shadowBlur=0;
+    ctx.fillStyle='rgba(255,255,255,0.85)'; ctx.font='11px Arial';
+    ctx.fillText('A cada 20 moedas coletadas',0,26);
+    ctx.restore();
+  }
   if(phase===4&&webStuck>0){
     ctx.fillStyle='rgba(0,0,0,0.6)'; rrect(CW/2-70,84+oy,140,26,8); ctx.fill();
     ctx.strokeStyle='rgba(180,220,255,0.7)'; ctx.lineWidth=1.5; rrect(CW/2-70,84+oy,140,26,8); ctx.stroke();
