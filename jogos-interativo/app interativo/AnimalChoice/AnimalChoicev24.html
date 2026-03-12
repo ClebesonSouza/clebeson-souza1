@@ -1055,6 +1055,17 @@ function update(){
   if(pl.x<0) pl.x=0;
   pl.onGround=false;
 
+  // Rastro mágico da borboleta no ar
+  if(pl.char==='butterfly' && !pl.onGround && Math.random()<0.45){
+    var tc=['#FF69B4','#FFD700','#DA70D6','#C1FF00','#00BFFF','#FF6347'];
+    particles.push({
+      x:pl.x+pl.w/2+(Math.random()-0.5)*8,
+      y:pl.y+pl.h*0.6+(Math.random()-0.5)*8,
+      vx:(Math.random()-0.5)*1.8,
+      vy:-Math.random()*1.2-0.3,
+      life:40, color:tc[Math.floor(Math.random()*tc.length)], type:'trail'
+    });
+  }
   if(!isDigging){
     // Ground
     if(pl.y+pl.h>=GY&&groundAt(pl.x+pl.w/2)){
@@ -1539,8 +1550,14 @@ function drawParticles(){
     if(p.type==='bubble'){
       ctx.strokeStyle=p.color; ctx.lineWidth=1.5;
       ctx.beginPath(); ctx.arc(p.x-camX,p.y,4,0,Math.PI*2); ctx.stroke();
+     } else if(p.type==='trail'||p.type==='dust'){
+      var pr=2.5*(p.life/40);
+      ctx.fillStyle=p.color; ctx.shadowColor=p.color; ctx.shadowBlur=8;
+      ctx.beginPath(); ctx.arc(p.x-camX,p.y,pr,0,Math.PI*2); ctx.fill();
+      ctx.shadowBlur=0;
     } else {
-      ctx.fillStyle=p.color; ctx.fillRect(p.x-camX-3,p.y-3,6,6);
+      ctx.fillStyle=p.color;
+      ctx.fillRect(p.x-camX-3,p.y-3,6,6);
     }
   }
   ctx.globalAlpha=1;
@@ -2182,108 +2199,153 @@ function drawCaterpillar(cx,cy,def){
 }
 // ── Borboleta: visão lateral (cabeça direita, corpo horizontal, asas para cima) ──
 function drawButterfly(cx,cy,def){
-  var t=Date.now()/130;
-  var flapY=Math.abs(Math.sin(t))*14;
+  var now=Date.now();
+  var t=now/130;
+  // Batida rítmica: abs(sin) → abertura suave, fecha rápido (como borboleta real)
+  var flapRaw=Math.sin(now/180);
+  var flapY=Math.abs(flapRaw)*16; // amplitude maior
+  var isFlying=!pl.onGround;
+
   ctx.save();
   ctx.translate(cx,cy);
-  // Abdômen fino (segmentos para esquerda)
-  var abdC=['#7B1FA2','#9C27B0','#7B1FA2','#6A1B9A'];
+
+  // ── GLOW pulsante ao redor (só no ar) ──────────────────────────────────
+  if(isFlying){
+    var glowPulse=0.18+0.10*Math.sin(now/280);
+    var glowGrad=ctx.createRadialGradient(4,0,4,4,0,42);
+    glowGrad.addColorStop(0,'rgba(255,105,180,'+((glowPulse+0.12).toFixed(2))+')');
+    glowGrad.addColorStop(0.5,'rgba(220,0,150,'+(glowPulse.toFixed(2))+')');
+    glowGrad.addColorStop(1,'rgba(180,0,100,0)');
+    ctx.fillStyle=glowGrad;
+    ctx.beginPath(); ctx.ellipse(4,0,42,36,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // ── ABDÔMEN segmentado ────────────────────────────────────────────────
+  var abdC=['#7B1FA2','#9C27B0','#AB47BC','#6A1B9A'];
   for(var s=0;s<4;s++){
     var bx=-s*7;
-    ctx.fillStyle=abdC[s];
-    ctx.beginPath(); ctx.arc(bx,0,2.5,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.6;
-    ctx.beginPath(); ctx.arc(bx,0,2.5,0,Math.PI*2); ctx.stroke();
+    var grad=ctx.createRadialGradient(bx-1,-1,0.5,bx,0,3);
+    grad.addColorStop(0,'rgba(255,255,255,0.35)'); grad.addColorStop(1,abdC[s]);
+    ctx.fillStyle=grad;
+    ctx.beginPath(); ctx.arc(bx,0,2.8,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.7;
+    ctx.beginPath(); ctx.arc(bx,0,2.8,0,Math.PI*2); ctx.stroke();
   }
-  // Tórax fino
+
+  // ── TÓRAX ─────────────────────────────────────────────────────────────
   var tx2=4;
   ctx.fillStyle='#6A1B9A';
-  ctx.beginPath(); ctx.arc(tx2,0,3.5,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.8;
-  ctx.beginPath(); ctx.arc(tx2,0,3.5,0,Math.PI*2); ctx.stroke();
-  // Asa sup esquerda — AMPLIADA
-  ctx.fillStyle='rgba(255,105,180,0.92)';
-  ctx.beginPath();
-  ctx.moveTo(tx2,0);
-  ctx.bezierCurveTo(tx2-12,-10-flapY,tx2-44,-18-flapY,tx2-36,-6-flapY*0.3);
-  ctx.bezierCurveTo(tx2-24,5,tx2-8,3,tx2,0);
-  ctx.fill();
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.3;
-  ctx.beginPath();
-  ctx.moveTo(tx2,0);
-  ctx.bezierCurveTo(tx2-12,-10-flapY,tx2-44,-18-flapY,tx2-36,-6-flapY*0.3);
-  ctx.bezierCurveTo(tx2-24,5,tx2-8,3,tx2,0);
-  ctx.stroke();
-  ctx.strokeStyle='rgba(180,0,80,0.3)'; ctx.lineWidth=0.8;
-  ctx.beginPath(); ctx.moveTo(tx2,0); ctx.quadraticCurveTo(tx2-18,-6-flapY*0.5,tx2-30,-4-flapY*0.3); ctx.stroke();
-  ctx.fillStyle='rgba(255,215,0,0.65)';
-  ctx.beginPath(); ctx.arc(tx2-22,-7-flapY*0.5,5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(tx2,0,3.8,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=0.9;
+  ctx.beginPath(); ctx.arc(tx2,0,3.8,0,Math.PI*2); ctx.stroke();
 
-  // Asa sup direita — AMPLIADA
-  ctx.fillStyle='rgba(255,105,180,0.92)';
-  ctx.beginPath();
-  ctx.moveTo(tx2,0);
-  ctx.bezierCurveTo(tx2+12,-10-flapY,tx2+38,-18-flapY,tx2+30,-6-flapY*0.3);
-  ctx.bezierCurveTo(tx2+20,5,tx2+7,3,tx2,0);
-  ctx.fill();
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.3;
-  ctx.beginPath();
-  ctx.moveTo(tx2,0);
-  ctx.bezierCurveTo(tx2+12,-10-flapY,tx2+38,-18-flapY,tx2+30,-6-flapY*0.3);
-  ctx.bezierCurveTo(tx2+20,5,tx2+7,3,tx2,0);
-  ctx.stroke();
-  ctx.strokeStyle='rgba(180,0,80,0.3)'; ctx.lineWidth=0.8;
-  ctx.beginPath(); ctx.moveTo(tx2,0); ctx.quadraticCurveTo(tx2+16,-6-flapY*0.5,tx2+25,-4-flapY*0.3); ctx.stroke();
-  ctx.fillStyle='rgba(255,215,0,0.65)';
-  ctx.beginPath(); ctx.arc(tx2+18,-7-flapY*0.5,5,0,Math.PI*2); ctx.fill();
+  // helper para desenhar uma asa com gradiente + padrão
+  function drawWing(flip){
+    var sign=flip?-1:1;
+    var fw=flip?-1:1; // direção horizontal
 
-  // Asa inf esquerda — AMPLIADA
-  ctx.fillStyle='rgba(255,140,200,0.82)';
-  ctx.beginPath();
-  ctx.moveTo(tx2-1,2);
-  ctx.bezierCurveTo(tx2-10,-4-flapY*0.6,tx2-30,-8-flapY*0.5,tx2-24,3);
-  ctx.bezierCurveTo(tx2-17,10,tx2-6,8,tx2-1,2);
-  ctx.fill();
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.9;
-  ctx.beginPath();
-  ctx.moveTo(tx2-1,2);
-  ctx.bezierCurveTo(tx2-10,-4-flapY*0.6,tx2-30,-8-flapY*0.5,tx2-24,3);
-  ctx.bezierCurveTo(tx2-17,10,tx2-6,8,tx2-1,2);
-  ctx.stroke();
+    // Cor base com gradiente
+    var wGrad=ctx.createLinearGradient(tx2,0,tx2+sign*42,-flapY);
+    wGrad.addColorStop(0,'rgba(255,105,180,0.95)');
+    wGrad.addColorStop(0.5,'rgba(255,60,180,0.88)');
+    wGrad.addColorStop(1,'rgba(220,0,140,0.70)');
 
-  // Asa inf direita — AMPLIADA
-  ctx.fillStyle='rgba(255,140,200,0.82)';
-  ctx.beginPath();
-  ctx.moveTo(tx2+1,2);
-  ctx.bezierCurveTo(tx2+10,-4-flapY*0.6,tx2+28,-8-flapY*0.5,tx2+22,3);
-  ctx.bezierCurveTo(tx2+15,10,tx2+5,8,tx2+1,2);
-  ctx.fill();
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.9;
-  ctx.beginPath();
-  ctx.moveTo(tx2+1,2);
-  ctx.bezierCurveTo(tx2+10,-4-flapY*0.6,tx2+28,-8-flapY*0.5,tx2+22,3);
-  ctx.bezierCurveTo(tx2+15,10,tx2+5,8,tx2+1,2);
-  ctx.stroke();
-  // Cabeça
+    // Asa superior
+    ctx.fillStyle=wGrad;
+    ctx.beginPath();
+    ctx.moveTo(tx2,0);
+    ctx.bezierCurveTo(tx2+sign*12,-10-flapY, tx2+sign*44,-18-flapY, tx2+sign*36,-6-flapY*0.3);
+    ctx.bezierCurveTo(tx2+sign*24,5, tx2+sign*8,3, tx2,0);
+    ctx.fill();
+    // Borda
+    ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.4;
+    ctx.beginPath();
+    ctx.moveTo(tx2,0);
+    ctx.bezierCurveTo(tx2+sign*12,-10-flapY, tx2+sign*44,-18-flapY, tx2+sign*36,-6-flapY*0.3);
+    ctx.bezierCurveTo(tx2+sign*24,5, tx2+sign*8,3, tx2,0);
+    ctx.stroke();
+    // Nervura central
+    ctx.strokeStyle='rgba(180,0,80,0.35)'; ctx.lineWidth=1.0;
+    ctx.beginPath(); ctx.moveTo(tx2,0);
+    ctx.quadraticCurveTo(tx2+sign*18,-6-flapY*0.5, tx2+sign*32,-5-flapY*0.3); ctx.stroke();
+    // Manchas decorativas (padrão de borboleta)
+    var spotY=-7-flapY*0.5;
+    ctx.fillStyle='rgba(255,230,0,0.80)';
+    ctx.beginPath(); ctx.arc(tx2+sign*22, spotY, 5.5, 0, Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.arc(tx2+sign*22, spotY, 2.5, 0, Math.PI*2); ctx.fill();
+    // Bolinha extra perto da borda
+    ctx.fillStyle='rgba(255,200,50,0.55)';
+    ctx.beginPath(); ctx.arc(tx2+sign*34, -flapY*0.25, 3, 0, Math.PI*2); ctx.fill();
+
+    // Asa inferior
+    var wiGrad=ctx.createLinearGradient(tx2,2,tx2+sign*28,8);
+    wiGrad.addColorStop(0,'rgba(255,140,200,0.88)');
+    wiGrad.addColorStop(1,'rgba(200,50,160,0.65)');
+    ctx.fillStyle=wiGrad;
+    ctx.beginPath();
+    ctx.moveTo(tx2+sign*1,2);
+    ctx.bezierCurveTo(tx2+sign*10,-4-flapY*0.6, tx2+sign*30,-8-flapY*0.5, tx2+sign*24,3);
+    ctx.bezierCurveTo(tx2+sign*17,10, tx2+sign*6,8, tx2+sign*1,2);
+    ctx.fill();
+    ctx.strokeStyle='#C2185B'; ctx.lineWidth=1.0;
+    ctx.beginPath();
+    ctx.moveTo(tx2+sign*1,2);
+    ctx.bezierCurveTo(tx2+sign*10,-4-flapY*0.6, tx2+sign*30,-8-flapY*0.5, tx2+sign*24,3);
+    ctx.bezierCurveTo(tx2+sign*17,10, tx2+sign*6,8, tx2+sign*1,2);
+    ctx.stroke();
+    // Bolinha asa inferior
+    ctx.fillStyle='rgba(255,220,80,0.70)';
+    ctx.beginPath(); ctx.arc(tx2+sign*18, -flapY*0.28+2, 3.5, 0, Math.PI*2); ctx.fill();
+  }
+
+  // Asas esquerda (flip=true) depois direita (flip=false) — esquerda por baixo
+  drawWing(true);
+  drawWing(false);
+
+  // ── CABEÇA ────────────────────────────────────────────────────────────
   var hx=14;
-  ctx.fillStyle='#7B1FA2';
+  // Cabeça com gradiente
+  var hGrad=ctx.createRadialGradient(hx-2,-3,1,hx,-1,8);
+  hGrad.addColorStop(0,'#CE93D8'); hGrad.addColorStop(1,'#7B1FA2');
+  ctx.fillStyle=hGrad;
   ctx.beginPath(); ctx.arc(hx,-1,7,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1;
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1.1;
   ctx.beginPath(); ctx.arc(hx,-1,7,0,Math.PI*2); ctx.stroke();
+  // Olho
   ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(hx+3,-3,2.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+3,-3,2.3,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='#111';
-  ctx.beginPath(); ctx.arc(hx+3,-3,1.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+3,-3,1.3,0,Math.PI*2); ctx.fill();
   ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(hx+3.5,-3.5,0.6,0,Math.PI*2); ctx.fill();
-  // Antenas
-  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1.4; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(hx+2,-7); ctx.quadraticCurveTo(hx+10,-16,hx+8,-20); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(hx+5,-6); ctx.quadraticCurveTo(hx+14,-13,hx+13,-18); ctx.stroke();
+  ctx.beginPath(); ctx.arc(hx+3.5,-3.5,0.65,0,Math.PI*2); ctx.fill();
+
+  // ── ANTENAS animadas ──────────────────────────────────────────────────
+  var antWag=Math.sin(now/400)*2;
+  ctx.strokeStyle='#4A148C'; ctx.lineWidth=1.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(hx+2,-7);
+  ctx.quadraticCurveTo(hx+10+antWag,-16, hx+8+antWag,-20); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+5,-6);
+  ctx.quadraticCurveTo(hx+14+antWag,-13, hx+13+antWag,-18); ctx.stroke();
+  // Bolinhas das antenas
   ctx.fillStyle='#FF69B4';
-  ctx.beginPath(); ctx.arc(hx+8,-20,2.2,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(hx+13,-18,2.2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+8+antWag,-20,2.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(hx+13+antWag,-18,2.5,0,Math.PI*2); ctx.fill();
+
   ctx.restore();
+
+  // ── PÓ MÁGICO ao pousar ───────────────────────────────────────────────
+  if(pl.char==='butterfly'&&pl.onGround&&Math.abs(pl.vy)<0.5&&Math.random()<0.25){
+    var dustColors=['#FF69B4','#FFD700','#DA70D6','#7FFF00','#00BFFF'];
+    particles.push({
+      x:pl.x+pl.w/2+(Math.random()-0.5)*20,
+      y:pl.y+pl.h,
+      vx:(Math.random()-0.5)*2.5,
+      vy:-Math.random()*1.8-0.5,
+      life:35, color:dustColors[Math.floor(Math.random()*dustColors.length)],
+      type:'dust'
+    });
+  }
 }
 
 function drawFrogGaps(){
