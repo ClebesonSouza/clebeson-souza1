@@ -2114,227 +2114,176 @@ function drawFrog(cx,cy,def){
   ctx.restore();
 }
 function drawCaterpillar(cx, cy, def) {
-  var t = Date.now() / 280;
+  var t = Date.now() / 320; // Movimento suave
   ctx.save();
 
-  var numSegs = 6;
-  var segR    = 6;
-  var segSp   = 8;
-  var startX  = cx - 16;
-  var bodyY   = cy + 5;
+  var numSegs = 8;  // 8 segmentos como na imagem
+  var segR    = 5.5;
+  var segSp   = 7;
+  var startX  = cx - 20;
+  var bodyY   = cy + 4;
 
-  // ─── SEGMENTOS — rabo → cabeça ───
+  // Corpo — onda suave como na imagem
   for (var s = numSegs - 1; s >= 0; s--) {
-    var bx   = startX + s * segSp;
-    var wave = Math.sin(t - s * 0.7) * 2.8;
-    var by   = bodyY + wave;
+    var bx = startX + s * segSp;
+    var wave = Math.sin(t - s * 0.65) * 2.2;
+    var by = bodyY + wave;
 
-    // Gradiente radial real por segmento (volume 3D)
-    var segCol  = (s % 2 === 0) ? def.color : '#A5D633';
-    var grad = ctx.createRadialGradient(bx - 2, by - 2, 1, bx, by, segR + 1);
-    grad.addColorStop(0, '#DEFF80');
-    grad.addColorStop(0.45, segCol);
-    grad.addColorStop(1, '#4a7a00');
+    // Verde da imagem #5CB840 com gradiente 3D Pixar
+    var grad = ctx.createRadialGradient(bx - 1.5, by - 2, 0.5, bx, by, segR + 1);
+    grad.addColorStop(0, '#D2F2A0');  // topo claro
+    grad.addColorStop(0.4, '#5CB840'); // verde médio da imagem
+    grad.addColorStop(1, '#3A8C20');   // borda escura
 
-    ctx.shadowColor = 'rgba(0,0,0,0.20)';
-    ctx.shadowBlur  = 3;
-
+    ctx.shadowColor = 'rgba(0,0,0,0.25)';
+    ctx.shadowBlur  = 2.5;
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(bx, by, segR + 1, segR - 0.5, 0, 0, Math.PI * 2);
+    ctx.ellipse(bx, by, segR + 0.8, segR - 0.3, 0, 0, Math.PI * 2);
     ctx.fill();
-
     ctx.shadowBlur = 0;
 
-    // Contorno accent — separação visível entre segmentos
-    ctx.strokeStyle = def.accent;
-    ctx.lineWidth   = 1.2;
-    ctx.globalAlpha = 0.7;
+    // Contorno fino escuro da imagem
+    ctx.strokeStyle = '#2E6B18';
+    ctx.lineWidth = 1.1;
     ctx.beginPath();
-    ctx.ellipse(bx, by, segR + 1, segR - 0.5, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.globalAlpha = 1;
-
-    // Listra central horizontal
-    ctx.strokeStyle = 'rgba(0,90,0,0.30)';
-    ctx.lineWidth   = 1;
-    ctx.beginPath();
-    ctx.moveTo(bx - segR + 2, by);
-    ctx.lineTo(bx + segR - 2, by);
+    ctx.ellipse(bx, by, segR + 0.8, segR - 0.3, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // ─── PROLETAS (segmentos do meio) ───
-    if (s >= 1 && s <= 4) {
-      var legPhase = Math.sin(t - s * 0.7 + 1.2) * 2.5;
-      var legBaseY = by + segR - 1;
-      var legLen   = 7;
+    // ─── NUBS AMARELOS (não patas!) ───
+    var nubY = by + segR + 1;
+    var nubWave = Math.sin(t - s * 0.8 + 1.5) * 0.8;
 
-      // Pata esquerda — curva
-      ctx.strokeStyle = '#33691E';
-      ctx.lineWidth   = 1.8;
-      ctx.lineCap     = 'round';
-      ctx.beginPath();
-      ctx.moveTo(bx - 4, legBaseY);
-      ctx.quadraticCurveTo(bx - 6, legBaseY + legLen * 0.55, bx - 4, legBaseY + legLen + legPhase);
-      ctx.stroke();
-      // ventosa clara
-      ctx.fillStyle   = '#CCFF33';
-      ctx.strokeStyle = '#33691E';
-      ctx.lineWidth   = 1;
-      ctx.beginPath();
-      ctx.ellipse(bx - 4, legBaseY + legLen + legPhase + 2, 2.8, 1.6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
+    // Nub amarelo #C8E030 da imagem
+    ctx.fillStyle = '#C8E030';
+    ctx.beginPath();
+    ctx.arc(bx - 3.5, nubY + nubWave, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.arc(bx + 3.5, nubY + nubWave, 1.8, 0, Math.PI * 2);
+    ctx.fill();
 
-      // Pata direita — curva
-      ctx.strokeStyle = '#33691E';
-      ctx.lineWidth   = 1.8;
-      ctx.beginPath();
-      ctx.moveTo(bx + 4, legBaseY);
-      ctx.quadraticCurveTo(bx + 6, legBaseY + legLen * 0.55, bx + 4, legBaseY + legLen - legPhase);
-      ctx.stroke();
-      ctx.fillStyle   = '#CCFF33';
-      ctx.strokeStyle = '#33691E';
-      ctx.lineWidth   = 1;
-      ctx.beginPath();
-      ctx.ellipse(bx + 4, legBaseY + legLen - legPhase + 2, 2.8, 1.6, 0, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.stroke();
-    }
-
-    // ─── PATAS TORÁCICAS (segmentos 0 e 5) ───
-    if (s === 0 || s === 5) {
-      var tPhase  = Math.sin(t + s * 1.1) * 1.8;
-      var tBaseY  = by + segR - 2;
-      ctx.strokeStyle = '#33691E';
-      ctx.lineWidth   = 1.6;
-      ctx.lineCap     = 'round';
-      // esquerda
-      ctx.beginPath();
-      ctx.moveTo(bx - 3, tBaseY);
-      ctx.lineTo(bx - 6, tBaseY + 6 + tPhase);
-      ctx.stroke();
-      ctx.fillStyle = '#558B2F';
-      ctx.beginPath();
-      ctx.ellipse(bx - 6, tBaseY + 7 + tPhase, 2, 1.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-      // direita
-      ctx.beginPath();
-      ctx.moveTo(bx + 3, tBaseY);
-      ctx.lineTo(bx + 6, tBaseY + 6 - tPhase);
-      ctx.stroke();
-      ctx.fillStyle = '#558B2F';
-      ctx.beginPath();
-      ctx.ellipse(bx + 6, tBaseY + 7 - tPhase, 2, 1.2, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    // Ponto escuro no nub (detalhe da imagem)
+    ctx.fillStyle = '#6B8A00';
+    ctx.beginPath();
+    ctx.arc(bx - 3.5, nubY + nubWave + 0.7, 0.6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.arc(bx + 3.5, nubY + nubWave + 0.7, 0.6, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   // ─── CABEÇA ───
-  var headX  = startX + numSegs * segSp;
-  var headY2 = bodyY + Math.sin(t) * 2.5 - 3;
-  var headR  = 7;
+  var headX = startX + numSegs * segSp;
+  var headY = bodyY + Math.sin(t) * 1.8 - 2;
+  var headR = 6.5;
 
-  // Gradiente radial na cabeça
-  var headGrad = ctx.createRadialGradient(headX - 2, headY2 - 2, 1, headX, headY2, headR + 1);
-  headGrad.addColorStop(0, '#EEFF90');
-  headGrad.addColorStop(0.5, def.color);
-  headGrad.addColorStop(1, '#4a7a00');
+  // Gradiente cabeça igual aos segmentos
+  var headGrad = ctx.createRadialGradient(headX - 1, headY - 1.5, 0.5, headX, headY, headR);
+  headGrad.addColorStop(0, '#D2F2A0');
+  headGrad.addColorStop(0.4, '#5CB840');
+  headGrad.addColorStop(1, '#3A8C20');
 
-  ctx.shadowColor = 'rgba(0,0,0,0.25)';
-  ctx.shadowBlur  = 4;
-  ctx.fillStyle   = headGrad;
+  ctx.shadowColor = 'rgba(0,0,0,0.28)';
+  ctx.shadowBlur  = 3;
+  ctx.fillStyle = headGrad;
   ctx.beginPath();
-  ctx.arc(headX, headY2, headR, 0, Math.PI * 2);
+  ctx.arc(headX, headY, headR, 0, Math.PI * 2);
   ctx.fill();
   ctx.shadowBlur = 0;
 
-  ctx.strokeStyle = def.accent;
-  ctx.lineWidth   = 1.8;
+  ctx.strokeStyle = '#2E6B18';
+  ctx.lineWidth = 1.3;
   ctx.beginPath();
-  ctx.arc(headX, headY2, headR, 0, Math.PI * 2);
+  ctx.arc(headX, headY, headR, 0, Math.PI * 2);
   ctx.stroke();
 
-  // Olho — pupila verde escuro (mantém identidade da lagartinha)
-  ctx.fillStyle = '#1B5E20';
+  // ─── OLHOS (dois olhos como na imagem) ───
+  // Olho esquerdo
+  ctx.fillStyle = '#9B70A0'; // íris roxa da imagem
   ctx.beginPath();
-  ctx.arc(headX + 3, headY2 - 2.5, 3, 0, Math.PI * 2);
+  ctx.arc(headX - 1.5, headY - 2, 3.2, 0, Math.PI * 2);
   ctx.fill();
-  // brilho principal
+  ctx.fillStyle = '#111'; // pupila
+  ctx.beginPath();
+  ctx.arc(headX - 1.5, headY - 2, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  // brilho 1
   ctx.fillStyle = 'white';
   ctx.beginPath();
-  ctx.arc(headX + 4, headY2 - 3.5, 1.3, 0, Math.PI * 2);
+  ctx.arc(headX - 1.2, headY - 2.8, 0.9, 0, Math.PI * 2);
   ctx.fill();
-  // brilho secundário
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  // brilho 2
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.beginPath();
-  ctx.arc(headX + 2.3, headY2 - 1.8, 0.6, 0, Math.PI * 2);
+  ctx.arc(headX - 2.3, headY - 1.5, 0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sorriso
+  // Olho direito
+  ctx.fillStyle = '#9B70A0';
+  ctx.beginPath();
+  ctx.arc(headX + 3, headY - 2, 3.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = '#111';
+  ctx.beginPath();
+  ctx.arc(headX + 3, headY - 2, 1.8, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'white';
+  ctx.beginPath();
+  ctx.arc(headX + 3.3, headY - 2.8, 0.9, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
+  ctx.beginPath();
+  ctx.arc(headX + 2.7, headY - 1.5, 0.5, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Sorriso suave da imagem
   ctx.strokeStyle = '#1B5E20';
-  ctx.lineWidth   = 1.6;
-  ctx.lineCap     = 'round';
+  ctx.lineWidth = 1.2;
+  ctx.lineCap = 'round';
   ctx.beginPath();
-  ctx.arc(headX + 1, headY2 + 1.5, 3.5, 0.2, Math.PI - 0.2);
+  ctx.arc(headX + 1.2, headY + 1.5, 2.8, 0.25, Math.PI - 0.25);
   ctx.stroke();
 
-  // Bochechas — dois pontinhos estilo cartoon
-  ctx.fillStyle = 'rgba(255,140,140,0.65)';
+  // Bochechas rosadas
+  ctx.fillStyle = 'rgba(255,150,150,0.65)';
   ctx.beginPath();
-  ctx.arc(headX + 5.5, headY2 + 3, 1.4, 0, Math.PI * 2);
+  ctx.arc(headX + 4.5, headY + 2.5, 1.4, 0, Math.PI * 2);
   ctx.fill();
   ctx.beginPath();
-  ctx.arc(headX + 7, headY2 + 2, 1, 0, Math.PI * 2);
+  ctx.arc(headX - 0.5, headY + 2.5, 1.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // ─── ANTENAS — base def.color, ponta def.accent ───
-  var antWave = Math.sin(t * 1.4) * 1.8;
+  // ─── ANTENAS ───
+  var antWave = Math.sin(t * 1.5) * 1.5;
+  ctx.strokeStyle = '#3A8C20';
+  ctx.lineWidth = 1.6;
+  ctx.lineCap = 'round';
 
-  // Antena esquerda
-  var antGradL = ctx.createLinearGradient(
-    headX - 2, headY2 - headR,
-    headX - 6 + antWave, headY2 - headR - 12
-  );
-  antGradL.addColorStop(0, def.color);
-  antGradL.addColorStop(1, def.accent);
-  ctx.strokeStyle = antGradL;
-  ctx.lineWidth   = 1.8;
-  ctx.lineCap     = 'round';
+  // Esquerda
   ctx.beginPath();
-  ctx.moveTo(headX - 2, headY2 - headR);
-  ctx.quadraticCurveTo(headX - 8 + antWave, headY2 - headR - 6, headX - 6 + antWave, headY2 - headR - 12);
+  ctx.moveTo(headX - 2, headY - headR);
+  ctx.quadraticCurveTo(headX - 7 + antWave, headY - headR - 5, headX - 4 + antWave, headY - headR - 10);
   ctx.stroke();
-  // bolinha ponta
-  ctx.fillStyle = def.accent;
+  ctx.fillStyle = '#2B6614'; // bolinha verde-escuro da imagem
   ctx.beginPath();
-  ctx.arc(headX - 6 + antWave, headY2 - headR - 12, 2.2, 0, Math.PI * 2);
+  ctx.arc(headX - 4 + antWave, headY - headR - 10, 2.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.beginPath();
-  ctx.arc(headX - 7 + antWave, headY2 - headR - 13, 0.9, 0, Math.PI * 2);
+  ctx.arc(headX - 5 + antWave, headY - headR - 11, 0.8, 0, Math.PI * 2);
   ctx.fill();
 
-  // Antena direita
-  var antGradR = ctx.createLinearGradient(
-    headX + 4, headY2 - headR,
-    headX + 8 - antWave, headY2 - headR - 12
-  );
-  antGradR.addColorStop(0, def.color);
-  antGradR.addColorStop(1, def.accent);
-  ctx.strokeStyle = antGradR;
-  ctx.lineWidth   = 1.8;
+  // Direita
   ctx.beginPath();
-  ctx.moveTo(headX + 4, headY2 - headR);
-  ctx.quadraticCurveTo(headX + 10 - antWave, headY2 - headR - 6, headX + 8 - antWave, headY2 - headR - 12);
+  ctx.moveTo(headX + 3.5, headY - headR);
+  ctx.quadraticCurveTo(headX + 8 - antWave, headY - headR - 5, headX + 6 - antWave, headY - headR - 10);
   ctx.stroke();
-  ctx.fillStyle = def.accent;
+  ctx.fillStyle = '#2B6614';
   ctx.beginPath();
-  ctx.arc(headX + 8 - antWave, headY2 - headR - 12, 2.2, 0, Math.PI * 2);
+  ctx.arc(headX + 6 - antWave, headY - headR - 10, 2.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = 'rgba(255,255,255,0.55)';
+  ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.beginPath();
-  ctx.arc(headX + 9 - antWave, headY2 - headR - 13, 0.9, 0, Math.PI * 2);
+  ctx.arc(headX + 7 - antWave, headY - headR - 11, 0.8, 0, Math.PI * 2);
   ctx.fill();
 
   ctx.restore();
