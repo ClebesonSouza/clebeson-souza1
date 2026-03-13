@@ -2114,26 +2114,25 @@ function drawFrog(cx,cy,def){
   ctx.restore();
 }
 function drawCaterpillar(cx, cy, def) {
-  var t = Date.now() / 320; // Movimento suave
+  var t = Date.now() / 320;
   ctx.save();
 
-  var numSegs = 8;  // 8 segmentos como na imagem
+  var numSegs = 8;
   var segR    = 5.5;
   var segSp   = 7;
   var startX  = cx - 20;
-  var bodyY   = cy + 4;
+  // CORRIGIDO: cy + 16 para nubs tocarem exatamente o chão (era cy + 5)
+  var bodyY   = cy + 16;
 
-  // Corpo — onda suave como na imagem
   for (var s = numSegs - 1; s >= 0; s--) {
     var bx = startX + s * segSp;
     var wave = Math.sin(t - s * 0.65) * 2.2;
     var by = bodyY + wave;
 
-    // Verde da imagem #5CB840 com gradiente 3D Pixar
     var grad = ctx.createRadialGradient(bx - 1.5, by - 2, 0.5, bx, by, segR + 1);
-    grad.addColorStop(0, '#D2F2A0');  // topo claro
-    grad.addColorStop(0.4, '#5CB840'); // verde médio da imagem
-    grad.addColorStop(1, '#3A8C20');   // borda escura
+    grad.addColorStop(0, '#D2F2A0');
+    grad.addColorStop(0.4, '#5CB840');
+    grad.addColorStop(1, '#3A8C20');
 
     ctx.shadowColor = 'rgba(0,0,0,0.25)';
     ctx.shadowBlur  = 2.5;
@@ -2143,40 +2142,38 @@ function drawCaterpillar(cx, cy, def) {
     ctx.fill();
     ctx.shadowBlur = 0;
 
-    // Contorno fino escuro da imagem
     ctx.strokeStyle = '#2E6B18';
     ctx.lineWidth = 1.1;
     ctx.beginPath();
     ctx.ellipse(bx, by, segR + 0.8, segR - 0.3, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // ─── NUBS AMARELOS (não patas!) ───
+    // Nubs amarelos — tocam o chão
     var nubY = by + segR + 1;
     var nubWave = Math.sin(t - s * 0.8 + 1.5) * 0.8;
 
-    // Nub amarelo #C8E030 da imagem
     ctx.fillStyle = '#C8E030';
     ctx.beginPath();
     ctx.arc(bx - 3.5, nubY + nubWave, 1.8, 0, Math.PI * 2);
     ctx.fill();
+    ctx.beginPath();
     ctx.arc(bx + 3.5, nubY + nubWave, 1.8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Ponto escuro no nub (detalhe da imagem)
     ctx.fillStyle = '#6B8A00';
     ctx.beginPath();
     ctx.arc(bx - 3.5, nubY + nubWave + 0.7, 0.6, 0, Math.PI * 2);
     ctx.fill();
+    ctx.beginPath();
     ctx.arc(bx + 3.5, nubY + nubWave + 0.7, 0.6, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  // ─── CABEÇA ───
+  // CABEÇA — posicionada junto ao corpo no chão
   var headX = startX + numSegs * segSp;
   var headY = bodyY + Math.sin(t) * 1.8 - 2;
   var headR = 6.5;
 
-  // Gradiente cabeça igual aos segmentos
   var headGrad = ctx.createRadialGradient(headX - 1, headY - 1.5, 0.5, headX, headY, headR);
   headGrad.addColorStop(0, '#D2F2A0');
   headGrad.addColorStop(0.4, '#5CB840');
@@ -2196,22 +2193,19 @@ function drawCaterpillar(cx, cy, def) {
   ctx.arc(headX, headY, headR, 0, Math.PI * 2);
   ctx.stroke();
 
-  // ─── OLHOS (dois olhos como na imagem) ───
   // Olho esquerdo
-  ctx.fillStyle = '#9B70A0'; // íris roxa da imagem
+  ctx.fillStyle = '#9B70A0';
   ctx.beginPath();
   ctx.arc(headX - 1.5, headY - 2, 3.2, 0, Math.PI * 2);
   ctx.fill();
-  ctx.fillStyle = '#111'; // pupila
+  ctx.fillStyle = '#111';
   ctx.beginPath();
   ctx.arc(headX - 1.5, headY - 2, 1.8, 0, Math.PI * 2);
   ctx.fill();
-  // brilho 1
   ctx.fillStyle = 'white';
   ctx.beginPath();
   ctx.arc(headX - 1.2, headY - 2.8, 0.9, 0, Math.PI * 2);
   ctx.fill();
-  // brilho 2
   ctx.fillStyle = 'rgba(255,255,255,0.6)';
   ctx.beginPath();
   ctx.arc(headX - 2.3, headY - 1.5, 0.5, 0, Math.PI * 2);
@@ -2235,7 +2229,7 @@ function drawCaterpillar(cx, cy, def) {
   ctx.arc(headX + 2.7, headY - 1.5, 0.5, 0, Math.PI * 2);
   ctx.fill();
 
-  // Sorriso suave da imagem
+  // Sorriso
   ctx.strokeStyle = '#1B5E20';
   ctx.lineWidth = 1.2;
   ctx.lineCap = 'round';
@@ -2243,7 +2237,7 @@ function drawCaterpillar(cx, cy, def) {
   ctx.arc(headX + 1.2, headY + 1.5, 2.8, 0.25, Math.PI - 0.25);
   ctx.stroke();
 
-  // Bochechas rosadas
+  // Bochechas
   ctx.fillStyle = 'rgba(255,150,150,0.65)';
   ctx.beginPath();
   ctx.arc(headX + 4.5, headY + 2.5, 1.4, 0, Math.PI * 2);
@@ -2252,18 +2246,17 @@ function drawCaterpillar(cx, cy, def) {
   ctx.arc(headX - 0.5, headY + 2.5, 1.4, 0, Math.PI * 2);
   ctx.fill();
 
-  // ─── ANTENAS ───
+  // Antenas
   var antWave = Math.sin(t * 1.5) * 1.5;
   ctx.strokeStyle = '#3A8C20';
   ctx.lineWidth = 1.6;
   ctx.lineCap = 'round';
 
-  // Esquerda
   ctx.beginPath();
   ctx.moveTo(headX - 2, headY - headR);
   ctx.quadraticCurveTo(headX - 7 + antWave, headY - headR - 5, headX - 4 + antWave, headY - headR - 10);
   ctx.stroke();
-  ctx.fillStyle = '#2B6614'; // bolinha verde-escuro da imagem
+  ctx.fillStyle = '#2B6614';
   ctx.beginPath();
   ctx.arc(headX - 4 + antWave, headY - headR - 10, 2.2, 0, Math.PI * 2);
   ctx.fill();
@@ -2272,7 +2265,6 @@ function drawCaterpillar(cx, cy, def) {
   ctx.arc(headX - 5 + antWave, headY - headR - 11, 0.8, 0, Math.PI * 2);
   ctx.fill();
 
-  // Direita
   ctx.beginPath();
   ctx.moveTo(headX + 3.5, headY - headR);
   ctx.quadraticCurveTo(headX + 8 - antWave, headY - headR - 5, headX + 6 - antWave, headY - headR - 10);
