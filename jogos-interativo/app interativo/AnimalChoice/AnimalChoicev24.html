@@ -3707,7 +3707,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     var overlay = document.getElementById('rotateOverlay');
     var tpad    = document.getElementById('touchControls');
     var ui      = document.getElementById('ui');
-    var mute    = document.getElementById('muteBtn');
+    var mute    = document.getElementById('audioControl');
     if(!wrapper) return;
 
     var vw = window.innerWidth;
@@ -3723,7 +3723,7 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
       if(overlay) overlay.style.display = 'none';
       if(tpad)    tpad.style.display    = 'none';
       if(ui)      ui.style.display      = '';
-      if(mute)  { mute.style.top = ''; mute.style.right = ''; }
+      if(mute)  { mute.style.top = ''; mute.style.right = '10px'; mute.style.left = ''; }
       return;
     }
 
@@ -3773,11 +3773,14 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Mostra D-pad apenas durante o jogo (não no menu/gameover/intro)
     if(tpad) tpad.style.display = (typeof state !== 'undefined' && state === 'playing') ? 'flex' : 'none';
 
-    // Reposiciona botão mute no canto superior direito do canvas
+    // Reposiciona controle de volume abaixo do contador de moedas (esquerda)
+    // Contador de moedas: canvas y=102 (52+oy50), altura=26 → base=128px canvas
     if(mute){
+      var starsBottom = (128) * scale + offY; // base do contador de moedas em tela
       mute.style.position = 'fixed';
-      mute.style.top   = (offY + 8 + 50) + 'px';
-      mute.style.right = (vw - offX - scaledW + 8) + 'px';
+      mute.style.top   = (starsBottom + 6) + 'px';
+      mute.style.left  = (offX + Math.round(10 * scale)) + 'px';
+      mute.style.right = '';
     }
   }
 
