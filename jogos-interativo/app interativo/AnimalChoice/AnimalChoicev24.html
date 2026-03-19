@@ -9,7 +9,7 @@
     body {
       background:#0d1b2a; display:flex; flex-direction:column;
       align-items:center; justify-content:center;
-      min-height:100vh; font-family:'Arial Rounded MT Bold',Arial,sans-serif; overflow:hidden;
+      min-height:100vh; font-family:'Arial Rounded MT Bold',Arial,sans-serif; overflow:hidden; 
     }
     #gameWrapper { position:relative; width:800px; }
     #gameCanvas { display:block; border-radius:16px 16px 0 0; box-shadow:0 0 40px rgba(0,200,255,0.25); }
@@ -40,16 +40,25 @@
     .lock-overlay span:first-child { font-size:22px; }
     .lock-overlay span:last-child { font-size:8px; color:rgba(255,255,255,0.8); text-align:center; line-height:1.3; }
   
-  #muteBtn {
-    position: fixed; top: 10px; right: 10px;
-    background: rgba(0,0,0,0.55); color: #fff;
-    border: 1.5px solid rgba(255,255,255,0.3);
-    border-radius: 50%; width: 38px; height: 38px;
-    font-size: 18px; cursor: pointer; z-index: 999;
-    display: flex; align-items: center; justify-content: center;
+  #audioControl {
+    position: fixed; top: 10px; right: 10px; z-index: 999;
+    display: flex; align-items: center; gap: 6px;
+    background: rgba(0,0,0,0.55); border: 1.5px solid rgba(255,255,255,0.3);
+    border-radius: 20px; padding: 4px 10px 4px 6px;
     transition: background 0.2s;
   }
-  #muteBtn:hover { background: rgba(0,0,0,0.8); }
+  #audioControl:hover { background: rgba(0,0,0,0.75); }
+  #muteBtn {
+    background: none; border: none; color: #fff;
+    font-size: 18px; cursor: pointer; padding: 0;
+    width: 26px; height: 26px;
+    display: flex; align-items: center; justify-content: center;
+    transition: opacity 0.2s;
+  }
+  #muteBtn:hover { opacity: 0.7; }
+  #volSlider {
+    width: 70px; height: 4px; accent-color: #FFD700; cursor: pointer;
+  }
 
 
     /* ── TOUCH D-PAD ── */
@@ -185,7 +194,9 @@
     }
 
     @media (max-width: 820px) {
-      #muteBtn { top: 4px; right: 4px; width: 30px; height: 30px; font-size: 14px; }
+      #audioControl { top: 4px; right: 4px; padding: 3px 8px 3px 4px; gap: 4px; }
+      #muteBtn { font-size: 14px; width: 22px; height: 22px; }
+      #volSlider { width: 50px; }
     }
 
 
@@ -206,7 +217,11 @@
 <body>
 <div id="gameWrapper">
   
-<button id="muteBtn" title="Mute/Som" onclick="soundEnabled=!soundEnabled; this.textContent=soundEnabled?'🔊':'🔇'">🔊</button>
+<div id="audioControl">
+  <button id="muteBtn" title="Mute/Som" onclick="toggleMute()">🔊</button>
+  <input type="range" id="volSlider" min="0" max="1" step="0.05" value="0.75"
+    oninput="setVolume(parseFloat(this.value))" title="Volume">
+</div>
 <canvas id="gameCanvas" width="800" height="440"></canvas>
   <div id="ui">
     <button class="cbtn active" id="btn-cat" onclick="switchChar('cat')">
@@ -275,6 +290,412 @@ document.addEventListener('touchstart', unlockAudio, {once: false});
 function getAudioCtx(){
   if(!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
   return audioCtx;
+}
+
+// ════════════════════════════════════════════════════════
+//  MÚSICA FASE 1 — Campos do Amanhecer
+//  432 Hz · Dó Maior · 163 BPM · 8 compassos · Loop
+// ════════════════════════════════════════════════════════
+var musicMasterGain  = null;
+var musicFadeGain    = null;
+var musicReverbNode  = null;
+var musicIsPlaying   = false;
+var musicLoopTimeout = null;
+var bgmFadeScheduled = false;
+
+var BGM_BPM   = 260;  // intermediario
+var BGM_Q     = Math.round(60000 / BGM_BPM); // semínima em ms (~189ms)
+var BGM_E     = Math.round(BGM_Q / 2);
+var BGM_S     = Math.round(BGM_Q / 4);
+var BGM_H     = BGM_Q * 2;
+var BGM_BEATS = 192;
+var BGM_DUR_S = BGM_Q * BGM_BEATS / 1000; // 48 compassos (6 secoes)
+
+// Frequências 432 Hz (oitavas 3, 4 e 5)
+var N = {
+  C3:129, D3:144, E3:162, F3:172, G3:192, A3:216, B3:243,
+  C4:257, D4:289, E4:324, F4:343, G4:385, A4:432, B4:485,
+  C5:513, D5:576, E5:647, F5:685, G5:770, A5:864, B5:970,
+  C6:1028, D6:1154, E6:1295,
+  R:0
+};
+
+// Reverb convolver — timbre do AnimalChoice v50
+function createMusicReverb(ctx, dur) {
+  var conv = ctx.createConvolver();
+  var rate = ctx.sampleRate, len = Math.floor(rate * dur);
+  var buf  = ctx.createBuffer(2, len, rate);
+  for (var ch = 0; ch < 2; ch++) {
+    var d = buf.getChannelData(ch);
+    for (var i = 0; i < len; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/len, 2.8);
+  }
+  conv.buffer = buf;
+  return conv;
+}
+
+// Piano v50 — sine+triangle blend com ADSR e reverb opcional
+// wet=0 para acordes (seco), wet=0.20 para melodia (com reverb)
+function bgmPianoNote(freq, durS, volume, delay, noVibrato) {
+  if (!musicIsPlaying || !musicMasterGain) return;
+  var ctx       = getAudioCtx();
+  var startTime = ctx.currentTime + delay / 1000;
+  var wet       = noVibrato ? 0.0 : 0.20;
+
+  var osc1=ctx.createOscillator(); osc1.type='sine';     osc1.frequency.value=freq;
+  var osc2=ctx.createOscillator(); osc2.type='triangle'; osc2.frequency.value=freq;
+  var osc3=ctx.createOscillator(); osc3.type='sine';     osc3.frequency.value=freq*2;
+  var osc4=ctx.createOscillator(); osc4.type='sine';     osc4.frequency.value=freq*3;
+  var g1=ctx.createGain(); g1.gain.value=0.52;
+  var g2=ctx.createGain(); g2.gain.value=0.24;
+  var g3=ctx.createGain(); g3.gain.value=0.14;
+  var g4=ctx.createGain(); g4.gain.value=0.05;
+  osc1.connect(g1); osc2.connect(g2); osc3.connect(g3); osc4.connect(g4);
+
+  var env     = ctx.createGain();
+  var attack  = 0.012, decay = 0.14, sustain = 0.52;
+  var release = Math.min(durS * 0.40, 0.45);
+  var noteEnd = startTime + durS, stopTime = noteEnd + 0.10;
+  var susStart = Math.max(startTime + attack + decay, noteEnd - release);
+  env.gain.setValueAtTime(0, startTime);
+  env.gain.linearRampToValueAtTime(volume, startTime + attack);
+  env.gain.linearRampToValueAtTime(volume * sustain, startTime + attack + decay);
+  if (susStart > startTime + attack + decay) env.gain.setValueAtTime(volume * sustain, susStart);
+  env.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
+  env.gain.setValueAtTime(0, stopTime - 0.002);
+
+  g1.connect(env); g2.connect(env); g3.connect(env); g4.connect(env);
+
+  var dry = ctx.createGain(); dry.gain.value = 1 - wet;
+  env.connect(dry); dry.connect(musicMasterGain);
+  if (wet > 0 && musicReverbNode) {
+    var wet2 = ctx.createGain(); wet2.gain.value = wet;
+    env.connect(wet2); wet2.connect(musicReverbNode);
+  }
+  [osc1,osc2,osc3,osc4].forEach(function(o){ o.start(startTime); o.stop(stopTime); });
+}
+
+// Acorde — mesmo timbre v50, seco (sem reverb), arpejo de 6ms entre notas
+// volume agora é multiplicador dinâmico (0.0–1.5); padrão 1.0
+function bgmChord(freqs, durS, volume, delay) {
+  if (!musicIsPlaying || !musicMasterGain) return;
+  var mult = (volume > 0 && volume <= 1.5) ? volume : 1.0;
+  freqs.forEach(function(f, i) {
+    bgmPianoNote(f, durS, (i === 0 ? 0.06 : 0.042) * mult, delay + i * 6, true);
+  });
+}
+
+// Linha de baixo — timbre cálido (2 senos: fundamental + 8va), ataque suave
+function bgmBassNote(freq, durS, volume, delay) {
+  if (!musicIsPlaying || !musicMasterGain) return;
+  var ctx       = getAudioCtx();
+  var startTime = ctx.currentTime + delay / 1000;
+  var osc1 = ctx.createOscillator(); osc1.type = 'sine'; osc1.frequency.value = freq;
+  var osc2 = ctx.createOscillator(); osc2.type = 'sine'; osc2.frequency.value = freq * 2;
+  var g1 = ctx.createGain(); g1.gain.value = 0.70;
+  var g2 = ctx.createGain(); g2.gain.value = 0.30;
+  osc1.connect(g1); osc2.connect(g2);
+  var env     = ctx.createGain();
+  var attack  = 0.06;
+  var release = Math.min(durS * 0.55, 0.9);
+  var noteEnd = startTime + durS, stopTime = noteEnd + 0.18;
+  env.gain.setValueAtTime(0, startTime);
+  env.gain.linearRampToValueAtTime(volume, startTime + attack);
+  env.gain.setValueAtTime(volume, noteEnd - release);
+  env.gain.exponentialRampToValueAtTime(0.0001, noteEnd);
+  env.gain.setValueAtTime(0, stopTime - 0.01);
+  g1.connect(env); g2.connect(env);
+  env.connect(musicMasterGain);
+  osc1.start(startTime); osc1.stop(stopTime);
+  osc2.start(startTime); osc2.stop(stopTime);
+}
+
+// ══ COMPOSIÇÃO — "Campos do Amanhecer" — 32 compassos ═══
+// 4 secoes de 8 compassos — todas notas do acorde (chord tones)
+// Secao A: Tema  |  B: Desenvolvimento  |  C: Contraste  |  D: Climax
+// Progressao: I-IV-vi-V (A/B/D)  e  vi-IV-I-V-vi-ii-V-I (C)
+var BGM_MELODY = [
+  // ── SECAO A — Tema Principal (compassos 1-8) ────────────
+  // C1 C maior:  E G C
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_H],
+  // C2 F maior:  F A C
+  [N.F5,BGM_Q],[N.A5,BGM_Q],[N.C6,BGM_H],
+  // C3 La menor: C A E A
+  [N.C6,BGM_Q],[N.A5,BGM_Q],[N.E5,BGM_Q],[N.A5,BGM_Q],
+  // C4 G maior:  G B D
+  [N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_H],
+  // C5 C maior:  arpejo C E G C
+  [N.C5,BGM_Q],[N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_Q],
+  // C6 F maior:  A C F
+  [N.A5,BGM_Q],[N.C6,BGM_Q],[N.F5,BGM_H],
+  // C7 G maior:  B G D
+  [N.B5,BGM_Q],[N.G5,BGM_Q],[N.D5,BGM_H],
+  // C8 C maior:  resolve
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_H],
+
+  // ── SECAO B — Desenvolvimento (compassos 9-16) ──────────
+  // C9  C maior: C G E
+  [N.C6,BGM_Q],[N.G5,BGM_Q],[N.E5,BGM_H],
+  // C10 F maior: A F A
+  [N.A5,BGM_Q],[N.F5,BGM_Q],[N.A5,BGM_H],
+  // C11 La menor: E A C
+  [N.E5,BGM_Q],[N.A5,BGM_Q],[N.C6,BGM_H],
+  // C12 G maior: G D B
+  [N.G5,BGM_Q],[N.D5,BGM_Q],[N.B4,BGM_H],
+  // C13 C maior: E C G E  (volta ao baixo)
+  [N.E5,BGM_Q],[N.C5,BGM_Q],[N.G5,BGM_Q],[N.E5,BGM_Q],
+  // C14 F maior: C A F
+  [N.C6,BGM_Q],[N.A5,BGM_Q],[N.F5,BGM_H],
+  // C15 G maior: D G B
+  [N.D5,BGM_Q],[N.G5,BGM_Q],[N.B5,BGM_H],
+  // C16 C maior: resolve
+  [N.G5,BGM_Q],[N.E5,BGM_Q],[N.C6,BGM_H],
+
+  // ── SECAO C — Contraste (compassos 17-24) ───────────────
+  // C17 La menor: A C E
+  [N.A5,BGM_Q],[N.C6,BGM_Q],[N.E5,BGM_H],
+  // C18 F maior: C A F
+  [N.C6,BGM_Q],[N.A5,BGM_Q],[N.F5,BGM_H],
+  // C19 C maior: G E C
+  [N.G5,BGM_Q],[N.E5,BGM_Q],[N.C5,BGM_H],
+  // C20 G maior: B D G B  (ascendente dramatico)
+  [N.B4,BGM_Q],[N.D5,BGM_Q],[N.G5,BGM_Q],[N.B5,BGM_Q],
+  // C21 La menor: E A C
+  [N.E5,BGM_Q],[N.A5,BGM_Q],[N.C6,BGM_H],
+  // C22 Re menor: D F A
+  [N.D5,BGM_Q],[N.F5,BGM_Q],[N.A5,BGM_H],
+  // C23 G maior: G B D
+  [N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_H],
+  // C24 C maior: resolve
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_H],
+
+  // ── SECAO D — Climax (compassos 25-32) ──────────────────
+  // C25 F maior: F A C  (inicia no IV — tensao do climax)
+  [N.F5,BGM_Q],[N.A5,BGM_Q],[N.C6,BGM_H],
+  // C26 G maior: G B D
+  [N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_H],
+  // C27 La menor: A E C  (recapitula vi)
+  [N.A5,BGM_Q],[N.E5,BGM_Q],[N.C6,BGM_H],
+  // C28 G maior: B G B D  (tensao maxima — semi-cadencia)
+  [N.B5,BGM_Q],[N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_Q],
+  // C29 C maior: C E G C  (resolucao ascendente — climax)
+  [N.C5,BGM_Q],[N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_Q],
+  // C30 F maior: A C F
+  [N.A5,BGM_Q],[N.C6,BGM_Q],[N.F5,BGM_H],
+  // C31 G maior: G D B
+  [N.G5,BGM_Q],[N.D5,BGM_Q],[N.B4,BGM_H],
+  // C32 C maior: resolucao final longa
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_H],
+
+  // ── SECAO E — Nova Cor com Em (compassos 33-40) ──────────
+  // C33 C maior: G E C
+  [N.G5,BGM_Q],[N.E5,BGM_Q],[N.C6,BGM_H],
+  // C34 Em menor: E G B
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.B5,BGM_H],
+  // C35 F maior: A C F
+  [N.A5,BGM_Q],[N.C6,BGM_Q],[N.F5,BGM_H],
+  // C36 G maior: D G B D
+  [N.D5,BGM_Q],[N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_Q],
+  // C37 C maior: C E G
+  [N.C6,BGM_Q],[N.E5,BGM_Q],[N.G5,BGM_H],
+  // C38 Em menor: G B E
+  [N.G5,BGM_Q],[N.B5,BGM_Q],[N.E5,BGM_H],
+  // C39 La menor: A E C
+  [N.A5,BGM_Q],[N.E5,BGM_Q],[N.C6,BGM_H],
+  // C40 G maior: resolve secao
+  [N.G5,BGM_Q],[N.D5,BGM_Q],[N.B5,BGM_H],
+
+  // ── SECAO F — Coda Rica (compassos 41-48) ────────────────
+  // C41 C maior: C E G C (ascendente)
+  [N.C5,BGM_Q],[N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_Q],
+  // C42 F maior: F A C
+  [N.F5,BGM_Q],[N.A5,BGM_Q],[N.C6,BGM_H],
+  // C43 Em menor: E B G
+  [N.E5,BGM_Q],[N.B4,BGM_Q],[N.G5,BGM_H],
+  // C44 La menor: A C E
+  [N.A5,BGM_Q],[N.C6,BGM_Q],[N.E5,BGM_H],
+  // C45 Re menor: D F A
+  [N.D5,BGM_Q],[N.F5,BGM_Q],[N.A5,BGM_H],
+  // C46 G maior: G B D
+  [N.G5,BGM_Q],[N.B5,BGM_Q],[N.D5,BGM_H],
+  // C47 C maior: E G C E
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_Q],[N.E5,BGM_Q],
+  // C48 C maior: resolucao final longa
+  [N.E5,BGM_Q],[N.G5,BGM_Q],[N.C6,BGM_H],
+];
+
+// Acordes — gerados por progresso (2 ataques por compasso: tempos 1 e 3)
+// Voicings abertos: baixo + 3 notas do acorde em posicao espalhada
+var BGM_CHORDS = (function() {
+  var C  = [N.C3,N.E4,N.G4,N.C5];
+  var F  = [N.F3,N.A4,N.C5,N.F5];
+  var Am = [N.A3,N.E4,N.A4,N.C5];
+  var G  = [N.G3,N.B4,N.D5,N.G5];
+  var Dm = [N.D3,N.A4,N.D5,N.F5];
+  var Em = [N.E3,N.G4,N.B4,N.E5]; // iii grau — nova cor
+  // progressao: 48 compassos (6 secoes x 8 compassos)
+  var prog = [
+    C, F,  Am, G,  C,  F,  G,  C,  // Secao A — tema principal
+    C, F,  Am, G,  C,  F,  G,  C,  // Secao B — variacao na melodia
+    Am,F,  C,  G,  Am, Dm, G,  C,  // Secao C — contraste (ii/Dm)
+    F, G,  Am, G,  C,  F,  G,  C,  // Secao D — climax
+    C, Em, F,  G,  C,  Em, Am, G,  // Secao E — nova cor com Em (iii)
+    C, F,  Em, Am, Dm, G,  C,  C,  // Secao F — coda rica, resolucao final
+  ];
+  var out = [];
+  var DUR  = BGM_Q * 1.9 / 1000;
+  var DURL = BGM_Q * 3.9 / 1000; // acorde longo nos finais de secao
+  for (var i = 0; i < prog.length; i++) {
+    var b    = BGM_Q * i * 4;
+    var last = (i === 7 || i === 15 || i === 23 || i === 31 || i === 39 || i === 47);
+    out.push({beat: b,             ch: prog[i], dur: DUR});
+    out.push({beat: b + BGM_Q * 2, ch: prog[i], dur: last ? DURL : DUR});
+  }
+  return out;
+})();
+
+// Lookahead scheduler — agenda só notas dentro da janela à frente
+var BGM_LOOKAHEAD = 0.30;  // 300ms de antecipação (buffer maior = menos engasgos)
+var BGM_SCHED_INT = 50;    // tick a cada 50ms
+var bgmNoteList   = [];    // lista plana ordenada: {t, freq, dur, type, freqs}
+var bgmNoteIdx    = 0;
+var bgmLoopStart  = 0;
+
+function bgmBuildNoteList() {
+  var notes = [];
+  // Melodia — preenche BGM_BEATS semínimas exatas
+  var t = 0, targetMs = BGM_Q * BGM_BEATS, mi = 0;
+  while (t < targetMs) {
+    var note = BGM_MELODY[mi % BGM_MELODY.length];
+    var remaining = targetMs - t;
+    var durMs = Math.min(note[1], remaining);
+    if (note[0] > 0)
+      notes.push({t: t/1000, freq: note[0], dur: durMs/1000, type: 'mel'});
+    t += durMs; mi++;
+  }
+  // Acordes
+  for (var ci = 0; ci < BGM_CHORDS.length; ci++) {
+    var c = BGM_CHORDS[ci];
+    notes.push({t: c.beat/1000, freqs: c.ch, dur: c.dur, type: 'chd'});
+  }
+  // Linha de baixo: root do acorde no tempo 1 de cada compasso (indices pares)
+  for (var bi = 0; bi < BGM_CHORDS.length; bi += 2) {
+    var bc = BGM_CHORDS[bi];
+    notes.push({t: bc.beat/1000, freq: bc.ch[0], dur: BGM_Q * 3.8 / 1000, type: 'bas'});
+  }
+  notes.sort(function(a, b) { return a.t - b.t; });
+  return notes;
+}
+
+function bgmRunScheduler() {
+  if (!musicIsPlaying) return;
+  var ctx     = getAudioCtx();
+  var now     = ctx.currentTime;
+  var horizon = now + BGM_LOOKAHEAD;
+
+  // Agendar fade de transicao do loop (2 compassos antes do fim, uma vez por loop)
+  var fadePoint = bgmLoopStart + BGM_DUR_S - BGM_Q * 8 / 1000;
+  if (!bgmFadeScheduled && musicFadeGain && fadePoint <= horizon) {
+    bgmFadeScheduled = true;
+    var loopEnd    = bgmLoopStart + BGM_DUR_S;
+    var nextStart  = loopEnd;
+    musicFadeGain.gain.cancelScheduledValues(fadePoint - 0.05);
+    musicFadeGain.gain.setValueAtTime(1.0, Math.max(now, fadePoint));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.setValueAtTime(0.12, nextStart);
+    musicFadeGain.gain.linearRampToValueAtTime(1.0, nextStart + BGM_Q * 2 / 1000);
+  }
+
+  while (bgmNoteIdx < bgmNoteList.length) {
+    var n   = bgmNoteList[bgmNoteIdx];
+    var abs = bgmLoopStart + n.t;
+    if (abs > horizon) break;
+    bgmNoteIdx++;
+    if (abs < now - 0.01) continue; // nota ja no passado — pula
+    var delay = Math.max(0, (abs - now) * 1000);
+    // Variacao dinamica por secao
+    var barIdx  = Math.floor(n.t * 1000 / (BGM_Q * 4));
+    var dynMult = 1.0;
+    if (barIdx >= 16 && barIdx < 24) dynMult = 0.82; // Secao C — contraste, suave
+    if (barIdx >= 24 && barIdx < 32) dynMult = 1.12; // Secao D — climax, intenso
+    if (barIdx >= 40)                dynMult = 0.90; // Secao F — coda, relaxa
+    if      (n.type === 'mel') bgmPianoNote(n.freq, n.dur, 0.035 * dynMult, delay);
+    else if (n.type === 'chd') bgmChord(n.freqs, n.dur, dynMult, delay);
+    else if (n.type === 'bas') bgmBassNote(n.freq, n.dur, 0.038 * dynMult, delay);
+  }
+
+  // Fim do loop — reinicia com tempo absoluto preciso
+  if (bgmNoteIdx >= bgmNoteList.length) {
+    var nextLoopStart = bgmLoopStart + BGM_DUR_S;
+    if (nextLoopStart <= horizon + 0.05) {
+      bgmLoopStart     = nextLoopStart;
+      bgmNoteIdx       = 0;
+      bgmFadeScheduled = false;
+    }
+  }
+
+  musicLoopTimeout = setTimeout(bgmRunScheduler, BGM_SCHED_INT);
+}
+
+function startPhase1Music() {
+  if (musicIsPlaying) return;
+  var ctx = getAudioCtx();
+  ctx.resume().then(function() {
+    if (musicIsPlaying) return;
+    // Compressor compartilhado — 1 unico para toda a musica (muito mais leve)
+    var sharedComp = ctx.createDynamicsCompressor();
+    sharedComp.threshold.value = -16;
+    sharedComp.knee.value      = 10;
+    sharedComp.ratio.value     = 3.5;
+    sharedComp.attack.value    = 0.003;
+    sharedComp.release.value   = 0.20;
+    musicMasterGain = ctx.createGain();
+    var sliderEl = document.getElementById('volSlider');
+    var initVol  = sliderEl ? parseFloat(sliderEl.value) : 0.75;
+    musicMasterGain.gain.value = soundEnabled ? initVol : 0;
+    musicFadeGain = ctx.createGain();
+    musicFadeGain.gain.value = 1.0;
+    musicMasterGain.connect(musicFadeGain);
+    musicFadeGain.connect(sharedComp);
+    sharedComp.connect(ctx.destination);
+    musicReverbNode = createMusicReverb(ctx, 2.2);
+    musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying   = true;
+    bgmFadeScheduled = false;
+    bgmNoteList  = bgmBuildNoteList();
+    bgmNoteIdx   = 0;
+    bgmLoopStart = ctx.currentTime + 0.10;
+    bgmRunScheduler();
+  });
+}
+
+function stopBgMusic() {
+  musicIsPlaying   = false;
+  bgmFadeScheduled = false;
+  clearTimeout(musicLoopTimeout);
+  musicLoopTimeout = null;
+  musicMasterGain  = null;
+  musicFadeGain    = null;
+  musicReverbNode  = null;
+}
+
+function toggleMute() {
+  soundEnabled = !soundEnabled;
+  document.getElementById('muteBtn').textContent = soundEnabled ? '🔊' : '🔇';
+  if (musicMasterGain && audioCtx) {
+    var sliderEl = document.getElementById('volSlider');
+    var target   = soundEnabled ? (sliderEl ? parseFloat(sliderEl.value) : 0.75) : 0;
+    musicMasterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, audioCtx.currentTime);
+    musicMasterGain.gain.linearRampToValueAtTime(target, audioCtx.currentTime + 0.35);
+  }
+}
+
+function setVolume(val) {
+  if (soundEnabled && musicMasterGain && audioCtx) {
+    musicMasterGain.gain.cancelScheduledValues(audioCtx.currentTime);
+    musicMasterGain.gain.setValueAtTime(musicMasterGain.gain.value, audioCtx.currentTime);
+    musicMasterGain.gain.linearRampToValueAtTime(val, audioCtx.currentTime + 0.10);
+  }
 }
 
 function playTone(freq, type, duration, volume, startFreq){
@@ -902,10 +1323,11 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
   refreshLockState();
+  stopBgMusic(); startPhase1Music();
 }
 function respawn(){
   lives--; if(isDigging) stopDig();
-  if(lives<=0){state='gameover'; sndGameOver();return;}
+  if(lives<=0){state='gameover'; sndGameOver(); stopBgMusic(); return;}
   pl.x=Math.max(60,camX+80); pl.y=GY-50; pl.vy=0;
 }
 function unlockCaterpillar(){ sndUnlock();
@@ -922,7 +1344,7 @@ function unlockCaterpillarButterfly(){ sndUnlock();
   document.getElementById('caterpillar-lock').style.display='none';
   showMobileUnlock('Lagartinha','🐛','mpanel-caterpillar');
 }
-function beginPhase2(){ sndPhase2Start();//
+function beginPhase2(){ stopBgMusic(); sndPhase2Start();//
   phase=2; state='playing';
   tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0;
@@ -941,7 +1363,7 @@ function unlockFrog(){ sndUnlock();
   document.getElementById('frog-lock').style.display='none';
   showMobileUnlock('Sapinho','🐸','mpanel-frog');
 }
-function beginPhase3(){ sndPhase3Start();
+function beginPhase3(){ stopBgMusic(); sndPhase3Start();
   phase=3; state='playing';
   tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
@@ -952,7 +1374,7 @@ function beginPhase3(){ sndPhase3Start();
   document.getElementById('btn-cat').classList.add('active');
 }
 function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
-  sndPhase4Start();
+  stopBgMusic(); sndPhase4Start();
   phase=4; state='playing';
   tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';
@@ -963,7 +1385,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   document.getElementById('btn-cat').classList.add('active');
 }
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
-  sndPhase5Start();
+  stopBgMusic(); sndPhase5Start();
   phase=5; state='playing';
   tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='frog'; // Começa com Sapinho
@@ -976,7 +1398,7 @@ function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
 }
 // ── Update ────────────────────────────────────────────────────────────────────
 function beginPhase6(){
-  sndPhase6Start();
+  stopBgMusic(); sndPhase6Start();
   phase=6; state='playing';
   tutorialTimer=420;
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='caterpillar'; pl.w=48; pl.h=52;
