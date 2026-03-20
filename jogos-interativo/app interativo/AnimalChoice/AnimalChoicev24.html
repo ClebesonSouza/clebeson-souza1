@@ -2368,7 +2368,7 @@ function genP7Flowers(){
   pollenChargingFlower=null;
   beeCardTimer=0;
 
-  var bouquetPositions=[200, 1050, 2000, 3150, 4550];
+  var bouquetPositions=[200, 1050, 2200, 3150, 4550];
   var colors=[
     {open:'#FF6B6B',closed:'#C2185B',petals:['#FF6B6B','#FF8E53','#FFD700','#FF6B6B']},
     {open:'#7C4DFF',closed:'#4527A0',petals:['#7C4DFF','#E040FB','#B39DDB','#7C4DFF']},
@@ -4305,6 +4305,11 @@ function drawP3UnlockStars(){
 function drawPlayer(){
   if(phase===6&&metamorphState!=='none'&&metamorphState!=='done') return;
   var def=CHARS[pl.char], sx=pl.x-camX, sy=pl.y, cx=sx+pl.w/2, cy=sy+pl.h/2;
+  // When collecting pollen, land visually on top of the source flower
+  if(phase===7&&pollenChargingFlower&&(pl.char==='butterfly'||pl.char==='bee')){
+    cx=pollenChargingFlower.x-camX;
+    cy=pollenChargingFlower.y-18;
+  }
   switch(pl.char){
     case 'cat':         drawCat(cx,cy,def);         break;
     case 'dog':         drawDog(cx,cy,def);         break;
