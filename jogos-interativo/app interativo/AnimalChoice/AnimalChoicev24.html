@@ -1773,6 +1773,7 @@ var CHARS = {
 var state='menu', phase=1, camX=0, score=0, lives=3, webStuck=0;
 var nextBonusLife=20; // próxima marca de moedas para ganhar vida
 var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
+var gameZeroed=false; // true quando o jogador zera o jogo nessa sessao
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
 var frogUnlocked=false, frogLongJump=false, frogTongue=0;
@@ -2116,10 +2117,7 @@ function groundAt(x){// funcao para verificar se tem chao em determinada posicao
 // ── LOCALSTORAGE ────────────────────────────────────────────────────────────
 function saveProgress(){
   try{
-    localStorage.setItem('ac_tatu', catUnlocked?'1':'0');
-    localStorage.setItem('ac_frog', frogUnlocked?'1':'0');
-    localStorage.setItem('ac_caterpillar', caterpillarUnlocked?'1':'0');
-    localStorage.setItem('ac_butterfly', butterflyUnlocked?'1':'0');
+    // personagens nao sao salvos — desbloqueios existem apenas na sessao atual
     var best=parseInt(localStorage.getItem('ac_best')||'0');
     if(score>best) localStorage.setItem('ac_best', score);
     localStorage.setItem('ac_version','v4');
@@ -2136,22 +2134,7 @@ function loadProgress(){
       localStorage.setItem('ac_version', SAVE_VERSION);
       return; // personagens ficam bloqueados
     }
-    catUnlocked        = localStorage.getItem('ac_tatu')==='1';
-    frogUnlocked       = localStorage.getItem('ac_frog')==='1';
-    caterpillarUnlocked= localStorage.getItem('ac_caterpillar')==='1';
-    butterflyUnlocked  = localStorage.getItem('ac_butterfly')==='1';
-    if(catUnlocked){
-      var bt=document.getElementById('btn-tatu'); if(bt) bt.classList.remove('locked');
-      var lt=document.getElementById('cat-lock'); if(lt) lt.style.display='none';
-    }
-    if(frogUnlocked){
-      var bf=document.getElementById('btn-frog'); if(bf) bf.classList.remove('locked');
-      var lf=document.getElementById('frog-lock'); if(lf) lf.style.display='none';
-    }
-    if(caterpillarUnlocked){
-      var bc=document.getElementById('btn-caterpillar'); if(bc) bc.classList.remove('locked');
-      var lc=document.getElementById('caterpillar-lock'); if(lc) lc.style.display='none';
-    }
+    // personagens nao sao carregados — sempre iniciam bloqueados ao abrir a pagina
   }catch(e){}
 }
 // ── FIM LOCALSTORAGE ─────────────────────────────────────────────────────────
@@ -2179,8 +2162,10 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   caterpillarBarrierStarsCollected=0;
   genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
   p6.speedGates.forEach(function(g){g.passed=false;});
-  catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false;
-  butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
+  if(!gameZeroed){
+    catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false; butterflyUnlocked=false;
+  }
+  metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
@@ -2546,8 +2531,9 @@ function update(){
     } else if(phase===5){ state='phase6intro';
     } else {
       state='win'; sndVictory();
+      gameZeroed=true;
       catUnlocked=true; frogUnlocked=true; caterpillarUnlocked=true; butterflyUnlocked=true;
-      refreshLockState(); saveProgress();
+      refreshLockState();
     }
   }
 
