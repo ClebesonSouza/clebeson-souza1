@@ -1029,6 +1029,515 @@ function startPhase3Music() {
   });
 }
 
+// ════════════════════════════════════════════════════════
+//  MÚSICA FASE 4 — Selva Perigosa
+//  432 Hz · Ré menor · 185 BPM · 32 compassos · Loop
+// ════════════════════════════════════════════════════════
+var BGM4_BPM   = 185;
+var BGM4_Q     = Math.round(60000 / BGM4_BPM); // ~324 ms
+var BGM4_H     = BGM4_Q * 2;
+var BGM4_BEATS = 128; // 32 compassos × 4 tempos
+var BGM4_DUR_S = BGM4_Q * BGM4_BEATS / 1000;  // ~41.6 s
+
+var BGM4_MELODY = [
+  // ── SECAO A — Tema Selva (c.1-8) ────────────────────
+  [N.D5,BGM4_Q],[N.F5,BGM4_Q],[N.A5,BGM4_H],
+  [N.C6,BGM4_Q],[N.A5,BGM4_Q],[N.F5,BGM4_H],
+  [N.G5,BGM4_Q],[N.E5,BGM4_Q],[N.C6,BGM4_H],
+  [N.A5,BGM4_Q],[N.E5,BGM4_Q],[N.A5,BGM4_H],
+  [N.D5,BGM4_Q],[N.A5,BGM4_Q],[N.F5,BGM4_Q],[N.D5,BGM4_Q],
+  [N.F5,BGM4_Q],[N.C6,BGM4_Q],[N.A5,BGM4_H],
+  [N.G5,BGM4_Q],[N.B5,BGM4_Q],[N.D5,BGM4_H],
+  [N.A5,BGM4_Q],[N.C6,BGM4_Q],[N.A5,BGM4_H],
+  // ── SECAO B — Peril (c.9-16) ─────────────────────────
+  [N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.D5,BGM4_H],
+  [N.C6,BGM4_Q],[N.G5,BGM4_Q],[N.E5,BGM4_H],
+  [N.A5,BGM4_Q],[N.E5,BGM4_Q],[N.C6,BGM4_H],
+  [N.G5,BGM4_Q],[N.B5,BGM4_Q],[N.G5,BGM4_H],
+  [N.D5,BGM4_Q],[N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.F5,BGM4_Q],
+  [N.E5,BGM4_Q],[N.G5,BGM4_Q],[N.C6,BGM4_H],
+  [N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.C6,BGM4_H],
+  [N.D5,BGM4_Q],[N.A5,BGM4_Q],[N.D5,BGM4_H],
+  // ── SECAO C — Tensao (c.17-24) ────────────────────────
+  [N.A5,BGM4_Q],[N.C6,BGM4_Q],[N.E5,BGM4_H],
+  [N.G5,BGM4_Q],[N.D5,BGM4_Q],[N.B5,BGM4_H],
+  [N.C6,BGM4_Q],[N.A5,BGM4_Q],[N.F5,BGM4_H],
+  [N.D5,BGM4_Q],[N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.D5,BGM4_Q],
+  [N.E5,BGM4_Q],[N.A5,BGM4_Q],[N.C6,BGM4_H],
+  [N.F5,BGM4_Q],[N.D5,BGM4_Q],[N.A5,BGM4_H],
+  [N.G5,BGM4_Q],[N.F5,BGM4_Q],[N.E5,BGM4_H],
+  [N.A5,BGM4_Q],[N.E5,BGM4_Q],[N.A5,BGM4_H],
+  // ── SECAO D — Coda (c.25-32) ──────────────────────────
+  [N.D5,BGM4_Q],[N.A5,BGM4_Q],[N.F5,BGM4_H],
+  [N.C6,BGM4_Q],[N.E5,BGM4_Q],[N.G5,BGM4_H],
+  [N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.C6,BGM4_H],
+  [N.B5,BGM4_Q],[N.G5,BGM4_Q],[N.D5,BGM4_H],
+  [N.A5,BGM4_Q],[N.E5,BGM4_Q],[N.A5,BGM4_Q],[N.C6,BGM4_Q],
+  [N.F5,BGM4_Q],[N.A5,BGM4_Q],[N.D5,BGM4_H],
+  [N.G5,BGM4_Q],[N.B5,BGM4_Q],[N.G5,BGM4_H],
+  [N.D5,BGM4_Q],[N.F5,BGM4_Q],[N.D5,BGM4_H],
+];
+
+var BGM4_CHORDS = (function() {
+  var Dm = [N.D3, N.A4, N.D5, N.F5];
+  var F  = [N.F3, N.C5, N.F5, N.A5];
+  var C  = [N.C3, N.G4, N.C5, N.E5];
+  var Am = [N.A3, N.E4, N.A4, N.C5];
+  var G  = [N.G3, N.D4, N.G4, N.B4];
+  var prog = [
+    Dm, F,  C,  Am, Dm, F,  G,  Am, // Secao A
+    Dm, C,  Am, G,  Dm, C,  F,  Dm, // Secao B
+    Am, G,  F,  Dm, Am, F,  C,  Am, // Secao C
+    Dm, C,  F,  G,  Am, Dm, G,  Dm, // Secao D
+  ];
+  var out  = [];
+  var DUR  = BGM4_Q * 1.9 / 1000;
+  var DURL = BGM4_Q * 3.9 / 1000;
+  for (var i = 0; i < prog.length; i++) {
+    var b    = BGM4_Q * i * 4;
+    var last = (i===7||i===15||i===23||i===31);
+    out.push({beat: b,           ch: prog[i], dur: DUR});
+    out.push({beat: b+BGM4_Q*2, ch: prog[i], dur: last ? DURL : DUR});
+  }
+  return out;
+})();
+
+function bgm4BuildNoteList() {
+  var notes = [];
+  var t = 0, targetMs = BGM4_Q * BGM4_BEATS, mi = 0;
+  while (t < targetMs) {
+    var note = BGM4_MELODY[mi % BGM4_MELODY.length];
+    var remaining = targetMs - t;
+    var durMs = Math.min(note[1], remaining);
+    if (note[0] > 0)
+      notes.push({t: t/1000, freq: note[0], dur: durMs/1000, type: 'mel'});
+    t += durMs; mi++;
+  }
+  for (var ci = 0; ci < BGM4_CHORDS.length; ci++) {
+    var c = BGM4_CHORDS[ci];
+    notes.push({t: c.beat/1000, freqs: c.ch, dur: c.dur, type: 'chd'});
+  }
+  for (var bi = 0; bi < BGM4_CHORDS.length; bi += 2) {
+    var bc = BGM4_CHORDS[bi];
+    notes.push({t: bc.beat/1000, freq: bc.ch[0], dur: BGM4_Q * 3.8 / 1000, type: 'bas'});
+  }
+  notes.sort(function(a, b) { return a.t - b.t; });
+  return notes;
+}
+
+function bgm4RunScheduler() {
+  if (!musicIsPlaying) return;
+  var ctx     = getAudioCtx();
+  var now     = ctx.currentTime;
+  var horizon = now + BGM_LOOKAHEAD;
+  var fadePoint = bgmLoopStart + BGM4_DUR_S - BGM4_Q * 8 / 1000;
+  if (!bgmFadeScheduled && musicFadeGain && fadePoint <= horizon) {
+    bgmFadeScheduled = true;
+    var loopEnd = bgmLoopStart + BGM4_DUR_S;
+    musicFadeGain.gain.cancelScheduledValues(fadePoint - 0.05);
+    musicFadeGain.gain.setValueAtTime(1.0, Math.max(now, fadePoint));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.setValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.linearRampToValueAtTime(1.0, loopEnd + BGM4_Q * 2 / 1000);
+  }
+  while (bgmNoteIdx < bgmNoteList.length) {
+    var n   = bgmNoteList[bgmNoteIdx];
+    var abs = bgmLoopStart + n.t;
+    if (abs > horizon) break;
+    bgmNoteIdx++;
+    if (abs < now - 0.01) continue;
+    var delay   = Math.max(0, (abs - now) * 1000);
+    var barIdx  = Math.floor(n.t * 1000 / (BGM4_Q * 4));
+    var dynMult = 1.0;
+    if (barIdx >= 8  && barIdx < 16) dynMult = 1.10; // Secao B — mais intenso
+    if (barIdx >= 16 && barIdx < 24) dynMult = 1.18; // Secao C — climax
+    if (barIdx >= 24)                dynMult = 0.90; // Secao D — coda
+    if      (n.type === 'mel') bgmPianoNote(n.freq, n.dur, 0.034 * dynMult, delay);
+    else if (n.type === 'chd') bgmChord(n.freqs, n.dur, dynMult, delay);
+    else if (n.type === 'bas') bgmBassNote(n.freq, n.dur, 0.038 * dynMult, delay);
+  }
+  if (bgmNoteIdx >= bgmNoteList.length) {
+    var nextLoopStart = bgmLoopStart + BGM4_DUR_S;
+    if (nextLoopStart <= horizon + 0.05) {
+      bgmLoopStart     = nextLoopStart;
+      bgmNoteIdx       = 0;
+      bgmFadeScheduled = false;
+    }
+  }
+  musicLoopTimeout = setTimeout(bgm4RunScheduler, BGM_SCHED_INT);
+}
+
+function startPhase4Music() {
+  if (musicIsPlaying) return;
+  var ctx = getAudioCtx();
+  ctx.resume().then(function() {
+    if (musicIsPlaying) return;
+    var sharedComp = ctx.createDynamicsCompressor();
+    sharedComp.threshold.value = -16;
+    sharedComp.knee.value      = 10;
+    sharedComp.ratio.value     = 3.5;
+    sharedComp.attack.value    = 0.003;
+    sharedComp.release.value   = 0.20;
+    musicMasterGain = ctx.createGain();
+    var sliderEl = document.getElementById('volSlider');
+    var initVol  = sliderEl ? parseFloat(sliderEl.value) : 0.75;
+    musicMasterGain.gain.value = soundEnabled ? initVol : 0;
+    musicFadeGain = ctx.createGain();
+    musicFadeGain.gain.value = 1.0;
+    musicMasterGain.connect(musicFadeGain);
+    musicFadeGain.connect(sharedComp);
+    sharedComp.connect(ctx.destination);
+    musicReverbNode = createMusicReverb(ctx, 1.8); // reverb curto — selva abafada
+    musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying   = true;
+    bgmFadeScheduled = false;
+    bgmNoteList  = bgm4BuildNoteList();
+    bgmNoteIdx   = 0;
+    bgmLoopStart = ctx.currentTime + 0.10;
+    bgm4RunScheduler();
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  MÚSICA FASE 5 — Pântano Sombrio
+//  432 Hz · Lá menor · 155 BPM · 32 compassos · Loop
+// ════════════════════════════════════════════════════════
+var BGM5_BPM   = 155;
+var BGM5_Q     = Math.round(60000 / BGM5_BPM); // ~387 ms
+var BGM5_H     = BGM5_Q * 2;
+var BGM5_BEATS = 128;
+var BGM5_DUR_S = BGM5_Q * BGM5_BEATS / 1000;  // ~49.5 s
+
+var BGM5_MELODY = [
+  // ── SECAO A — Pantano (c.1-8) ─────────────────────────
+  [N.A5,BGM5_Q],[N.C6,BGM5_Q],[N.E5,BGM5_H],
+  [N.G5,BGM5_Q],[N.E5,BGM5_Q],[N.C6,BGM5_H],
+  [N.D5,BGM5_Q],[N.F5,BGM5_Q],[N.A5,BGM5_H],
+  [N.G5,BGM5_Q],[N.B5,BGM5_Q],[N.D5,BGM5_H],
+  [N.A5,BGM5_Q],[N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_Q],
+  [N.F5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_H],
+  [N.E5,BGM5_Q],[N.G5,BGM5_Q],[N.B5,BGM5_H],
+  [N.A5,BGM5_Q],[N.C6,BGM5_Q],[N.A5,BGM5_H],
+  // ── SECAO B — Sombras (c.9-16) ────────────────────────
+  [N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_H],
+  [N.D5,BGM5_Q],[N.F5,BGM5_Q],[N.A5,BGM5_H],
+  [N.G5,BGM5_Q],[N.B5,BGM5_Q],[N.D5,BGM5_H],
+  [N.C6,BGM5_Q],[N.E5,BGM5_Q],[N.G5,BGM5_H],
+  [N.A5,BGM5_Q],[N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.G5,BGM5_Q],
+  [N.F5,BGM5_Q],[N.C6,BGM5_Q],[N.A5,BGM5_H],
+  [N.D5,BGM5_Q],[N.A5,BGM5_Q],[N.F5,BGM5_H],
+  [N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.A5,BGM5_H],
+  // ── SECAO C — Misterio (c.17-24) ──────────────────────
+  [N.C6,BGM5_Q],[N.A5,BGM5_Q],[N.E5,BGM5_H],
+  [N.B5,BGM5_Q],[N.G5,BGM5_Q],[N.E5,BGM5_H],
+  [N.A5,BGM5_Q],[N.F5,BGM5_Q],[N.C6,BGM5_H],
+  [N.G5,BGM5_Q],[N.D5,BGM5_Q],[N.B5,BGM5_Q],[N.G5,BGM5_Q],
+  [N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_H],
+  [N.D5,BGM5_Q],[N.A5,BGM5_Q],[N.F5,BGM5_H],
+  [N.G5,BGM5_Q],[N.E5,BGM5_Q],[N.C6,BGM5_H],
+  [N.A5,BGM5_Q],[N.C6,BGM5_Q],[N.A5,BGM5_H],
+  // ── SECAO D — Coda (c.25-32) ──────────────────────────
+  [N.A5,BGM5_Q],[N.G5,BGM5_Q],[N.E5,BGM5_H],
+  [N.D5,BGM5_Q],[N.F5,BGM5_Q],[N.A5,BGM5_H],
+  [N.C6,BGM5_Q],[N.A5,BGM5_Q],[N.F5,BGM5_H],
+  [N.G5,BGM5_Q],[N.B5,BGM5_Q],[N.D5,BGM5_H],
+  [N.E5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_Q],[N.A5,BGM5_Q],
+  [N.F5,BGM5_Q],[N.A5,BGM5_Q],[N.C6,BGM5_H],
+  [N.G5,BGM5_Q],[N.B5,BGM5_Q],[N.E5,BGM5_H],
+  [N.A5,BGM5_Q],[N.E5,BGM5_Q],[N.A5,BGM5_H],
+];
+
+var BGM5_CHORDS = (function() {
+  var Am = [N.A3, N.E4, N.A4, N.C5];
+  var C  = [N.C3, N.G4, N.C5, N.E5];
+  var Dm = [N.D3, N.A4, N.D5, N.F5];
+  var G  = [N.G3, N.D4, N.G4, N.B4];
+  var F  = [N.F3, N.C5, N.F5, N.A5];
+  var Em = [N.E3, N.G4, N.B4, N.E5];
+  var prog = [
+    Am, C,  Dm, G,  Am, F,  Em, Am, // Secao A
+    Am, Dm, G,  C,  Am, F,  Dm, Am, // Secao B
+    Am, Em, F,  G,  Am, Dm, C,  Am, // Secao C
+    Am, Dm, F,  G,  Am, F,  Em, Am, // Secao D
+  ];
+  var out  = [];
+  var DUR  = BGM5_Q * 1.9 / 1000;
+  var DURL = BGM5_Q * 3.9 / 1000;
+  for (var i = 0; i < prog.length; i++) {
+    var b    = BGM5_Q * i * 4;
+    var last = (i===7||i===15||i===23||i===31);
+    out.push({beat: b,           ch: prog[i], dur: DUR});
+    out.push({beat: b+BGM5_Q*2, ch: prog[i], dur: last ? DURL : DUR});
+  }
+  return out;
+})();
+
+function bgm5BuildNoteList() {
+  var notes = [];
+  var t = 0, targetMs = BGM5_Q * BGM5_BEATS, mi = 0;
+  while (t < targetMs) {
+    var note = BGM5_MELODY[mi % BGM5_MELODY.length];
+    var remaining = targetMs - t;
+    var durMs = Math.min(note[1], remaining);
+    if (note[0] > 0)
+      notes.push({t: t/1000, freq: note[0], dur: durMs/1000, type: 'mel'});
+    t += durMs; mi++;
+  }
+  for (var ci = 0; ci < BGM5_CHORDS.length; ci++) {
+    var c = BGM5_CHORDS[ci];
+    notes.push({t: c.beat/1000, freqs: c.ch, dur: c.dur, type: 'chd'});
+  }
+  for (var bi = 0; bi < BGM5_CHORDS.length; bi += 2) {
+    var bc = BGM5_CHORDS[bi];
+    notes.push({t: bc.beat/1000, freq: bc.ch[0], dur: BGM5_Q * 3.8 / 1000, type: 'bas'});
+  }
+  notes.sort(function(a, b) { return a.t - b.t; });
+  return notes;
+}
+
+function bgm5RunScheduler() {
+  if (!musicIsPlaying) return;
+  var ctx     = getAudioCtx();
+  var now     = ctx.currentTime;
+  var horizon = now + BGM_LOOKAHEAD;
+  var fadePoint = bgmLoopStart + BGM5_DUR_S - BGM5_Q * 8 / 1000;
+  if (!bgmFadeScheduled && musicFadeGain && fadePoint <= horizon) {
+    bgmFadeScheduled = true;
+    var loopEnd = bgmLoopStart + BGM5_DUR_S;
+    musicFadeGain.gain.cancelScheduledValues(fadePoint - 0.05);
+    musicFadeGain.gain.setValueAtTime(1.0, Math.max(now, fadePoint));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.setValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.linearRampToValueAtTime(1.0, loopEnd + BGM5_Q * 2 / 1000);
+  }
+  while (bgmNoteIdx < bgmNoteList.length) {
+    var n   = bgmNoteList[bgmNoteIdx];
+    var abs = bgmLoopStart + n.t;
+    if (abs > horizon) break;
+    bgmNoteIdx++;
+    if (abs < now - 0.01) continue;
+    var delay   = Math.max(0, (abs - now) * 1000);
+    var barIdx  = Math.floor(n.t * 1000 / (BGM5_Q * 4));
+    var dynMult = 1.0;
+    if (barIdx >= 8  && barIdx < 16) dynMult = 0.85; // Secao B — mais sombrio
+    if (barIdx >= 16 && barIdx < 24) dynMult = 1.08; // Secao C — misterio
+    if (barIdx >= 24)                dynMult = 0.80; // Secao D — coda suave
+    if      (n.type === 'mel') bgmPianoNote(n.freq, n.dur, 0.031 * dynMult, delay);
+    else if (n.type === 'chd') bgmChord(n.freqs, n.dur, dynMult, delay);
+    else if (n.type === 'bas') bgmBassNote(n.freq, n.dur, 0.035 * dynMult, delay);
+  }
+  if (bgmNoteIdx >= bgmNoteList.length) {
+    var nextLoopStart = bgmLoopStart + BGM5_DUR_S;
+    if (nextLoopStart <= horizon + 0.05) {
+      bgmLoopStart     = nextLoopStart;
+      bgmNoteIdx       = 0;
+      bgmFadeScheduled = false;
+    }
+  }
+  musicLoopTimeout = setTimeout(bgm5RunScheduler, BGM_SCHED_INT);
+}
+
+function startPhase5Music() {
+  if (musicIsPlaying) return;
+  var ctx = getAudioCtx();
+  ctx.resume().then(function() {
+    if (musicIsPlaying) return;
+    var sharedComp = ctx.createDynamicsCompressor();
+    sharedComp.threshold.value = -16;
+    sharedComp.knee.value      = 10;
+    sharedComp.ratio.value     = 3.5;
+    sharedComp.attack.value    = 0.003;
+    sharedComp.release.value   = 0.20;
+    musicMasterGain = ctx.createGain();
+    var sliderEl = document.getElementById('volSlider');
+    var initVol  = sliderEl ? parseFloat(sliderEl.value) : 0.75;
+    musicMasterGain.gain.value = soundEnabled ? initVol : 0;
+    musicFadeGain = ctx.createGain();
+    musicFadeGain.gain.value = 1.0;
+    musicMasterGain.connect(musicFadeGain);
+    musicFadeGain.connect(sharedComp);
+    sharedComp.connect(ctx.destination);
+    musicReverbNode = createMusicReverb(ctx, 3.0); // reverb medio — pantano umido
+    musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying   = true;
+    bgmFadeScheduled = false;
+    bgmNoteList  = bgm5BuildNoteList();
+    bgmNoteIdx   = 0;
+    bgmLoopStart = ctx.currentTime + 0.10;
+    bgm5RunScheduler();
+  });
+}
+
+// ════════════════════════════════════════════════════════
+//  MÚSICA FASE 6 — Jardim da Metamorfose
+//  432 Hz · Dó Maior · 95 BPM · 32 compassos · Loop
+// ════════════════════════════════════════════════════════
+var BGM6_BPM   = 95;
+var BGM6_Q     = Math.round(60000 / BGM6_BPM); // ~632 ms
+var BGM6_H     = BGM6_Q * 2;
+var BGM6_BEATS = 128;
+var BGM6_DUR_S = BGM6_Q * BGM6_BEATS / 1000;  // ~80.8 s
+
+var BGM6_MELODY = [
+  // ── SECAO A — Jardim (c.1-8) ──────────────────────────
+  [N.C5,BGM6_Q],[N.E5,BGM6_Q],[N.G5,BGM6_H],
+  [N.A5,BGM6_Q],[N.E5,BGM6_Q],[N.A5,BGM6_H],
+  [N.F5,BGM6_Q],[N.A5,BGM6_Q],[N.C6,BGM6_H],
+  [N.G5,BGM6_Q],[N.B5,BGM6_Q],[N.D5,BGM6_H],
+  [N.C5,BGM6_Q],[N.G5,BGM6_Q],[N.E5,BGM6_Q],[N.C5,BGM6_Q],
+  [N.A5,BGM6_Q],[N.F5,BGM6_Q],[N.C6,BGM6_H],
+  [N.G5,BGM6_Q],[N.D5,BGM6_Q],[N.B5,BGM6_H],
+  [N.E5,BGM6_Q],[N.C5,BGM6_Q],[N.E5,BGM6_H],
+  // ── SECAO B — Transformacao (c.9-16) ──────────────────
+  [N.E5,BGM6_Q],[N.G5,BGM6_Q],[N.C6,BGM6_H],
+  [N.D5,BGM6_Q],[N.F5,BGM6_Q],[N.A5,BGM6_H],
+  [N.G5,BGM6_Q],[N.B5,BGM6_Q],[N.D5,BGM6_H],
+  [N.C6,BGM6_Q],[N.E5,BGM6_Q],[N.G5,BGM6_H],
+  [N.A5,BGM6_Q],[N.E5,BGM6_Q],[N.A5,BGM6_Q],[N.C6,BGM6_Q],
+  [N.F5,BGM6_Q],[N.A5,BGM6_Q],[N.D5,BGM6_H],
+  [N.G5,BGM6_Q],[N.B5,BGM6_Q],[N.G5,BGM6_H],
+  [N.C6,BGM6_Q],[N.A5,BGM6_Q],[N.C6,BGM6_H],
+  // ── SECAO C — Magia (c.17-24) ─────────────────────────
+  [N.G5,BGM6_Q],[N.E5,BGM6_Q],[N.C5,BGM6_H],
+  [N.B5,BGM6_Q],[N.G5,BGM6_Q],[N.E5,BGM6_H],
+  [N.A5,BGM6_Q],[N.F5,BGM6_Q],[N.C6,BGM6_H],
+  [N.G5,BGM6_Q],[N.D5,BGM6_Q],[N.B5,BGM6_Q],[N.G5,BGM6_Q],
+  [N.C6,BGM6_Q],[N.A5,BGM6_Q],[N.E5,BGM6_H],
+  [N.F5,BGM6_Q],[N.D5,BGM6_Q],[N.A5,BGM6_H],
+  [N.E5,BGM6_Q],[N.G5,BGM6_Q],[N.C6,BGM6_H],
+  [N.G5,BGM6_Q],[N.D5,BGM6_Q],[N.G5,BGM6_H],
+  // ── SECAO D — Borboleta (c.25-32) ─────────────────────
+  [N.C6,BGM6_Q],[N.B5,BGM6_Q],[N.A5,BGM6_H],
+  [N.G5,BGM6_Q],[N.E5,BGM6_Q],[N.C5,BGM6_H],
+  [N.F5,BGM6_Q],[N.A5,BGM6_Q],[N.C6,BGM6_H],
+  [N.G5,BGM6_Q],[N.B5,BGM6_Q],[N.D5,BGM6_H],
+  [N.E5,BGM6_Q],[N.C5,BGM6_Q],[N.E5,BGM6_Q],[N.G5,BGM6_Q],
+  [N.A5,BGM6_Q],[N.F5,BGM6_Q],[N.A5,BGM6_H],
+  [N.G5,BGM6_Q],[N.E5,BGM6_Q],[N.B4,BGM6_H],
+  [N.C5,BGM6_Q],[N.E5,BGM6_Q],[N.C5,BGM6_H],
+];
+
+var BGM6_CHORDS = (function() {
+  var C  = [N.C3, N.G4, N.C5, N.E5];
+  var Am = [N.A3, N.E4, N.A4, N.C5];
+  var F  = [N.F3, N.C5, N.F5, N.A5];
+  var G  = [N.G3, N.D4, N.G4, N.B4];
+  var Dm = [N.D3, N.A4, N.D5, N.F5];
+  var Em = [N.E3, N.G4, N.B4, N.E5];
+  var prog = [
+    C,  Am, F,  G,  C,  F,  G,  C,  // Secao A
+    C,  Dm, G,  C,  Am, Dm, G,  Am, // Secao B
+    C,  Em, F,  G,  Am, Dm, C,  G,  // Secao C
+    Am, C,  F,  G,  C,  F,  G,  C,  // Secao D
+  ];
+  var out  = [];
+  var DUR  = BGM6_Q * 1.9 / 1000;
+  var DURL = BGM6_Q * 3.9 / 1000;
+  for (var i = 0; i < prog.length; i++) {
+    var b    = BGM6_Q * i * 4;
+    var last = (i===7||i===15||i===23||i===31);
+    out.push({beat: b,           ch: prog[i], dur: DUR});
+    out.push({beat: b+BGM6_Q*2, ch: prog[i], dur: last ? DURL : DUR});
+  }
+  return out;
+})();
+
+function bgm6BuildNoteList() {
+  var notes = [];
+  var t = 0, targetMs = BGM6_Q * BGM6_BEATS, mi = 0;
+  while (t < targetMs) {
+    var note = BGM6_MELODY[mi % BGM6_MELODY.length];
+    var remaining = targetMs - t;
+    var durMs = Math.min(note[1], remaining);
+    if (note[0] > 0)
+      notes.push({t: t/1000, freq: note[0], dur: durMs/1000, type: 'mel'});
+    t += durMs; mi++;
+  }
+  for (var ci = 0; ci < BGM6_CHORDS.length; ci++) {
+    var c = BGM6_CHORDS[ci];
+    notes.push({t: c.beat/1000, freqs: c.ch, dur: c.dur, type: 'chd'});
+  }
+  for (var bi = 0; bi < BGM6_CHORDS.length; bi += 2) {
+    var bc = BGM6_CHORDS[bi];
+    notes.push({t: bc.beat/1000, freq: bc.ch[0], dur: BGM6_Q * 3.8 / 1000, type: 'bas'});
+  }
+  notes.sort(function(a, b) { return a.t - b.t; });
+  return notes;
+}
+
+function bgm6RunScheduler() {
+  if (!musicIsPlaying) return;
+  var ctx     = getAudioCtx();
+  var now     = ctx.currentTime;
+  var horizon = now + BGM_LOOKAHEAD;
+  var fadePoint = bgmLoopStart + BGM6_DUR_S - BGM6_Q * 8 / 1000;
+  if (!bgmFadeScheduled && musicFadeGain && fadePoint <= horizon) {
+    bgmFadeScheduled = true;
+    var loopEnd = bgmLoopStart + BGM6_DUR_S;
+    musicFadeGain.gain.cancelScheduledValues(fadePoint - 0.05);
+    musicFadeGain.gain.setValueAtTime(1.0, Math.max(now, fadePoint));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.setValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.linearRampToValueAtTime(1.0, loopEnd + BGM6_Q * 2 / 1000);
+  }
+  while (bgmNoteIdx < bgmNoteList.length) {
+    var n   = bgmNoteList[bgmNoteIdx];
+    var abs = bgmLoopStart + n.t;
+    if (abs > horizon) break;
+    bgmNoteIdx++;
+    if (abs < now - 0.01) continue;
+    var delay   = Math.max(0, (abs - now) * 1000);
+    var barIdx  = Math.floor(n.t * 1000 / (BGM6_Q * 4));
+    var dynMult = 1.0;
+    if (barIdx >= 8  && barIdx < 16) dynMult = 1.05; // Secao B — transformacao
+    if (barIdx >= 16 && barIdx < 24) dynMult = 1.15; // Secao C — magia plena
+    if (barIdx >= 24)                dynMult = 0.88; // Secao D — delicado final
+    if      (n.type === 'mel') bgmPianoNote(n.freq, n.dur, 0.038 * dynMult, delay);
+    else if (n.type === 'chd') bgmChord(n.freqs, n.dur, dynMult, delay);
+    else if (n.type === 'bas') bgmBassNote(n.freq, n.dur, 0.040 * dynMult, delay);
+  }
+  if (bgmNoteIdx >= bgmNoteList.length) {
+    var nextLoopStart = bgmLoopStart + BGM6_DUR_S;
+    if (nextLoopStart <= horizon + 0.05) {
+      bgmLoopStart     = nextLoopStart;
+      bgmNoteIdx       = 0;
+      bgmFadeScheduled = false;
+    }
+  }
+  musicLoopTimeout = setTimeout(bgm6RunScheduler, BGM_SCHED_INT);
+}
+
+function startPhase6Music() {
+  if (musicIsPlaying) return;
+  var ctx = getAudioCtx();
+  ctx.resume().then(function() {
+    if (musicIsPlaying) return;
+    var sharedComp = ctx.createDynamicsCompressor();
+    sharedComp.threshold.value = -16;
+    sharedComp.knee.value      = 10;
+    sharedComp.ratio.value     = 3.5;
+    sharedComp.attack.value    = 0.003;
+    sharedComp.release.value   = 0.20;
+    musicMasterGain = ctx.createGain();
+    var sliderEl = document.getElementById('volSlider');
+    var initVol  = sliderEl ? parseFloat(sliderEl.value) : 0.75;
+    musicMasterGain.gain.value = soundEnabled ? initVol : 0;
+    musicFadeGain = ctx.createGain();
+    musicFadeGain.gain.value = 1.0;
+    musicMasterGain.connect(musicFadeGain);
+    musicFadeGain.connect(sharedComp);
+    sharedComp.connect(ctx.destination);
+    musicReverbNode = createMusicReverb(ctx, 4.0); // reverb longo — jardim magico
+    musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying   = true;
+    bgmFadeScheduled = false;
+    bgmNoteList  = bgm6BuildNoteList();
+    bgmNoteIdx   = 0;
+    bgmLoopStart = ctx.currentTime + 0.10;
+    bgm6RunScheduler();
+  });
+}
+
 function toggleMute() {
   soundEnabled = !soundEnabled;
   document.getElementById('muteBtn').textContent = soundEnabled ? '🔊' : '🔇';
@@ -1233,7 +1742,6 @@ function sndPhase6Start(){// Jardim da Metamorfose - mágico, especial
 
 
 
-"use strict";// Ativa o modo estrito para evitar erros silenciosos e impor boas práticas de codificação
 var canvas = document.getElementById('gameCanvas');// Obtém o elemento canvas do DOM para desenhar o jogo
 var ctx = canvas.getContext('2d');// Obtém o contexto 2D do canvas, que é usado para desenhar formas, imagens e texto no canvas
 var CW=800, CH=440, GY=370, GRAV=0.55;// Define constantes para a largura do canvas (CW), altura do canvas (CH), posição do chão (GY) e gravidade (GRAV) que afeta a física do jogo
@@ -1670,7 +2178,6 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   p6.speedGates.forEach(function(g){g.passed=false;});
   butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;
-  catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
   refreshLockState();
@@ -1736,6 +2243,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
+  startPhase4Music();
 }
 function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   stopBgMusic(); sndPhase5Start();
@@ -1748,6 +2256,7 @@ function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   caterpillarBarrierStarsCollected=0;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-frog').classList.add('active');
+  startPhase5Music();
 }
 // ── Update ────────────────────────────────────────────────────────────────────
 function beginPhase6(){
@@ -1765,6 +2274,7 @@ function beginPhase6(){
   document.querySelector('#btn-caterpillar .em').textContent='🐛';
   document.querySelector('#btn-caterpillar .cn').textContent='Lagartinha';
   document.querySelector('#btn-caterpillar .ca').textContent='Come Folhas';
+  startPhase6Music();
 }
 
 function update(){
@@ -1904,7 +2414,7 @@ function update(){
   
   // P5 barrier stars (hidden stars underground)
   if(phase===5){
-    for(i2=0;i2<p5BarrierStars.length;i2++){
+    for(var i2=0;i2<p5BarrierStars.length;i2++){
       var bs=p5BarrierStars[i2];
       if(!bs.got&&Math.abs(pl.x+pl.w/2-bs.x)<bs.r+16&&Math.abs(pl.y+pl.h/2-bs.y)<bs.r+16){
         bs.got=true; score+=10; sndStar();
