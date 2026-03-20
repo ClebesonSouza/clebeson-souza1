@@ -2320,36 +2320,33 @@ var p7={
     // Plataformas para pulo alto do Gatinho (cercas de jardim altas)
     {x:320, y:295,w:110,h:18},{x:560,y:260,w:100,h:18},
     {x:1200,y:280,w:120,h:18},{x:1420,y:245,w:110,h:18},
-    {x:2200,y:270,w:130,h:18},{x:2450,y:235,w:110,h:18},
+    {x:2450,y:235,w:110,h:18},
     {x:3300,y:285,w:120,h:18},{x:3520,y:250,w:100,h:18},
     {x:4200,y:275,w:130,h:18},{x:4450,y:240,w:110,h:18}
   ],
   walls:[
     // Muros de pedra/terra para o Tatuzinho cavar
-    {x:900, y:GY-260,w:36,h:260},
-    {x:3000,y:GY-260,w:36,h:260}
+    {x:1800, y:GY-260,w:36,h:260},
+    {x:3000,y:GY-260,w:36,h:260},{x:940,y:GY-260,w:36,h:260}
   ],
   waterPits:[
     // Lagos/fontes ornamentais para o Patinho nadar
-    {x:1700,w:380,ceilY:80,ceilH:40},
+    {x:1490,w:380,ceilY:80,ceilH:40},
     {x:3800,w:340,ceilY:80,ceilH:40}
   ],
   gaps:[
     // Canteiros largos sem chao para o Passarinho sobrevoar
-    {x:600, w:280},
-    {x:2700,w:260}
+    {x:311, w:480},
+    {x:2695,w:260}
   ],
-  frogGaps:[
-    // Fosso para o Sapinho saltar (pulo duplo)
-    {x:1550,w:220,ceilY:55,ceilH:35}
-  ],
+ 
   speedGates:[
     // Portao dourado para o Cachorrinho
     {x:4700,y:GY-5000,w:28,h:5000,passed:false}
   ],
   megaBarriers:[
     // Muro de jardim macico para o Tatuzinho cavar
-    {x:2500,y:GY-5000,w:300,h:5000}
+    {x:2350,y:GY-5000,w:300,h:5000}
   ],
   finish:{x:WORLD-180,y:GY-110,w:18,h:110}
 };
@@ -2447,10 +2444,11 @@ function loadProgress(){
   }catch(e){}
 }
 // ── FIM LOCALSTORAGE ─────────────────────────────────────────────────────────
+                        //RESERTE DE FASES===================================================================================================================================================================
 
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
-  state='playing'; phase=1; tutorialTimer=420;// reseta tudo para o inicio da fase 1
+  state='playing'; phase=7; tutorialTimer=420;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
   camX=0; score=0; lives=3; isDigging=false; nextBonusLife=20; extraLifeTimer=0;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
