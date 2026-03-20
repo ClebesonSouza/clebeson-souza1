@@ -3773,15 +3773,6 @@ document.addEventListener('touchmove', function(e){ e.preventDefault(); }, {pass
     // Mostra D-pad apenas durante o jogo (não no menu/gameover/intro)
     if(tpad) tpad.style.display = (typeof state !== 'undefined' && state === 'playing') ? 'flex' : 'none';
 
-    // Reposiciona controle de volume abaixo do contador de moedas (esquerda)
-    // Contador de moedas: canvas y=102 (52+oy50), altura=26 → base=128px canvas
-    if(mute){
-      var starsBottom = (128) * scale + offY; // base do contador de moedas em tela
-      mute.style.position = 'fixed';
-      mute.style.top   = (starsBottom + 6) + 'px';
-      mute.style.left  = (offX + Math.round(10 * scale)) + 'px';
-      mute.style.right = '';
-    }
   }
 
   // Mostra/oculta UI ao trocar estado (menu vs jogo)
