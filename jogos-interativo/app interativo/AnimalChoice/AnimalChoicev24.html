@@ -264,6 +264,14 @@
         <span>Fase 5<br>Colete 20 ⭐</span>
       </div>
     </button>
+    <button class="cbtn locked" id="btn-bee" onclick="switchChar('bee')">
+      <span class="em">🐝</span><span class="cn">Abelha</span>
+      <span class="ca">Coleta Nectar</span><span class="ck">[8]</span>
+      <div class="lock-overlay" id="bee-lock">
+        <span>&#x1F512;</span>
+        <span>Zere o jogo<br>com a Borboleta!</span>
+      </div>
+    </button>
   </div>
 </div>
 <script>
@@ -1541,6 +1549,195 @@ function startPhase6Music() {
   });
 }
 
+// ════════════════════════════════════════════════════════
+//  MÚSICA FASE 7 — Jardim das Flores
+//  432 Hz · Dó Maior · 90 BPM · 32 compassos · Loop
+//  Clima: mágico, leve, encantado — borboleta e flores
+// ════════════════════════════════════════════════════════
+var BGM7_BPM   = 90;
+var BGM7_Q     = Math.round(60000 / BGM7_BPM); // 667 ms
+var BGM7_H     = BGM7_Q * 2;
+var BGM7_E     = Math.round(BGM7_Q / 2);
+var BGM7_BEATS = 128;
+var BGM7_DUR_S = BGM7_Q * BGM7_BEATS / 1000;  // ~95 s
+
+var BGM7_MELODY = [
+  // ── SEÇÃO A — Borboleta no Jardim (c.1-8) ─────────────
+  [N.E5,BGM7_E],[N.G5,BGM7_E],[N.C6,BGM7_H],
+  [N.B5,BGM7_E],[N.A5,BGM7_E],[N.G5,BGM7_H],
+  [N.F5,BGM7_E],[N.A5,BGM7_E],[N.C6,BGM7_H],
+  [N.G5,BGM7_E],[N.E5,BGM7_E],[N.D5,BGM7_H],
+  [N.C5,BGM7_E],[N.E5,BGM7_E],[N.G5,BGM7_E],[N.C6,BGM7_E],
+  [N.B5,BGM7_E],[N.A5,BGM7_E],[N.F5,BGM7_H],
+  [N.G5,BGM7_E],[N.E5,BGM7_E],[N.C5,BGM7_H],
+  [N.D5,BGM7_E],[N.F5,BGM7_E],[N.A5,BGM7_H],
+  // ── SEÇÃO B — Polen Dourado (c.9-16) ──────────────────
+  [N.A5,BGM7_E],[N.C6,BGM7_E],[N.E5,BGM7_H],
+  [N.G5,BGM7_E],[N.B5,BGM7_E],[N.D5,BGM7_H],
+  [N.F5,BGM7_E],[N.A5,BGM7_E],[N.C6,BGM7_H],
+  [N.E5,BGM7_E],[N.G5,BGM7_E],[N.B5,BGM7_H],
+  [N.C6,BGM7_E],[N.A5,BGM7_E],[N.G5,BGM7_E],[N.E5,BGM7_E],
+  [N.F5,BGM7_E],[N.D5,BGM7_E],[N.A5,BGM7_H],
+  [N.G5,BGM7_E],[N.B5,BGM7_E],[N.D5,BGM7_H],
+  [N.C6,BGM7_E],[N.G5,BGM7_E],[N.E5,BGM7_H],
+  // ── SEÇÃO C — Flores Abrindo (c.17-24) ────────────────
+  [N.E5,BGM7_E],[N.G5,BGM7_E],[N.A5,BGM7_H],
+  [N.C6,BGM7_E],[N.B5,BGM7_E],[N.G5,BGM7_H],
+  [N.A5,BGM7_E],[N.F5,BGM7_E],[N.D5,BGM7_H],
+  [N.G5,BGM7_E],[N.E5,BGM7_E],[N.C5,BGM7_Q],[N.B4,BGM7_Q],
+  [N.C5,BGM7_E],[N.E5,BGM7_E],[N.G5,BGM7_E],[N.A5,BGM7_E],
+  [N.F5,BGM7_E],[N.A5,BGM7_E],[N.C6,BGM7_H],
+  [N.E5,BGM7_E],[N.G5,BGM7_E],[N.B5,BGM7_H],
+  [N.A5,BGM7_E],[N.G5,BGM7_E],[N.E5,BGM7_H],
+  // ── SEÇÃO D — Magia do Jardim (c.25-32) ───────────────
+  [N.C6,BGM7_E],[N.B5,BGM7_E],[N.A5,BGM7_H],
+  [N.G5,BGM7_E],[N.E5,BGM7_E],[N.C5,BGM7_H],
+  [N.F5,BGM7_E],[N.A5,BGM7_E],[N.C6,BGM7_H],
+  [N.G5,BGM7_E],[N.B5,BGM7_E],[N.D5,BGM7_Q],[N.G5,BGM7_Q],
+  [N.E5,BGM7_E],[N.C5,BGM7_E],[N.E5,BGM7_E],[N.G5,BGM7_E],
+  [N.A5,BGM7_E],[N.F5,BGM7_E],[N.A5,BGM7_H],
+  [N.G5,BGM7_E],[N.E5,BGM7_E],[N.B4,BGM7_H],
+  [N.C5,BGM7_E],[N.E5,BGM7_E],[N.C5,BGM7_H],
+];
+
+var BGM7_CHORDS = (function() {
+  var C  = [N.C3, N.G4, N.C5, N.E5];
+  var Am = [N.A3, N.E4, N.A4, N.C5];
+  var F  = [N.F3, N.C5, N.F5, N.A5];
+  var G  = [N.G3, N.D4, N.G4, N.B4];
+  var Dm = [N.D3, N.A4, N.D5, N.F5];
+  var Em = [N.E3, N.G4, N.B4, N.E5];
+  var prog = [
+    C, Am, F,  G,  C,  F,  C,  Dm, // Secao A
+    Am, G,  F,  Em, Am, Dm, G,  C,  // Secao B
+    Am, C,  Dm, C,  C,  F,  Em, Am, // Secao C
+    Am, C,  F,  G,  C,  F,  G,  C,  // Secao D
+  ];
+  var out  = [];
+  var DUR  = BGM7_Q * 1.9 / 1000;
+  var DURL = BGM7_Q * 3.9 / 1000;
+  for (var i = 0; i < prog.length; i++) {
+    var b    = BGM7_Q * i * 4;
+    var last = (i===7||i===15||i===23||i===31);
+    out.push({beat: b,           ch: prog[i], dur: DUR});
+    out.push({beat: b+BGM7_Q*2, ch: prog[i], dur: last ? DURL : DUR});
+  }
+  return out;
+})();
+
+function bgm7BuildNoteList() {
+  var notes = [];
+  var t = 0, targetMs = BGM7_Q * BGM7_BEATS, mi = 0;
+  while (t < targetMs) {
+    var note = BGM7_MELODY[mi % BGM7_MELODY.length];
+    var remaining = targetMs - t;
+    var durMs = Math.min(note[1], remaining);
+    if (note[0] > 0)
+      notes.push({t: t/1000, freq: note[0], dur: durMs/1000, type: 'mel'});
+    t += durMs; mi++;
+  }
+  for (var ci = 0; ci < BGM7_CHORDS.length; ci++) {
+    var c = BGM7_CHORDS[ci];
+    notes.push({t: c.beat/1000, freqs: c.ch, dur: c.dur, type: 'chd'});
+  }
+  for (var bi = 0; bi < BGM7_CHORDS.length; bi += 2) {
+    var bc = BGM7_CHORDS[bi];
+    notes.push({t: bc.beat/1000, freq: bc.ch[0], dur: BGM7_Q * 3.8 / 1000, type: 'bas'});
+  }
+  notes.sort(function(a, b) { return a.t - b.t; });
+  return notes;
+}
+
+function bgm7RunScheduler() {
+  if (!musicIsPlaying) return;
+  var ctx     = getAudioCtx();
+  var now     = ctx.currentTime;
+  var horizon = now + BGM_LOOKAHEAD;
+  var fadePoint = bgmLoopStart + BGM7_DUR_S - BGM7_Q * 8 / 1000;
+  if (!bgmFadeScheduled && musicFadeGain && fadePoint <= horizon) {
+    bgmFadeScheduled = true;
+    var loopEnd = bgmLoopStart + BGM7_DUR_S;
+    musicFadeGain.gain.cancelScheduledValues(fadePoint - 0.05);
+    musicFadeGain.gain.setValueAtTime(1.0, Math.max(now, fadePoint));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.setValueAtTime(0.12, loopEnd);
+    musicFadeGain.gain.linearRampToValueAtTime(1.0, loopEnd + BGM7_Q * 2 / 1000);
+  }
+  while (bgmNoteIdx < bgmNoteList.length) {
+    var n   = bgmNoteList[bgmNoteIdx];
+    var abs = bgmLoopStart + n.t;
+    if (abs > horizon) break;
+    bgmNoteIdx++;
+    if (abs < now - 0.01) continue;
+    var delay   = Math.max(0, (abs - now) * 1000);
+    var barIdx  = Math.floor(n.t * 1000 / (BGM7_Q * 4));
+    var dynMult = 1.0;
+    if (barIdx >= 8  && barIdx < 16) dynMult = 1.08; // Polen dourado — mais brilhante
+    if (barIdx >= 16 && barIdx < 24) dynMult = 1.15; // Flores abrindo — climax magico
+    if (barIdx >= 24)                dynMult = 0.90; // Coda — suave e encantado
+    if      (n.type === 'mel') bgmPianoNote(n.freq, n.dur, 0.036 * dynMult, delay);
+    else if (n.type === 'chd') bgmChord(n.freqs, n.dur, dynMult, delay);
+    else if (n.type === 'bas') bgmBassNote(n.freq, n.dur, 0.038 * dynMult, delay);
+  }
+  if (bgmNoteIdx >= bgmNoteList.length) {
+    var nextLoopStart = bgmLoopStart + BGM7_DUR_S;
+    if (nextLoopStart <= horizon + 0.05) {
+      bgmLoopStart     = nextLoopStart;
+      bgmNoteIdx       = 0;
+      bgmFadeScheduled = false;
+    }
+  }
+  musicLoopTimeout = setTimeout(bgm7RunScheduler, BGM_SCHED_INT);
+}
+
+function startPhase7Music() {
+  if (musicIsPlaying) return;
+  var ctx = getAudioCtx();
+  ctx.resume().then(function() {
+    if (musicIsPlaying) return;
+    var sharedComp = ctx.createDynamicsCompressor();
+    sharedComp.threshold.value = -16;
+    sharedComp.knee.value      = 10;
+    sharedComp.ratio.value     = 3.5;
+    sharedComp.attack.value    = 0.003;
+    sharedComp.release.value   = 0.20;
+    musicMasterGain = ctx.createGain();
+    var sliderEl = document.getElementById('volSlider');
+    var initVol  = sliderEl ? parseFloat(sliderEl.value) : 0.75;
+    musicMasterGain.gain.value = soundEnabled ? initVol : 0;
+    musicFadeGain = ctx.createGain();
+    musicFadeGain.gain.value = 1.0;
+    musicMasterGain.connect(musicFadeGain);
+    musicFadeGain.connect(sharedComp);
+    sharedComp.connect(ctx.destination);
+    musicReverbNode = createMusicReverb(ctx, 4.5); // reverb longo — jardim encantado
+    musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying   = true;
+    bgmFadeScheduled = false;
+    bgmNoteList  = bgm7BuildNoteList();
+    bgmNoteIdx   = 0;
+    bgmLoopStart = ctx.currentTime + 0.10;
+    bgm7RunScheduler();
+  });
+}
+
+function sndPhase7Start(){
+  playTone(523,'sine',0.12,0.16);
+  setTimeout(function(){ playTone(659,'sine',0.14,0.18); },110);
+  setTimeout(function(){ playTone(784,'sine',0.16,0.20); },220);
+  setTimeout(function(){ playTone(1047,'sine',0.18,0.22); },330);
+  setTimeout(function(){ playTone(1319,'sine',0.20,0.24); },440);
+  setTimeout(function(){ playTone(1568,'sine',0.22,0.26); },560);
+}
+
+function sndPollinate(){
+  // Som magico de polinizacao — acorde ascendente brilhante
+  playTone(784,'sine',0.15,0.18);
+  setTimeout(function(){ playTone(1047,'sine',0.12,0.20); },80);
+  setTimeout(function(){ playTone(1319,'sine',0.10,0.22); },160);
+  setTimeout(function(){ playTone(1568,'sine',0.08,0.16); },240);
+}
+
 function toggleMute() {
   soundEnabled = !soundEnabled;
   document.getElementById('muteBtn').textContent = soundEnabled ? '🔊' : '🔇';
@@ -1766,7 +1963,8 @@ var CHARS = {
   tatu:        {name:'Tatuzinho',   color:'#8D6E63',accent:'#5D4037',jumpF:-8, spd:3.5,grav:GRAV,    swim:false,fly:false,dig:true, ability:'Cavar pelo Chao'}
 ,  frog:        {name:'Sapinho',     color:'#4CAF50',accent:'#1B5E20',jumpF:-10,spd:4.2, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Insetos'},
   caterpillar: {name:'Lagartinha',   color:'#C1FF00',accent:'#990000',jumpF:-7, spd:3.5, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Folhas'},
-  butterfly: {name:'Borboleta!',color:'#FF69B4',accent:'#FF1493',jumpF:-18,spd:4.8,grav:GRAV*0.18,swim:false,fly:true,dig:false,ability:'Pula Alto e Paira'}
+  butterfly: {name:'Borboleta!',color:'#FF69B4',accent:'#FF1493',jumpF:-18,spd:4.8,grav:GRAV*0.18,swim:false,fly:true,dig:false,ability:'Pula Alto e Paira'},
+  bee:       {name:'Abelha',    color:'#FDD835',accent:'#F57F17',jumpF:-14,spd:5.5, grav:GRAV*0.20,swim:false,fly:true, dig:false,ability:'Coleta Nectar'}
 };
 
 // ── State ────────────────────────────────────────────────────────────────────
@@ -1779,10 +1977,21 @@ var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
 var frogUnlocked=false, frogLongJump=false, frogTongue=0;
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
+var beeUnlocked=false;
 var metamorphState='none', metamorphTimer=0, metamorphCountdown=3;
 var tutorialTimer=0; // frames do banner tutorial (300 = ~5s)
 var extraLifeTimer=0; // frames do popup +1 vida
 var p6Leaves=[], leavesEaten=0, TOTAL_LEAVES=20;
+// ── Polinização Fase 7 ───────────────────────────────────────────────────────
+var p7Flowers=[];           // array de flores do jardim
+var butterflyPollen=false;  // borboleta carrega polen
+var pollenBouquet=-1;       // qual buque o polen foi coletado
+var pollenGlow=0;           // timer do brilho da borboleta (frames)
+var pollenChargeTimer=0;    // timer de carregamento na flor aberta (0-180)
+var pollenChargingFlower=null; // flor sendo carregada no momento
+var pollinationsTotal=0;    // total de polinizacoes feitas (max 10)
+var pollinationComplete=false; // true quando todas as flores foram polinizadas
+var beeCardTimer=0;         // timer da animacao do card da abelha aparecendo
 
 // ── Input ────────────────────────────────────────────────────────────────────
 var K={};
@@ -1795,6 +2004,7 @@ window.addEventListener('keydown',function(e){
   if(e.key==='5' && catUnlocked) switchChar('tatu');
   if(e.key==='6' && frogUnlocked) switchChar('frog');
   if(e.key==='7'){ if(butterflyUnlocked) switchChar('butterfly'); else if(caterpillarUnlocked) switchChar('caterpillar'); }
+  if(e.key==='8' && beeUnlocked) switchChar('bee');
   if((e.key===' '||e.key==='ArrowUp') && state==='playing' && !isDigging){
     if(pl.char==='frog' && !pl.onGround && frogLongJump < 2){ // PULO DUPLO DO SAPINHO!
       pl.vy = -6; frogLongJump++; sndJump();
@@ -1820,6 +2030,7 @@ window.addEventListener('keydown',function(e){
   if(e.key===' ' && state==='phase4intro') beginPhase4();
   if(e.key===' ' && state==='phase5intro') beginPhase5();
   if(e.key===' ' && state==='phase6intro') beginPhase6();
+  if(e.key===' ' && state==='phase7intro') beginPhase7();
 });
 window.addEventListener('keyup',function(e){ K[e.key]=false; });
 canvas.addEventListener('click',function(){
@@ -1830,6 +2041,7 @@ canvas.addEventListener('click',function(){
   if(state==='phase4intro') beginPhase4();
   if(state==='phase5intro') beginPhase5();
   if(state==='phase6intro') beginPhase6();
+  if(state==='phase7intro') beginPhase7();
 });
 
 // ── Player ───────────────────────────────────────────────────────────────────
@@ -1840,6 +2052,7 @@ function switchChar(c){
   if(c==='tatu'&&!catUnlocked) return;
   if(c==='frog'&&!frogUnlocked) return;
   if((c==='caterpillar'||c==='butterfly')&&!caterpillarUnlocked) return;
+  if(c==='bee'&&!beeUnlocked) return;
   if(isDigging&&c!=='tatu') stopDig();
   pl.char=c;
   
@@ -2096,8 +2309,104 @@ function genP6Leaves(){
   for(var i=0;i<ld.length;i++) p6Leaves.push({x:ld[i].x,y:ld[i].y,w:18,h:14,eaten:false,wobble:Math.random()*Math.PI*2});
 }
 genP6Leaves();
-function getLevel(){ return phase===1?p1:phase===2?p2:phase===3?p3:phase===4?p4:phase===5?p5:p6; }
-function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:phase===3?p3Stars:phase===4?p4Stars:phase===5?p5Stars:p6Stars; }
+
+// ══════════════════════════════════════════════════════════════════════════════
+// FASE 7 — JARDIM DAS FLORES
+// Protagonista: Borboleta · Mecânica: Polinização
+// Obstáculos para todos os personagens · Sem estrelas · Abelha desbloqueada
+// ══════════════════════════════════════════════════════════════════════════════
+var p7={
+  platforms:[
+    // Plataformas para pulo alto do Gatinho (cercas de jardim altas)
+    {x:320, y:295,w:110,h:18},{x:560,y:260,w:100,h:18},
+    {x:1200,y:280,w:120,h:18},{x:1420,y:245,w:110,h:18},
+    {x:2200,y:270,w:130,h:18},{x:2450,y:235,w:110,h:18},
+    {x:3300,y:285,w:120,h:18},{x:3520,y:250,w:100,h:18},
+    {x:4200,y:275,w:130,h:18},{x:4450,y:240,w:110,h:18}
+  ],
+  walls:[
+    // Muros de pedra/terra para o Tatuzinho cavar
+    {x:900, y:GY-260,w:36,h:260},
+    {x:3000,y:GY-260,w:36,h:260}
+  ],
+  waterPits:[
+    // Lagos/fontes ornamentais para o Patinho nadar
+    {x:1700,w:380,ceilY:80,ceilH:40},
+    {x:3800,w:340,ceilY:80,ceilH:40}
+  ],
+  gaps:[
+    // Canteiros largos sem chao para o Passarinho sobrevoar
+    {x:600, w:280},
+    {x:2700,w:260}
+  ],
+  frogGaps:[
+    // Fosso para o Sapinho saltar (pulo duplo)
+    {x:1550,w:220,ceilY:55,ceilH:35}
+  ],
+  speedGates:[
+    // Portao dourado para o Cachorrinho
+    {x:4700,y:GY-5000,w:28,h:5000,passed:false}
+  ],
+  megaBarriers:[
+    // Muro de jardim macico para o Tatuzinho cavar
+    {x:2500,y:GY-5000,w:300,h:5000}
+  ],
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+
+// ── Gerador de flores da Fase 7 ──────────────────────────────────────────────
+// 5 buques × 3 flores (1 aberta=source, 2 fechadas=target)
+// Distribuidos ao longo do nivel em zonas seguras
+function genP7Flowers(){
+  p7Flowers=[];
+  pollinationsTotal=0;
+  pollinationComplete=false;
+  pollenBouquet=-1;
+  butterflyPollen=false;
+  pollenGlow=0;
+  pollenChargeTimer=0;
+  pollenChargingFlower=null;
+  beeCardTimer=0;
+
+  var bouquetPositions=[200, 1050, 2000, 3150, 4550];
+  var colors=[
+    {open:'#FF6B6B',closed:'#C2185B',petals:['#FF6B6B','#FF8E53','#FFD700','#FF6B6B']},
+    {open:'#7C4DFF',closed:'#4527A0',petals:['#7C4DFF','#E040FB','#B39DDB','#7C4DFF']},
+    {open:'#00BCD4',closed:'#006064',petals:['#00BCD4','#4DD0E1','#B2EBF2','#00BCD4']},
+    {open:'#FF9800',closed:'#E65100',petals:['#FF9800','#FFCC02','#FFE082','#FF9800']},
+    {open:'#4CAF50',closed:'#1B5E20',petals:['#4CAF50','#8BC34A','#DCEDC8','#4CAF50']}
+  ];
+
+  for(var b=0;b<5;b++){
+    var bx=bouquetPositions[b];
+    var col=colors[b];
+    // Flor fonte (aberta, com polen) — centro do buque
+    p7Flowers.push({
+      x:bx, y:GY-52, bouquet:b, role:'source',
+      state:'open',           // 'open' | 'depleted'
+      color:col.open, petalColors:col.petals,
+      chargeTimer:0, w:32, h:52
+    });
+    // Flor alvo 1 (fechada) — esquerda
+    p7Flowers.push({
+      x:bx-52, y:GY-52, bouquet:b, role:'target',
+      state:'closed',         // 'closed' | 'opening' | 'pollinated'
+      color:col.closed, petalColors:col.petals,
+      openTimer:0, w:32, h:52
+    });
+    // Flor alvo 2 (fechada) — direita
+    p7Flowers.push({
+      x:bx+52, y:GY-52, bouquet:b, role:'target',
+      state:'closed',
+      color:col.closed, petalColors:col.petals,
+      openTimer:0, w:32, h:52
+    });
+  }
+}
+genP7Flowers();
+
+function getLevel(){ return phase===1?p1:phase===2?p2:phase===3?p3:phase===4?p4:phase===5?p5:phase===6?p6:p7; }
+function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:phase===3?p3Stars:phase===4?p4Stars:phase===5?p5Stars:phase===6?p6Stars:[]; }
 
 function groundAt(x){// funcao para verificar se tem chao em determinada posicao x, usada para detectar se o jogador esta no chao ou caindo em um buraco, a funcao verifica se a posicao x esta dentro de algum dos buracos (gaps) ou buracos d'agua (waterPits) da fase atual, se estiver dentro de algum desses elementos, significa que nao tem chao naquela posicao e a funcao retorna false, caso contrario, retorna true, indicando que tem chao naquela posicao
   var lv=getLevel();// pega os dados da fase atual para verificar os buracos e buracos d'agua da fase atual
@@ -2162,8 +2471,9 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   caterpillarBarrierStarsCollected=0;
   genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
   p6.speedGates.forEach(function(g){g.passed=false;});
+  genP7Flowers(); p7.speedGates.forEach(function(g){g.passed=false;});
   if(!gameZeroed){
-    catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false; butterflyUnlocked=false;
+    catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false; butterflyUnlocked=false; beeUnlocked=false;
   }
   metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;
@@ -2248,6 +2558,18 @@ function beginPhase5(){ // NOVA FUNÇÃO PARA INICIAR FASE 5
   startPhase5Music();
 }
 // ── Update ────────────────────────────────────────────────────────────────────
+function beginPhase7(){
+  stopBgMusic(); sndPhase7Start();
+  phase=7; state='playing';
+  tutorialTimer=420;
+  pl.x=100; pl.y=GY-80; pl.vx=0; pl.vy=0; pl.char='butterfly'; pl.w=38; pl.h=38;
+  camX=0; isDigging=false; frogLongJump=0;
+  genP7Flowers();
+  p7.speedGates.forEach(function(g){g.passed=false;});
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-caterpillar').classList.add('active');
+  startPhase7Music();
+}
 function beginPhase6(){
   stopBgMusic(); sndPhase6Start();
   phase=6; state='playing';
@@ -2519,6 +2841,49 @@ function update(){
       pl.vy=Math.min(pl.vy,0.5);
     }
   }
+  // ── POLINIZAÇÃO FASE 7 ──────────────────────────────────────────────────────
+  if(phase===7){
+    var isFlier=(pl.char==='butterfly'||pl.char==='bee');
+    if(pollenGlow>0) pollenGlow--;
+    var plcx=pl.x+pl.w/2, plcy=pl.y+pl.h/2;
+    for(var fi=0;fi<p7Flowers.length;fi++){
+      var fl7=p7Flowers[fi];
+      // Flor alvo abrindo gradualmente
+      if(fl7.role==='target'&&fl7.state==='opening'){
+        fl7.openTimer++; if(fl7.openTimer>=90) fl7.state='pollinated';
+      }
+      // Carregamento na flor fonte (borboleta/abelha paira sobre ela)
+      if(fl7.role==='source'&&fl7.state==='open'&&isFlier&&!butterflyPollen){
+        var fdx=Math.abs(plcx-fl7.x), fdy=Math.abs(plcy-fl7.y);
+        if(fdx<28&&fdy<38){
+          if(pollenChargingFlower!==fl7){ pollenChargingFlower=fl7; pollenChargeTimer=0; }
+          pollenChargeTimer++;
+          if(pollenChargeTimer>=180){
+            butterflyPollen=true; pollenBouquet=fl7.bouquet;
+            pollenGlow=300; fl7.state='depleted';
+            pollenChargingFlower=null; pollenChargeTimer=0;
+            sndPollinate();
+          }
+        } else if(pollenChargingFlower===fl7){ pollenChargingFlower=null; pollenChargeTimer=0; }
+      }
+      // Descarregar pólen nas flores alvo do mesmo buquê
+      if(fl7.role==='target'&&fl7.state==='closed'&&butterflyPollen&&fl7.bouquet===pollenBouquet&&isFlier){
+        var tdx=Math.abs(plcx-fl7.x), tdy=Math.abs(plcy-fl7.y);
+        if(tdx<28&&tdy<42){
+          fl7.state='opening'; fl7.openTimer=0;
+          pollinationsTotal++; score+=15; sndPollinate();
+          for(var pp=0;pp<14;pp++) particles.push({x:fl7.x-camX+camX,y:fl7.y,vx:(Math.random()-0.5)*5,vy:-Math.random()*4-1,life:55,color:fl7.petalColors[pp%fl7.petalColors.length],type:'petal'});
+          if(pollinationsTotal%2===0){ lives++; extraLifeTimer=180; }
+          // Verificar se ambas as flores do buquê foram polinizadas
+          var bouqDone=p7Flowers.filter(function(f){return f.bouquet===pollenBouquet&&f.role==='target';}).every(function(f){return f.state!=='closed';});
+          if(bouqDone){ butterflyPollen=false; pollenBouquet=-1; pollenGlow=0; }
+          // Verificar polinização completa (todas as 10 flores alvo)
+          var allDone=p7Flowers.filter(function(f){return f.role==='target';}).every(function(f){return f.state!=='closed';});
+          if(allDone&&!pollinationComplete){ pollinationComplete=true; beeCardTimer=300; sndVictory(); }
+        }
+      }
+    }
+  }
   // Finish
   if(pl.x+pl.w>lv.finish.x){
     if(phase===1){
@@ -2529,9 +2894,12 @@ function update(){
     } else if(phase===3){ state='phase4intro'; // NOVA TRANSIÇÃO PARA FASE 4
     } else if(phase===4){ state='phase5intro'; // NOVA TRANSIÇÃO PARA FASE 5
     } else if(phase===5){ state='phase6intro';
+    } else if(phase===6){ state='phase7intro';
     } else {
+      // phase 7 — exige polinização completa
+      if(!pollinationComplete) return;
       state='win'; sndVictory();
-      gameZeroed=true;
+      gameZeroed=true; beeUnlocked=true;
       catUnlocked=true; frogUnlocked=true; caterpillarUnlocked=true; butterflyUnlocked=true;
       refreshLockState();
     }
@@ -2555,8 +2923,8 @@ function drawTree(x,ph){
 function drawBG(){
   var ph=phase;
   var sg=ctx.createLinearGradient(0,0,0,CH);
-  sg.addColorStop(0,ph===5?'#87CEEB':ph===4?'#0D1B2A':ph===3?'#0A0E1A':ph===2?'#546E7A':'#87CEEB'); // FASE 5: azul claro (dia)
-  sg.addColorStop(1,ph===5?'#90EE90':ph===4?'#1B4332':ph===3?'#0D2137':ph===2?'#37474F':'#E0F7FA'); // FASE 5: verde claro (grama)
+  sg.addColorStop(0,ph===7?'#E8D5F0':ph===5?'#87CEEB':ph===4?'#0D1B2A':ph===3?'#0A0E1A':ph===2?'#546E7A':'#87CEEB');
+  sg.addColorStop(1,ph===7?'#C8E6C9':ph===5?'#90EE90':ph===4?'#1B4332':ph===3?'#0D2137':ph===2?'#37474F':'#E0F7FA');
   ctx.fillStyle=sg; ctx.fillRect(0,0,CW,CH);
   if(ph===5){
     // SOL brilhante no canto superior direito
@@ -2602,6 +2970,20 @@ function drawBG(){
       ctx.fillStyle='rgba(255,255,120,0.4)'; ctx.beginPath(); ctx.arc(fx,fy,10,0,Math.PI*2); ctx.fill();
     }
     ctx.globalAlpha=1;
+  } else if(ph===7){
+    // Sol suave cor-de-rosa no canto superior esquerdo
+    ctx.fillStyle='rgba(255,200,220,0.85)'; ctx.beginPath(); ctx.arc(80,70,44,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,180,200,0.3)'; ctx.beginPath(); ctx.arc(80,70,68,0,Math.PI*2); ctx.fill();
+    // Pó de fada flutuando
+    var t7=Date.now()/700;
+    for(var fd=0;fd<10;fd++){
+      var fx7=(150+fd*310+Math.sin(t7+fd)*60-camX*0.2+CW*2)%CW;
+      var fy7=160+Math.sin(t7*1.4+fd*0.9)*50;
+      var fa7=0.3+0.5*Math.abs(Math.sin(t7*1.6+fd)); ctx.globalAlpha=fa7;
+      ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(fx7,fy7,2.5,0,Math.PI*2); ctx.fill();
+      ctx.fillStyle='rgba(255,230,80,0.3)'; ctx.beginPath(); ctx.arc(fx7,fy7,7,0,Math.PI*2); ctx.fill();
+    }
+    ctx.globalAlpha=1;
   } else if(ph===3){
     ctx.fillStyle='rgba(255,255,220,0.92)'; ctx.beginPath(); ctx.arc(CW-80,60,30,0,Math.PI*2); ctx.fill();
     ctx.fillStyle='rgba(255,255,200,0.25)'; ctx.beginPath(); ctx.arc(CW-80,60,45,0,Math.PI*2); ctx.fill();
@@ -2614,7 +2996,7 @@ function drawBG(){
     }
     ctx.globalAlpha=1;
   }
-  ctx.fillStyle=ph===5?'rgba(200,255,200,0.3)':ph===4?'rgba(100,200,150,0.15)':ph===3?'rgba(100,180,255,0.12)':ph===2?'rgba(200,220,255,0.2)':'rgba(255,255,255,0.82)';
+  ctx.fillStyle=ph===7?'rgba(230,200,255,0.25)':ph===5?'rgba(200,255,200,0.3)':ph===4?'rgba(100,200,150,0.15)':ph===3?'rgba(100,180,255,0.12)':ph===2?'rgba(200,220,255,0.2)':'rgba(255,255,255,0.82)';
   [80,260,500,720,970,1300,1700,2100,2500,2900].forEach(function(cx){
     var sx=cx-camX*0.45; if(sx>-80&&sx<CW+80) cloud(sx,55+(cx%3)*25);
   });
@@ -2627,11 +3009,11 @@ function drawGround(){
   for(var gx=startX;gx<camX+CW+38;gx+=38){
     if(!groundAt(gx+19)) continue;
     var sx=gx-camX;
-    ctx.fillStyle=phase===5?'#76B82A':phase===4?'#2D5A3D':phase===2?'#78909C':'#4CAF50'; // FASE 5: verde floresta
+    ctx.fillStyle=(phase===7||phase===5)?'#76B82A':phase===4?'#2D5A3D':phase===2?'#78909C':'#4CAF50';
     ctx.fillRect(sx,GY,38,20);
-    ctx.fillStyle=phase===5?'#9AD35F':phase===4?'#4A7C59':phase===2?'#90A4AE':'#66BB6A'; // FASE 5: verde claro
+    ctx.fillStyle=(phase===7||phase===5)?'#9AD35F':phase===4?'#4A7C59':phase===2?'#90A4AE':'#66BB6A';
     ctx.fillRect(sx,GY,38,5);
-    ctx.fillStyle=phase===4?'#1B4332':'#795548'; // FASE 4: marrom pântano
+    ctx.fillStyle=phase===4?'#1B4332':'#795548';
     ctx.fillRect(sx,GY+20,38,CH-GY-20);
   }
 }
@@ -2640,9 +3022,9 @@ function drawPlatforms(){
   for(var i=0;i<lv.platforms.length;i++){
     var p=lv.platforms[i], sx=p.x-camX;
     if(sx>CW||sx+p.w<0) continue;
-    ctx.fillStyle=phase===5?'#76B82A':phase===4?'#2D5A3D':phase===2?'#607D8B':'#4CAF50'; // FASE 5: verde floresta
+    ctx.fillStyle=(phase===7||phase===5)?'#76B82A':phase===4?'#2D5A3D':phase===2?'#607D8B':'#4CAF50';
     ctx.fillRect(sx,p.y,p.w,p.h);
-    ctx.fillStyle=phase===5?'#9AD35F':phase===4?'#4A7C59':phase===2?'#78909C':'#66BB6A'; // FASE 5: verde claro
+    ctx.fillStyle=(phase===7||phase===5)?'#9AD35F':phase===4?'#4A7C59':phase===2?'#78909C':'#66BB6A';
     ctx.fillRect(sx,p.y,p.w,5);
   }
 }
@@ -2658,7 +3040,7 @@ function drawWalls(){
       }
     ctx.fillStyle='rgba(0,0,0,0.45)'; rrect(sx+w.w/2-62,w.y-26,124,20,8); ctx.fill();
     ctx.fillStyle='white'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-    ctx.fillText('Use o Gatinho! [1]',sx+w.w/2,w.y-11);
+    ctx.fillText(phase===7?'Use o Tatuzinho! [5]':'Use o Gatinho! [1]',sx+w.w/2,w.y-11);
   }
 }
 
@@ -3664,6 +4046,48 @@ function drawButterfly(cx,cy,def){
   ctx.restore();
 }
 
+function drawBee(cx,cy,def){
+  var t=Date.now()/80;
+  var flapY=Math.abs(Math.sin(t))*9;
+  ctx.save(); ctx.translate(cx,cy);
+  // Abdômen listrado
+  ctx.fillStyle='#FDD835';
+  ctx.beginPath(); ctx.ellipse(0,2,9,13,0,0,Math.PI*2); ctx.fill();
+  var strY=[-8,-4,0,4,8], strC=['#212121','#F9A825','#212121','#F9A825','#212121'];
+  for(var s=0;s<5;s++){
+    ctx.save(); ctx.beginPath(); ctx.ellipse(0,2,9,13,0,0,Math.PI*2); ctx.clip();
+    ctx.fillStyle=strC[s]; ctx.fillRect(-10,strY[s],20,3.5); ctx.restore();
+  }
+  ctx.strokeStyle='#E65100'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(0,2,9,13,0,0,Math.PI*2); ctx.stroke();
+  // Ferrão
+  ctx.fillStyle='#795548';
+  ctx.beginPath(); ctx.moveTo(-2,15); ctx.lineTo(2,15); ctx.lineTo(0,20); ctx.closePath(); ctx.fill();
+  // Tórax
+  ctx.fillStyle='#F57F17';
+  ctx.beginPath(); ctx.ellipse(0,-10,7,8,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#E65100'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.ellipse(0,-10,7,8,0,0,Math.PI*2); ctx.stroke();
+  // Asas transparentes
+  ctx.fillStyle='rgba(200,230,255,0.72)'; ctx.strokeStyle='rgba(80,140,255,0.85)'; ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(-2,-12); ctx.bezierCurveTo(-14,-22-flapY,-28,-18-flapY,-20,-8-flapY*0.4); ctx.bezierCurveTo(-12,-2,-3,-10,-2,-12); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2,-12); ctx.bezierCurveTo(14,-22-flapY,28,-18-flapY,20,-8-flapY*0.4); ctx.bezierCurveTo(12,-2,3,-10,2,-12); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-3,-7); ctx.bezierCurveTo(-13,-13-flapY*0.6,-18,-7-flapY*0.4,-14,-2); ctx.bezierCurveTo(-9,2,-4,-4,-3,-7); ctx.fill(); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(3,-7); ctx.bezierCurveTo(13,-13-flapY*0.6,18,-7-flapY*0.4,14,-2); ctx.bezierCurveTo(9,2,4,-4,3,-7); ctx.fill(); ctx.stroke();
+  // Cabeça
+  ctx.fillStyle='#212121'; ctx.beginPath(); ctx.arc(0,-19,5,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(2,-20,1.6,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#212121'; ctx.beginPath(); ctx.arc(2.6,-20,0.7,0,Math.PI*2); ctx.fill();
+  // Antenas
+  ctx.strokeStyle='#212121'; ctx.lineWidth=1.3; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-2,-23); ctx.quadraticCurveTo(-7,-31,-5,-35); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(2,-23); ctx.quadraticCurveTo(7,-31,6,-35); ctx.stroke();
+  ctx.fillStyle='#FDD835';
+  ctx.beginPath(); ctx.arc(-5,-35,2,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(6,-35,2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+}
+
 function drawFrogGaps(){
   var lv=getLevel(); if(!lv.frogGaps) return;
   for(var i=0;i<lv.frogGaps.length;i++){
@@ -3890,6 +4314,7 @@ function drawPlayer(){
     case 'frog':        drawFrog(cx,cy,def);        break;
     case 'caterpillar': drawCaterpillar(cx,cy,def); break;
     case 'butterfly':   drawButterfly(cx,cy,def);   break;
+    case 'bee':         drawBee(cx,cy,def);         break;
   }
   if(!isDigging){
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
@@ -3924,13 +4349,9 @@ function drawHUD(){
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-85,10+oy,170,36,10); ctx.fill();
   ctx.fillStyle='#FFD700'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
   ctx.fillText(def.ability,CW/2,31+oy);
-  var all20=(phase===5?got>=50:got>=20);
-  ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52+oy,150,26,8); ctx.fill();
-  ctx.fillStyle=all20?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
-  ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68+oy);
   ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(CW/2-42,52+oy,84,26,8); ctx.fill();
   ctx.fillStyle='#81D4FA'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-  ctx.fillText('Fase '+phase+' de 6',CW/2,68+oy); // ATUALIZADO PARA 5 FASES
+  ctx.fillText('Fase '+phase+' de 7',CW/2,68+oy);
   // Popup +1 vida
   if(extraLifeTimer>0){
     var fa2=extraLifeTimer>120?1:extraLifeTimer/120;
@@ -3974,13 +4395,26 @@ function drawHUD(){
     ctx.fillStyle=bd?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
     ctx.fillText('⭐ Barreira: '+bg+'/20'+(bd?' 🦋 Desbloqueada!':' (Tatuzinho cava!)'),18,100+oy);
   }
+  if(phase===7){
+    var pd=pollinationComplete;
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,220,26,8); ctx.fill();
+    ctx.strokeStyle=pd?'#FFD700':'rgba(255,200,255,0.6)'; ctx.lineWidth=1.5; rrect(10,84+oy,220,26,8); ctx.stroke();
+    ctx.fillStyle=pd?'#FFD700':'#F8BBD9'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('🌸 Polinizadas: '+pollinationsTotal+'/10'+(pd?' 🐝 Chegue ao fim!':' (voe até as flores!)'),18,100+oy);
+    // Não exibe contador de estrelas na fase 7 (substitui)
+  } else {
+    var all20=(phase===5?got>=50:got>=20);
+    ctx.fillStyle='rgba(0,0,0,0.4)'; rrect(10,52+oy,150,26,8); ctx.fill();
+    ctx.fillStyle=all20?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('Estrelas: '+got+'/'+(phase===5?50:20)+(all20?' OK!':''),18,68+oy);
+  }
   if(pl.char==='tatu'){
     ctx.fillStyle='rgba(102,187,106,0.88)'; rrect(10,CH-30,250,20,8); ctx.fill();
     ctx.fillStyle='#1a1a1a'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
     ctx.fillText(isDigging?'Seta Cima = Emergir':'Seta Baixo = Cavar | Seta Cima = Emergir',15,CH-16);
   } else {
     ctx.fillStyle='rgba(255,255,255,0.35)'; ctx.font='10px Arial'; ctx.textAlign='left';
-    ctx.fillText('Setas: Mover | Espaco/Cima: Pular | 1-6: Trocar animal',12,CH-8);
+    ctx.fillText('Setas: Mover | Espaco/Cima: Pular | 1-8: Trocar animal',12,CH-8);
   }
 }
 
@@ -3999,6 +4433,104 @@ function drawP6Leaves(){
     ctx.beginPath(); ctx.moveTo(sx2-6,sy2); ctx.lineTo(sx2+6,sy2); ctx.stroke();
   }
 }
+function drawP7Flowers(){
+  if(phase!==7) return;
+  var t=Date.now()/400;
+  var plcx=pl.x+pl.w/2, plcy=pl.y+pl.h/2;
+  for(var fi=0;fi<p7Flowers.length;fi++){
+    var fl=p7Flowers[fi], sx=fl.x-camX, sy=fl.y;
+    if(sx<-70||sx>CW+70) continue;
+    // Talo
+    ctx.strokeStyle='#2E7D32'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(sx,sy+14); ctx.lineTo(sx,GY); ctx.stroke();
+    // Folhas
+    ctx.fillStyle='#4CAF50';
+    ctx.beginPath(); ctx.ellipse(sx-9,sy+8,9,4,0.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(sx+9,sy+12,9,4,-0.5,0,Math.PI*2); ctx.fill();
+    // Flor fechada (bolinha sem pétalas)
+    if(fl.role==='target'&&fl.state==='closed'){
+      ctx.fillStyle=fl.color;
+      ctx.beginPath(); ctx.arc(sx,sy,9,0,Math.PI*2); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(sx,sy,9,0,Math.PI*2); ctx.stroke();
+      ctx.fillStyle='rgba(255,255,255,0.3)'; ctx.beginPath(); ctx.arc(sx-3,sy-3,3,0,Math.PI*2); ctx.fill();
+      // Seta se jogador carrega pólen do mesmo buquê
+      if(butterflyPollen&&fl.bouquet===pollenBouquet){
+        var arA=0.55+Math.sin(t*3)*0.35;
+        ctx.globalAlpha=arA; ctx.fillStyle='#FFD700'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+        ctx.fillText('▼',sx,sy-22); ctx.globalAlpha=1;
+      }
+      continue;
+    }
+    // Pétalas (open/opening/pollinated/depleted)
+    var nP=6, pLen, pW, cR, cC, alpha=1;
+    if(fl.role==='source'){
+      if(fl.state==='open'){
+        pLen=13; pW=7; cR=6; cC='#FFD700'; alpha=1;
+        // Seta e barra de carregamento
+        if(!butterflyPollen&&Math.abs(plcx-fl.x)<140&&Math.abs(plcy-fl.y)<100){
+          var arA2=0.55+Math.sin(t*3)*0.35;
+          ctx.globalAlpha=arA2; ctx.fillStyle='#FFD700'; ctx.font='bold 18px Arial'; ctx.textAlign='center';
+          ctx.fillText('▼',sx,sy-24); ctx.globalAlpha=1;
+        }
+        if(pollenChargingFlower===fl){
+          var cp=pollenChargeTimer/180;
+          ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(sx-22,sy-34,44,9,4); ctx.fill();
+          var cg=ctx.createLinearGradient(sx-22,0,sx+22,0);
+          cg.addColorStop(0,'#FFD700'); cg.addColorStop(1,'#FF9800');
+          ctx.fillStyle=cg; rrect(sx-22,sy-34,44*cp,9,4); ctx.fill();
+          ctx.strokeStyle='#FF9800'; ctx.lineWidth=1.5; rrect(sx-22,sy-34,44,9,4); ctx.stroke();
+        }
+      } else { pLen=7; pW=4; cR=4; cC='#9E9E9E'; alpha=0.4; } // depleted
+    } else {
+      // target opening/pollinated
+      var prog=fl.state==='opening'?(fl.openTimer/90):1;
+      pLen=13*prog; pW=7*prog; cR=6; cC='#FFD700'; alpha=0.4+0.6*prog;
+      if(fl.state==='pollinated'){
+        for(var sp=0;sp<3;sp++){
+          var sa=t*1.8+sp*(Math.PI*2/3);
+          ctx.save(); ctx.globalAlpha=0.35+Math.sin(sa)*0.25;
+          ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(sx+Math.cos(sa)*18,sy+Math.sin(sa)*12,3,0,Math.PI*2); ctx.fill();
+          ctx.restore();
+        }
+      }
+    }
+    // Desenha pétalas
+    ctx.save(); ctx.translate(sx,sy); ctx.globalAlpha=alpha;
+    for(var p7i=0;p7i<nP;p7i++){
+      ctx.save(); ctx.rotate(p7i*(Math.PI*2/nP)+(fl.role==='source'?Math.sin(t*0.4)*0.06:0));
+      ctx.fillStyle=fl.petalColors[p7i%fl.petalColors.length];
+      ctx.beginPath(); ctx.ellipse(0,-pLen,pW,pLen*0.6,0,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    ctx.fillStyle=cC; ctx.beginPath(); ctx.arc(0,0,cR,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  // Glow do pólen na borboleta/abelha
+  if(butterflyPollen&&pollenGlow>0){
+    var ga=Math.min(1,pollenGlow/60)*0.45, gr=18+Math.sin(t*5)*5;
+    ctx.save(); ctx.globalAlpha=ga;
+    ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(pl.x+pl.w/2-camX,pl.y+pl.h/2,gr,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=1; ctx.restore();
+  }
+  // Card de desbloqueio da Abelha
+  if(pollinationComplete&&beeCardTimer>0){
+    beeCardTimer--;
+    var ca=Math.min(1,beeCardTimer>240?1:(beeCardTimer/60));
+    ctx.save(); ctx.globalAlpha=ca;
+    var cby=CH/2-60;
+    ctx.fillStyle='rgba(10,30,10,0.88)'; rrect(CW/2-120,cby,240,100,16); ctx.fill();
+    ctx.strokeStyle='#FFD700'; ctx.lineWidth=2.5; rrect(CW/2-120,cby,240,100,16); ctx.stroke();
+    ctx.font='32px Arial'; ctx.fillStyle='white'; ctx.textAlign='center';
+    ctx.fillText('🐝',CW/2,cby+44);
+    ctx.fillStyle='#FFD700'; ctx.font='bold 15px Arial';
+    ctx.fillText('Abelha Desbloqueada!',CW/2,cby+68);
+    ctx.fillStyle='#A5D6A7'; ctx.font='11px Arial';
+    ctx.fillText('Chegue à linha de chegada para vencer!',CW/2,cby+88);
+    ctx.restore();
+  }
+}
+
 function drawMetamorph(){
   if(phase!==6||metamorphState==='none'||metamorphState==='done') return;
   var sx2=pl.x-camX+pl.w/2, sy2=pl.y+pl.h/2;
@@ -4201,6 +4733,33 @@ function drawPhase6Intro(){
   ctx.fillText('Pressione ESPAÇO ou clique para começar',CW/2,330);
 }
 
+function drawPhase7Intro(){
+  ctx.fillStyle='rgba(10,30,10,0.9)'; ctx.fillRect(0,0,CW,CH);
+  var t=Date.now()/600;
+  ctx.textAlign='center';
+  ctx.fillStyle='#FFD700'; ctx.font='bold 30px Arial';
+  ctx.shadowColor='#FF9800'; ctx.shadowBlur=22;
+  ctx.fillText('🦋 FASE 7 — JARDIM DAS FLORES 🌸',CW/2,95); ctx.shadowBlur=0;
+  ctx.fillStyle='white'; ctx.font='16px Arial';
+  ctx.fillText('A Borboleta deve polinizar todas as flores do jardim!',CW/2,138);
+  ctx.fillText('Pouse na flor ABERTA por 3s para carregar o pólen',CW/2,162);
+  ctx.fillText('Leve o pólen para as flores FECHADAS do mesmo buquê',CW/2,186);
+  ctx.fillStyle='#FFD700'; ctx.font='bold 13px Arial';
+  ctx.fillText('10 flores polinizadas → Abelha desbloqueada! Depois, chegue ao fim.',CW/2,218);
+  ctx.fillStyle='#A5D6A7'; ctx.font='13px Arial';
+  ctx.fillText('🐱 Cerca  🐶 Portão  🦆 Lago  🐦 Canteiro  🦔 Muro  🐸 Fosso',CW/2,250);
+  // Card da Abelha (bloqueada, pulsando)
+  var pulse=Math.sin(t*2)*3;
+  var cby=270-pulse/2;
+  ctx.fillStyle='rgba(255,215,0,0.12)'; rrect(CW/2-50,cby,100,60+pulse,12); ctx.fill();
+  ctx.strokeStyle='rgba(255,215,0,0.5)'; ctx.lineWidth=2; rrect(CW/2-50,cby,100,60+pulse,12); ctx.stroke();
+  ctx.font='28px Arial'; ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.fillText('🔒',CW/2,cby+32);
+  ctx.fillStyle='rgba(255,215,0,0.7)'; ctx.font='bold 11px Arial';
+  ctx.fillText('🐝 Abelha',CW/2,cby+52+pulse);
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='13px Arial';
+  ctx.fillText('Pressione ESPAÇO ou clique para começar',CW/2,CH-12);
+}
+
 function drawMenu(){
   // Fundo gradiente
   var mg=ctx.createLinearGradient(0,0,0,CH);
@@ -4224,25 +4783,26 @@ function drawMenu(){
   ctx.fillText('Escolha o animal certo para superar cada obstaculo!',CW/2,104);
 
   // === CARDS CENTRALIZADOS ===
-  // 3 colunas × 2 linhas — centralizados no canvas 800px
-  var cardW=130, cardH=115, colGap=160, rowGap=126;
-  var totalW = 3*cardW + 2*(colGap-cardW); // = 3*130 + 2*30 = 450
-  var startX = (CW - (2*colGap + cardW)) / 2; // centro do primeiro card
+  // 4 colunas × 2 linhas — centralizados no canvas 800px
+  var cardW=110, cardH=100, colGap=170, rowGap=116;
+  var startX = (CW - (3*colGap + cardW)) / 2; // borda esquerda do primeiro card
 
-  var emojis=['🐱','🐶','🦆','🐦','🦔','🐸'];
+  var emojis=['🐱','🐶','🦆','🐦','🦔','🐸','🐛','🐝'];
   var cards=[
-    {n:'Gatinho',    a:'Pulo Alto',   c:'#FF9800', e:'🐱'},
-    {n:'Cachorrinho',a:'Corrida',     c:'#8D6E63', e:'🐶'},
-    {n:'Patinho',    a:'Nada',        c:'#FDD835', e:'🦆'},
-    {n:'Passarinho', a:'Voa',         c:'#29B6F6', e:'🐦'},
-    {n:'Tatuzinho',  a:'Cavar',       c:'#8D6E63', e:'🦔', locked:true},
-    {n:'Sapinho',    a:'Pulo Duplo',  c:'#4CAF50', e:'🐸', locked:true}
+    {n:'Gatinho',    a:'Pulo Alto',      c:'#FF9800', e:'🐱'},
+    {n:'Cachorrinho',a:'Corrida',        c:'#8D6E63', e:'🐶'},
+    {n:'Patinho',    a:'Nada',           c:'#FDD835', e:'🦆'},
+    {n:'Passarinho', a:'Voa',            c:'#29B6F6', e:'🐦'},
+    {n:'Tatuzinho',  a:'Cavar',          c:'#8D6E63', e:'🦔', locked:true},
+    {n:'Sapinho',    a:'Pulo Duplo',     c:'#4CAF50', e:'🐸', locked:true},
+    {n:'Lagartinha', a:'Come Folhas',    c:'#F48FB1', e:'🐛', locked:true},
+    {n:'Abelha',     a:'Coleta Nectar',  c:'#FFD700', e:'🐝', locked:true}
   ];
 
   cards.forEach(function(cd,i){
-    var col=i%3, row=Math.floor(i/3);
+    var col=i%4, row=Math.floor(i/4);
     var bx = startX + col*colGap + cardW/2; // centro horizontal do card
-    var by = 128 + row*rowGap;              // centro vertical do card
+    var by = 116 + row*rowGap;              // centro vertical do card
 
     // Fundo do card
     if(cd.locked){
@@ -4279,7 +4839,7 @@ function drawMenu(){
 
   // Botão JOGAR — centralizado, com pulsação
   var pulse=Math.sin(Date.now()/380)*3;
-  var btnY = 128 + 2*rowGap + 18; // logo abaixo dos cards
+  var btnY = 116 + 2*rowGap + 14; // logo abaixo dos cards
   ctx.fillStyle='#43A047';
   rrect(CW/2-130, btnY-pulse/2, 260, 44+pulse, 22); ctx.fill();
   ctx.fillStyle='white'; ctx.font='bold 20px Arial'; ctx.textAlign='center';
@@ -4413,7 +4973,7 @@ function drawWin(){
   ctx.fillStyle='#FFD700'; ctx.font='bold 20px Arial'; ctx.fillText('Pontuacao Final: '+score+' pontos',CW/2,238);
   var total=p1Stars.filter(function(s){return s.got;}).length+p2Stars.filter(function(s){return s.got;}).length+p3Stars.filter(function(s){return s.got;}).length+p3UnlockStars.filter(function(s){return s.got;}).length+p4Stars.filter(function(s){return s.got;}).length+p5Stars.filter(function(s){return s.got;}).length+p5BarrierStars.filter(function(s){return s.got;}).length+p6Stars.filter(function(s){return s.got;}).length; // TODAS AS FASES
   ctx.fillStyle='#aef'; ctx.font='17px Arial'; ctx.fillText('Estrelas: '+total+'/160',CW/2,278); // 160 ESTRELAS (20+20+20+10+20+30+20+20)
-  ctx.fillStyle='#A5D6A7'; ctx.font='bold 15px Arial'; ctx.fillText('🎉 Todos os personagens desbloqueados no menu!',CW/2,315);
+  ctx.fillStyle='#A5D6A7'; ctx.font='bold 15px Arial'; ctx.fillText('🎉 Todos os personagens desbloqueados! Incluindo a Abelha 🐝',CW/2,315);
   ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='13px Arial'; ctx.fillText('(Reiniciar o jogo volta a bloquea-los)',CW/2,338);
   ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,365);
 }
@@ -4438,7 +4998,8 @@ function drawTutorialBanner(){
     3:{ icon:'🐸', title:'Colete as estrelas especiais!',       sub:'Desbloqueie o Sapinho no início da fase para avançar!',      c1:'#80DEEA',c2:'#0097A7' },
     4:{ icon:'🐸', title:'Sapinho come insetos voadores!',      sub:'Recupera vida ao comer — desbloqueie a Lagartinha 🐛!',      c1:'#C5E1A5',c2:'#558B2F' },
     5:{ icon:'🦔', title:'Cave a barreira com o Tatuzinho!',    sub:'Colete as 20 estrelas escondidas para desbloquear a Lagartinha!', c1:'#C1FF00',c2:'#76FF03' },
-    6:{ icon:'🐛', title:'Colete 20 folhinhas com a Lagartinha!',sub:'Complete a metamorfose e vire Borboleta 🦋!',                c1:'#F48FB1',c2:'#E91E63' }
+    6:{ icon:'🐛', title:'Colete 20 folhinhas com a Lagartinha!',sub:'Complete a metamorfose e vire Borboleta 🦋!',                c1:'#F48FB1',c2:'#E91E63' },
+    7:{ icon:'🦋', title:'Pouse nas flores abertas para carregar pólen!',sub:'Leve o pólen às 10 flores fechadas para desbloquear a Abelha 🐝!', c1:'#FFD700',c2:'#FF9800' }
   };
   var t=tips[phase]; if(!t) return;
 
@@ -4517,13 +5078,14 @@ function loop(){
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
     drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
     drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
-    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD(); drawTutorialBanner();
+    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD(); drawTutorialBanner();
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
   else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
   else if(state==='phase4intro'){ drawBG(); drawGround(); drawPhase4Intro(); } // ADICIONADO
   else if(state==='phase5intro'){ drawBG(); drawGround(); drawPhase5Intro(); }
   else if(state==='phase6intro'){ drawBG(); drawGround(); drawPhase6Intro(); }
+  else if(state==='phase7intro'){ drawBG(); drawGround(); drawPhase7Intro(); }
   else if(state==='win')        { drawBG(); drawGround(); drawWin(); }
   else if(state==='gameover')   { drawBG(); drawGround(); drawGameOver(); }
   requestAnimationFrame(loop);
@@ -4726,6 +5288,8 @@ function refreshLockState(){
   if(btnFrog&&lockFrog){ if(frogUnlocked){btnFrog.classList.remove('locked');lockFrog.style.display='none';}else{btnFrog.classList.add('locked');lockFrog.style.display='';} }
   var btnCat=document.getElementById('btn-caterpillar'), lockCat=document.getElementById('caterpillar-lock');
   if(btnCat&&lockCat){ if(caterpillarUnlocked){btnCat.classList.remove('locked');lockCat.style.display='none';}else{btnCat.classList.add('locked');lockCat.style.display='';} }
+  var btnBee=document.getElementById('btn-bee'), lockBee=document.getElementById('bee-lock');
+  if(btnBee&&lockBee){ if(beeUnlocked){btnBee.classList.remove('locked');lockBee.style.display='none';}else{btnBee.classList.add('locked');lockBee.style.display='';} }
   // Mobile charPanel
   var mlTatu=document.getElementById('mpanel-tatu-lock');
   if(mlTatu) mlTatu.style.display=catUnlocked?'none':'block';
@@ -4733,6 +5297,8 @@ function refreshLockState(){
   if(mlFrog) mlFrog.style.display=frogUnlocked?'none':'block';
   var mlCat=document.getElementById('mpanel-caterpillar-lock');
   if(mlCat) mlCat.style.display=caterpillarUnlocked?'none':'block';
+  var mlBee=document.getElementById('mpanel-bee-lock');
+  if(mlBee) mlBee.style.display=beeUnlocked?'none':'block';
 }
 
 // ── INIT ───────────────────────────────────────────────────────────────────
@@ -4775,6 +5341,7 @@ document.addEventListener('DOMContentLoaded', function(){
     <button id="mpanel-tatu" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('tatu');toggleCharPanel()">🦔<span id="mpanel-tatu-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
     <button id="mpanel-frog" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('frog');toggleCharPanel()">🐸<span id="mpanel-frog-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
     <button id="mpanel-caterpillar" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('caterpillar');toggleCharPanel()">🐛<span id="mpanel-caterpillar-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
+    <button id="mpanel-bee" class="tbtn" style="width:44px;height:44px;font-size:22px;position:relative;" onclick="switchChar('bee');toggleCharPanel()">🐝<span id="mpanel-bee-lock" style="display:block;position:absolute;inset:0;background:rgba(0,0,0,0.6);border-radius:50%;font-size:16px;line-height:44px;text-align:center;">🔒</span></button>
   </div>
 </body>
 </html>
