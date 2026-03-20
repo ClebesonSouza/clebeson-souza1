@@ -335,21 +335,24 @@ function createMusicReverb(ctx, dur) {
 }
 
 // Piano v50 — sine+triangle blend com ADSR e reverb opcional
-// wet=0 para acordes (seco), wet=0.20 para melodia (com reverb)
+// wet=0.08 para acordes (reverb suave), wet=0.20 para melodia (com reverb)
+// em modo acorde (noVibrato=true): harmônicos altos (×2, ×3) são reduzidos
+// para evitar fadiga auditiva — osc3/osc4 passam por lowpass 900 Hz
 function bgmPianoNote(freq, durS, volume, delay, noVibrato) {
   if (!musicIsPlaying || !musicMasterGain) return;
   var ctx       = getAudioCtx();
   var startTime = ctx.currentTime + delay / 1000;
-  var wet       = noVibrato ? 0.0 : 0.20;
+  var wet       = noVibrato ? 0.08 : 0.20;
 
   var osc1=ctx.createOscillator(); osc1.type='sine';     osc1.frequency.value=freq;
   var osc2=ctx.createOscillator(); osc2.type='triangle'; osc2.frequency.value=freq;
   var osc3=ctx.createOscillator(); osc3.type='sine';     osc3.frequency.value=freq*2;
   var osc4=ctx.createOscillator(); osc4.type='sine';     osc4.frequency.value=freq*3;
-  var g1=ctx.createGain(); g1.gain.value=0.52;
-  var g2=ctx.createGain(); g2.gain.value=0.24;
-  var g3=ctx.createGain(); g3.gain.value=0.14;
-  var g4=ctx.createGain(); g4.gain.value=0.05;
+  // em modo acorde: reduz harmônicos altos (osc3/osc4) para evitar chiado
+  var g1=ctx.createGain(); g1.gain.value = noVibrato ? 0.58 : 0.52;
+  var g2=ctx.createGain(); g2.gain.value = noVibrato ? 0.28 : 0.24;
+  var g3=ctx.createGain(); g3.gain.value = noVibrato ? 0.06 : 0.14;
+  var g4=ctx.createGain(); g4.gain.value = noVibrato ? 0.01 : 0.05;
   osc1.connect(g1); osc2.connect(g2); osc3.connect(g3); osc4.connect(g4);
 
   var env     = ctx.createGain();
@@ -375,13 +378,13 @@ function bgmPianoNote(freq, durS, volume, delay, noVibrato) {
   [osc1,osc2,osc3,osc4].forEach(function(o){ o.start(startTime); o.stop(stopTime); });
 }
 
-// Acorde — mesmo timbre v50, seco (sem reverb), arpejo de 6ms entre notas
-// volume agora é multiplicador dinâmico (0.0–1.5); padrão 1.0
+// Acorde — timbre suavizado: volumes reduzidos (0.042/0.028) para evitar fadiga
+// harmônicos altos já atenuados em bgmPianoNote quando noVibrato=true
 function bgmChord(freqs, durS, volume, delay) {
   if (!musicIsPlaying || !musicMasterGain) return;
   var mult = (volume > 0 && volume <= 1.5) ? volume : 1.0;
   freqs.forEach(function(f, i) {
-    bgmPianoNote(f, durS, (i === 0 ? 0.06 : 0.042) * mult, delay + i * 6, true);
+    bgmPianoNote(f, durS, (i === 0 ? 0.042 : 0.028) * mult, delay + i * 6, true);
   });
 }
 
