@@ -2544,7 +2544,11 @@ function update(){
     } else if(phase===3){ state='phase4intro'; // NOVA TRANSIÇÃO PARA FASE 4
     } else if(phase===4){ state='phase5intro'; // NOVA TRANSIÇÃO PARA FASE 5
     } else if(phase===5){ state='phase6intro';
-    } else { state='win'; sndVictory(); }
+    } else {
+      state='win'; sndVictory();
+      catUnlocked=true; frogUnlocked=true; caterpillarUnlocked=true; butterflyUnlocked=true;
+      refreshLockState(); saveProgress();
+    }
   }
 
   if(pl.y>CH+80) respawn();
@@ -4423,7 +4427,9 @@ function drawWin(){
   ctx.fillStyle='#FFD700'; ctx.font='bold 20px Arial'; ctx.fillText('Pontuacao Final: '+score+' pontos',CW/2,238);
   var total=p1Stars.filter(function(s){return s.got;}).length+p2Stars.filter(function(s){return s.got;}).length+p3Stars.filter(function(s){return s.got;}).length+p3UnlockStars.filter(function(s){return s.got;}).length+p4Stars.filter(function(s){return s.got;}).length+p5Stars.filter(function(s){return s.got;}).length+p5BarrierStars.filter(function(s){return s.got;}).length+p6Stars.filter(function(s){return s.got;}).length; // TODAS AS FASES
   ctx.fillStyle='#aef'; ctx.font='17px Arial'; ctx.fillText('Estrelas: '+total+'/160',CW/2,278); // 160 ESTRELAS (20+20+20+10+20+30+20+20)
-  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,355);
+  ctx.fillStyle='#A5D6A7'; ctx.font='bold 15px Arial'; ctx.fillText('🎉 Todos os personagens desbloqueados no menu!',CW/2,315);
+  ctx.fillStyle='rgba(255,255,255,0.4)'; ctx.font='13px Arial'; ctx.fillText('(Reiniciar o jogo volta a bloquea-los)',CW/2,338);
+  ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='14px Arial'; ctx.fillText('Clique para o menu',CW/2,365);
 }
 function drawGameOver(){
   ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.fillRect(0,0,CW,CH);
