@@ -2448,7 +2448,7 @@ function loadProgress(){
 
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
-  state='playing'; phase=7; tutorialTimer=420;// reseta tudo para o inicio da fase 1
+  state='playing'; phase=1; tutorialTimer=420;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
   camX=0; score=0; lives=3; isDigging=false; nextBonusLife=20; extraLifeTimer=0;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
