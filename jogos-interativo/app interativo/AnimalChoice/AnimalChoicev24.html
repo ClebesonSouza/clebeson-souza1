@@ -2179,6 +2179,7 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   caterpillarBarrierStarsCollected=0;
   genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
   p6.speedGates.forEach(function(g){g.passed=false;});
+  catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false;
   butterflyUnlocked=false; metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
