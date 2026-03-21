@@ -2097,14 +2097,21 @@ var p1={
   platforms:[//plataformas onde os personagens podem pular e andar, cada plataforma tem x (posicao horizontal), y (altura), w (largura) e h (espessura)
     {x:480,y:310,w:110,h:18},{x:650,y:265,w:110,h:18},// plataformas 1 fase 1
     {x:2050,y:305,w:130,h:18},{x:2240,y:272,w:120,h:18},// plataformas 2 fase1
-    {x:2900,y:292,w:150,h:18},{x:3100,y:262,w:130,h:18}// plataformas perto do final da fase 1
+    {x:2900,y:292,w:150,h:18},{x:3100,y:262,w:130,h:18}, {x:3900,y:292,w:150,h:18},{x:4400,y:262,w:130,h:18}// plataformas perto do final da fase 1
   ],
   walls:[// paredes verticais que bloqueiam o caminho do jogador, cada parede tem x (posicao horizontal), y (altura), w (largura) e h (altura)
     {x:310,y:GY-195,w:36,h:195},// primeiro muro grande, perto do inicio
-    {x:1060,y:GY-445,w:36,h:405}// segundo muro grande, depois do primeiro buraco d'agua
+    {x:1060,y:GY-445,w:36,h:405},
+    {x:3060,y:GY-5000,w:36,h:4950},   
+    {x:3300,y:GY-195,w:36,h:195},
+    {x:3460,y:GY-5000,w:36,h:4950},
+    {x:3660,y:GY-195,w:36,h:195},
+    {x:3860,y:GY-445,w:36,h:405},
+    {x:4060,y:GY-445,w:36,h:405}
+    // segundo muro grande, depois do primeiro buraco d'agua
   ],
   waterPits:[// buracos de agua no chao, cada buraco tem x (posicao horizontal), w (largura), ceilY (altura do teto) e ceilH (espessura do teto)
-    {x:1100, w:460, ceilY:80, ceilH:40}// primeiro buraco d'agua da fase 1,
+    {x:1100, w:460, ceilY:80, ceilH:40},{x:4100, w:460, ceilY:80, ceilH:40},{x:4800, w:460, ceilY:80, ceilH:40}// primeiro buraco d'agua da fase 1,
   ],
   gaps:[{x:1700,w:410},{x:2605,w:190}], // aqui consigo mudar o tamanho dos buracos no chao
 
