@@ -2138,11 +2138,37 @@ var p2={
     {x:200,  w:960, ceilY:80, ceilH:40},// primeiro buraco d'agua da fase2
     {x:1750, w:440, ceilY:80, ceilH:40}// segundo buraco d'agua da fase2
   ],
-  gaps:[{x:2550,w:400}],// aqui consigo mudar o tamanho dos buracos no chão
+  gaps:[{x:2550,w:400},{x:4490,w:500}],// aqui consigo mudar o tamanho dos buracos no chão
   speedGates:[{x:3100,y:GY-5000,w:28,h:5000,passed:false}],//portão laranja de velocidade da fase2
   megaBarriers:[{x:1280,y:GY-5000,w:300,h:5000}],// mega barreira bloqueia o caminho se o jogador nao tiver a habilidade de cavar, ou seja, se ele nao tiver desbloqueado o Tatuzinho, que é o unico personagem com a habilidade de cavar, o jogador tem que desbloquear o Tatuzinho na fase 1 para conseguir passar por essa mega barreira, que bloqueia o caminho para a linha de chegada, ou seja, se o jogador nao tiver desbloqueado o Tatuzinho, ele nao consegue chegar na linha de chegada e vencer a fase
   finish:{x:WORLD-180,y:GY-110,w:18,h:110}// linha de chegada da fase 2, se o jogador passar por ela, ele vence a fase
 };
+// ── FASE 2 — Obstáculos especiais (x:3130-5320) ──────────────────────────────
+// 1) Pedras Rolantes (x:3230-3680)
+var p2Boulders=[
+  {x:3280,vx:1.8,minX:3230,maxX:3400,r:20},
+  {x:3460,vx:-2.1,minX:3420,maxX:3560,r:20},
+  {x:3600,vx:1.5,minX:3555,maxX:3670,r:20}
+];
+// 2) Zona Escura (x:3760-4410)
+var p2DarkZone={x:3760,w:650};
+// 3) Morcegos (x:3760-4410 — dentro da Zona Escura)
+var p2Bats=[
+  {x:3820,y:GY-110,vx:1.6,minX:3780,maxX:3950,baseY:GY-110,w:30,h:20},
+  {x:3990,y:GY-85, vx:-1.9,minX:3950,maxX:4110,baseY:GY-85, w:30,h:20},
+  {x:4140,y:GY-130,vx:1.4,minX:4100,maxX:4270,baseY:GY-130,w:30,h:20},
+  {x:4280,y:GY-95, vx:-1.7,minX:4240,maxX:4400,baseY:GY-95, w:30,h:20}
+];
+// 4) Piso Quebrável (x:4490-4990, sobre gap expandido)
+// 'solid' | 'cracking' | 'broken'
+var p2BreakFloors=[
+  {x:4510,w:68,state:'solid',timer:0},
+  {x:4630,w:68,state:'solid',timer:0},
+  {x:4750,w:68,state:'solid',timer:0}
+];
+// 5) Tornado (x:3130-4490 — bloqueia voadores, invisível para terrestres)
+var p2Tornado={x:3130,w:1360,angle:0};
+
 var p2Stars=[];// gera as estrelas da fase 2, cada estrela tem x (posicao horizontal), y (altura), got (se o jogador ja pegou a estrela ou nao) e r (raio da estrela, para calcular a colisao com o jogador)
 (function(){for(var i=0;i<20;i++) p2Stars.push({x:260+i*175+Math.random()*40,y:GY-55-Math.random()*90,got:false,r:11});})();// as estrelas da fase 2 ficam mais perto do chao, para incentivar o uso do Tatuzinho, que tem a habilidade de cavar e andar no chao
 
@@ -2477,6 +2503,10 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   genP6Leaves(); p6Stars.forEach(function(s){s.got=false;});
   p6.speedGates.forEach(function(g){g.passed=false;});
   genP7Flowers(); p7.speedGates.forEach(function(g){g.passed=false;});
+  p2Boulders.forEach(function(b){b.x=b.minX+Math.round((b.maxX-b.minX)/2);});
+  p2Bats.forEach(function(b){b.x=b.minX+Math.round((b.maxX-b.minX)/2); b.y=b.baseY;});
+  p2BreakFloors.forEach(function(f){f.state='solid';f.timer=0;});
+  p2Tornado.angle=0;
   if(!gameZeroed){
     catUnlocked=false; frogUnlocked=false; caterpillarUnlocked=false; butterflyUnlocked=false; beeUnlocked=false;
   }
@@ -2513,6 +2543,10 @@ function beginPhase2(){ stopBgMusic(); sndPhase2Start();//
   pl.char='cat'; // reseta personagem para o Gatinho
   camX=0; isDigging=false;
   p2.speedGates.forEach(function(g){g.passed=false;});
+  p2Boulders.forEach(function(b){b.x=b.minX+Math.round((b.maxX-b.minX)/2);});
+  p2Bats.forEach(function(b){b.x=b.minX+Math.round((b.maxX-b.minX)/2); b.y=b.baseY;});
+  p2BreakFloors.forEach(function(f){f.state='solid';f.timer=0;});
+  p2Tornado.angle=0;
   // Atualiza botão ativo para o Gatinho
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
@@ -2738,6 +2772,52 @@ function update(){
         var allBarrier=p5BarrierStars.every(function(s){return s.got;});
         if(allBarrier&&!caterpillarUnlocked) unlockCaterpillarButterfly();
       }
+    }
+  }
+
+  // ── FASE 2 — Obstáculos especiais ───────────────────────────────────────────
+  if(phase===2){
+    var t2=Date.now();
+    // Pedras Rolantes
+    for(var boi=0;boi<p2Boulders.length;boi++){
+      var bo=p2Boulders[boi];
+      bo.x+=bo.vx;
+      if(bo.x<bo.minX||bo.x>bo.maxX) bo.vx=-bo.vx;
+      var bdx=Math.abs(pl.x+pl.w/2-bo.x), bdy=Math.abs(pl.y+pl.h-(GY-bo.r));
+      if(bdx<bo.r+pl.w/2-4&&bdy<bo.r+4){ sndHit(); respawn(); }
+    }
+    // Morcegos
+    for(var bti=0;bti<p2Bats.length;bti++){
+      var bat=p2Bats[bti];
+      bat.x+=bat.vx;
+      if(bat.x<bat.minX||bat.x>bat.maxX) bat.vx=-bat.vx;
+      bat.y=bat.baseY+Math.sin(t2/300+bti*1.3)*18;
+      if(pl.x+pl.w>bat.x&&pl.x<bat.x+bat.w&&pl.y+pl.h>bat.y&&pl.y<bat.y+bat.h){
+        sndHit(); respawn();
+      }
+    }
+    // Piso Quebrável — colisão e lógica de quebra
+    for(var bfi=0;bfi<p2BreakFloors.length;bfi++){
+      var bf=p2BreakFloors[bfi];
+      if(bf.state==='broken'){
+        bf.timer++; if(bf.timer>=240){ bf.state='solid'; bf.timer=0; }
+        continue;
+      }
+      // Colisão: age como plataforma ao nível do chão
+      if(pl.x+pl.w>bf.x&&pl.x<bf.x+bf.w&&
+         pl.y+pl.h>=GY-2&&pl.y+pl.h<=GY+10&&pl.vy>=0){
+        pl.y=GY-pl.h; pl.vy=0; pl.onGround=true;
+        if(bf.state==='solid'){ bf.state='cracking'; bf.timer=0; }
+      }
+      if(bf.state==='cracking'){
+        bf.timer++; if(bf.timer>=45){ bf.state='broken'; bf.timer=0; }
+      }
+    }
+    // Tornado — gira e puxa voadores de qualquer posição >= 3130 de volta ao início da zona
+    p2Tornado.angle+=0.05;
+    if(CHARS[pl.char].fly&&pl.x+pl.w/2>=p2Tornado.x){
+      pl.x-=9; // puxão supera spd máximo de qualquer voador (5.5), arrastando de volta
+      if(pl.x<0) pl.x=0;
     }
   }
 
@@ -5080,6 +5160,219 @@ function drawTutorialBanner(){
 }
 // ── FIM BANNER TUTORIAL
 
+// ── FASE 2 — Funções de Desenho dos Obstáculos Especiais ─────────────────────
+function drawP2Boulders(){
+  if(phase!==2) return;
+  for(var i=0;i<p2Boulders.length;i++){
+    var bo=p2Boulders[i], sx=bo.x-camX;
+    if(sx<-60||sx>CW+60) continue;
+    var sy=GY-bo.r;
+    // Sombra
+    ctx.fillStyle='rgba(0,0,0,0.3)';
+    ctx.beginPath(); ctx.ellipse(sx,GY-2,bo.r*0.9,5,0,0,Math.PI*2); ctx.fill();
+    // Pedra — gradiente radial
+    var rg=ctx.createRadialGradient(sx-bo.r*0.3,sy-bo.r*0.3,2,sx,sy,bo.r);
+    rg.addColorStop(0,'#9E9E9E'); rg.addColorStop(0.6,'#616161'); rg.addColorStop(1,'#37474F');
+    ctx.fillStyle=rg;
+    ctx.beginPath(); ctx.arc(sx,sy,bo.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#263238'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(sx,sy,bo.r,0,Math.PI*2); ctx.stroke();
+    // Rachaduras
+    ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(sx-6,sy-8); ctx.lineTo(sx+2,sy+4); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(sx+5,sy-6); ctx.lineTo(sx-3,sy+6); ctx.stroke();
+    // Label
+    ctx.fillStyle='rgba(0,0,0,0.55)'; rrect(sx-38,sy-bo.r-26,76,18,8); ctx.fill();
+    ctx.fillStyle='#FFD700'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('🪨 Desvie!',sx,sy-bo.r-13);
+  }
+}
+
+function drawP2Bats(){
+  if(phase!==2) return;
+  var t=Date.now()/120;
+  for(var i=0;i<p2Bats.length;i++){
+    var bat=p2Bats[i], sx=bat.x-camX;
+    if(sx<-60||sx>CW+60) continue;
+    var sy=bat.y, flapY=Math.abs(Math.sin(t+i*0.9))*10;
+    ctx.save(); ctx.translate(sx+bat.w/2, sy+bat.h/2);
+    // Asas
+    ctx.fillStyle='rgba(30,20,40,0.9)';
+    ctx.beginPath(); ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-8,-8-flapY,-22,-10-flapY,-18,-2);
+    ctx.bezierCurveTo(-12,3,-4,2,0,0); ctx.fill();
+    ctx.beginPath(); ctx.moveTo(0,0);
+    ctx.bezierCurveTo(8,-8-flapY,22,-10-flapY,18,-2);
+    ctx.bezierCurveTo(12,3,4,2,0,0); ctx.fill();
+    // Corpo
+    ctx.fillStyle='#1a0a2e';
+    ctx.beginPath(); ctx.ellipse(0,2,5,7,0,0,Math.PI*2); ctx.fill();
+    // Olhos
+    ctx.fillStyle='#FF1744';
+    ctx.beginPath(); ctx.arc(-2,-1,1.5,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(2,-1,1.5,0,Math.PI*2); ctx.fill();
+    ctx.restore();
+    // Aviso pulsante
+    var pulse=0.5+0.5*Math.sin(t*3+i); ctx.globalAlpha=pulse;
+    ctx.fillStyle='#FF1744'; ctx.font='bold 10px Arial'; ctx.textAlign='center';
+    ctx.fillText('🦇',sx+bat.w/2,sy-8); ctx.globalAlpha=1;
+  }
+}
+
+function drawP2BreakFloors(){
+  if(phase!==2) return;
+  for(var i=0;i<p2BreakFloors.length;i++){
+    var bf=p2BreakFloors[i];
+    if(bf.state==='broken') continue;
+    var sx=bf.x-camX;
+    if(sx>CW||sx+bf.w<0) continue;
+    var alpha=bf.state==='cracking'?Math.max(0.3,1-bf.timer/45):1;
+    ctx.save(); ctx.globalAlpha=alpha;
+    // Base do piso
+    ctx.fillStyle='#5D4037'; ctx.fillRect(sx,GY-6,bf.w,6);
+    ctx.fillStyle='#795548'; ctx.fillRect(sx,GY-6,bf.w,3);
+    // Rachaduras progressivas no cracking
+    if(bf.state==='cracking'){
+      var prog=bf.timer/45;
+      ctx.strokeStyle='#212121'; ctx.lineWidth=1.5; ctx.lineCap='round';
+      ctx.beginPath(); ctx.moveTo(sx+bf.w*0.3,GY-6); ctx.lineTo(sx+bf.w*0.2,GY); ctx.stroke();
+      if(prog>0.3){ ctx.beginPath(); ctx.moveTo(sx+bf.w*0.6,GY-6); ctx.lineTo(sx+bf.w*0.7,GY); ctx.stroke(); }
+      if(prog>0.6){
+        ctx.beginPath(); ctx.moveTo(sx+bf.w*0.1,GY-4); ctx.lineTo(sx+bf.w*0.45,GY-4); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(sx+bf.w*0.55,GY-4); ctx.lineTo(sx+bf.w*0.9,GY-4); ctx.stroke();
+      }
+    }
+    ctx.restore();
+  }
+}
+
+function drawP2DarkZone(){
+  if(phase!==2) return;
+  var dz=p2DarkZone;
+  var screenStart=dz.x-camX, screenEnd=dz.x+dz.w-camX;
+  if(screenEnd<0||screenStart>CW) return;
+  var clipL=Math.max(0,screenStart), clipR=Math.min(CW,screenEnd);
+  var plcx=pl.x+pl.w/2, plcy=pl.y+pl.h/2;
+  var inZone=(plcx>dz.x&&plcx<dz.x+dz.w);
+  ctx.save();
+  ctx.beginPath(); ctx.rect(clipL,0,clipR-clipL,CH); ctx.clip();
+  if(inZone){
+    var lx=plcx-camX, ly=plcy;
+    var grd=ctx.createRadialGradient(lx,ly,25,lx,ly,160);
+    grd.addColorStop(0,'rgba(0,0,0,0)');
+    grd.addColorStop(0.45,'rgba(0,0,0,0.82)');
+    grd.addColorStop(1,'rgba(0,0,0,0.97)');
+    ctx.fillStyle=grd; ctx.fillRect(clipL,0,clipR-clipL,CH);
+  } else {
+    ctx.fillStyle='rgba(0,0,0,0.96)'; ctx.fillRect(clipL,0,clipR-clipL,CH);
+  }
+  // Label na borda de entrada
+  if(screenStart>0&&screenStart<CW){
+    ctx.fillStyle='rgba(0,0,0,0.7)'; rrect(screenStart+4,GY-46,120,20,8); ctx.fill();
+    ctx.strokeStyle='rgba(255,200,0,0.5)'; ctx.lineWidth=1; rrect(screenStart+4,GY-46,120,20,8); ctx.stroke();
+    ctx.fillStyle='rgba(255,200,0,0.85)'; ctx.font='bold 10px Arial'; ctx.textAlign='left';
+    ctx.fillText('🔦 Zona Escura!',screenStart+10,GY-32);
+  }
+  ctx.restore();
+}
+
+function drawP2Tornado(){
+  if(phase!==2) return;
+  if(!CHARS[pl.char].fly) return; // surpresa: invisível para personagens terrestres
+  var tz=p2Tornado;
+  var screenL=tz.x-camX, screenR=tz.x+tz.w-camX;
+  if(screenR<0||screenL>CW) return;
+  var clipL=Math.max(0,screenL), clipR=Math.min(CW,screenR);
+  var ang=tz.angle;
+  ctx.save();
+  ctx.beginPath(); ctx.rect(clipL,0,clipR-clipL,CH); ctx.clip();
+
+  // 1) Tint de fundo na zona inteira
+  var bgG=ctx.createLinearGradient(screenL,0,screenR,0);
+  bgG.addColorStop(0,'rgba(60,30,5,0)');
+  bgG.addColorStop(0.05,'rgba(90,45,5,0.4)');
+  bgG.addColorStop(0.95,'rgba(90,45,5,0.4)');
+  bgG.addColorStop(1,'rgba(60,30,5,0)');
+  ctx.fillStyle=bgG; ctx.fillRect(clipL,0,clipR-clipL,CH);
+
+  // 2) Rajadas de vento horizontais (animadas para a esquerda)
+  for(var s=0;s<24;s++){
+    var sy=10+s*(CH/24)+Math.sin(s*1.9)*6;
+    var sOff=((ang*220+s*89)%(tz.w));
+    var sx=screenL+sOff;
+    var slen=55+Math.sin(s*2.6+ang)*38;
+    ctx.beginPath();
+    ctx.moveTo(sx,sy); ctx.lineTo(sx-slen,sy);
+    ctx.strokeStyle='rgba(220,185,100,'+(0.05+Math.abs(Math.sin(s*1.1))*0.07)+')';
+    ctx.lineWidth=0.7+Math.abs(Math.sin(s*0.9))*0.6;
+    ctx.stroke();
+  }
+
+  // 3) Três funis (cone real: boca larga no topo, cauda estreita no chão)
+  var funnelRelX=[100,580,1080]; // posições relativas ao início da zona
+  for(var fi=0;fi<3;fi++){
+    var fcx=screenL+funnelRelX[fi];
+    if(fcx<clipL-80||fcx>clipR+80) continue;
+    var fAng=ang+fi*2.09;
+    var topW=50, botW=5;
+
+    // Silhueta do cone (forma de funil com curva de Bezier)
+    ctx.beginPath();
+    ctx.moveTo(fcx-topW,0);
+    ctx.quadraticCurveTo(fcx-topW*0.22, GY*0.55, fcx-botW, GY);
+    ctx.lineTo(fcx+botW, GY);
+    ctx.quadraticCurveTo(fcx+topW*0.22, GY*0.55, fcx+topW, 0);
+    ctx.closePath();
+    var coneG=ctx.createLinearGradient(fcx-topW,0,fcx+topW,0);
+    coneG.addColorStop(0,'rgba(130,95,25,0)');
+    coneG.addColorStop(0.5,'rgba(155,110,30,0.2)');
+    coneG.addColorStop(1,'rgba(130,95,25,0)');
+    ctx.fillStyle=coneG; ctx.fill();
+    ctx.strokeStyle='rgba(195,155,55,0.28)'; ctx.lineWidth=1.2; ctx.stroke();
+
+    // Elipses giratórias dentro do cone (profundidade 3D)
+    for(var li=0;li<13;li++){
+      var prog=li/13;
+      var ely=GY*prog;
+      var elW=((topW-botW)*(1-prog)+botW)*0.88;
+      ctx.beginPath();
+      ctx.ellipse(fcx, ely, elW, 4+prog*7, fAng+prog*Math.PI*3.5, 0, Math.PI*2);
+      ctx.strokeStyle='rgba(230,195,100,'+(0.05+0.25*(1-prog))+')';
+      ctx.lineWidth=1+prog*2.5;
+      ctx.stroke();
+    }
+
+    // Detritos orbitando ao longo do funil
+    for(var d=0;d<12;d++){
+      var da=fAng*3+d*(Math.PI*2/12);
+      var dprog=(d%12)/12;
+      var ely2=GY*dprog;
+      var elW2=(topW-botW)*(1-dprog)+botW;
+      var drad=elW2*0.75*Math.abs(Math.sin(da+d*0.35));
+      var dpx=fcx+Math.cos(da)*drad;
+      var dsz=2.4-dprog*1.9; if(dsz<0.35) dsz=0.35;
+      ctx.beginPath(); ctx.arc(dpx,ely2,dsz,0,Math.PI*2);
+      ctx.fillStyle='rgba(215,170,60,0.72)'; ctx.fill();
+    }
+  }
+
+  // 4) Aviso na borda de entrada da zona (visível quando screenL está na tela)
+  if(screenL>-20&&screenL<CW-10){
+    ctx.font='bold 26px Arial'; ctx.textAlign='center';
+    ctx.fillStyle='rgba(255,100,0,0.92)';
+    ctx.fillText('⬅',screenL+48,GY-158);
+    ctx.fillText('⬅',screenL+48,GY-122);
+    ctx.fillStyle='rgba(0,0,0,0.75)';
+    rrect(screenL+5,GY-74,138,24,9); ctx.fill();
+    ctx.strokeStyle='rgba(255,140,0,0.9)'; ctx.lineWidth=1.5;
+    rrect(screenL+5,GY-74,138,24,9); ctx.stroke();
+    ctx.fillStyle='#FFD700'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('🌪️ Zona do Tornado!',screenL+11,GY-58);
+  }
+
+  ctx.restore();
+}
+
 function loop(){
   ctx.clearRect(0,0,CW,CH);
   if(state==='menu') drawMenu();
@@ -5088,7 +5381,9 @@ function loop(){
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
     drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
     drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
-    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers(); drawPlayer(); drawParticles(); drawMetamorph(); drawHUD(); drawTutorialBanner();
+    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers();
+    drawP2Boulders(); drawP2Bats(); drawP2BreakFloors(); drawP2Tornado();
+    drawPlayer(); drawParticles(); drawMetamorph(); drawP2DarkZone(); drawHUD(); drawTutorialBanner();
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
   else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
