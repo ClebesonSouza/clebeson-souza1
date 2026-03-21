@@ -2045,7 +2045,7 @@ canvas.addEventListener('click',function(){
 });
 
 // ── Player ───────────────────────────────────────────────────────────────────
-var pl={x:100,y:GY-40,vx:0,vy:0,w:38,h:38,onGround:false,char:'cat',inWaterPit:false};
+var pl={x:100,y:GY-40,vx:0,vy:0,w:38,h:38,onGround:false,char:'cat',inWaterPit:false,facing:1};
 
 function switchChar(c){
   if(c==='caterpillar'&&butterflyUnlocked) c='butterfly';
@@ -2658,12 +2658,12 @@ function update(){
 
   // Horizontal movement
   if(pl.char==='frog'&&frogLongJump&&!pl.onGround){
-    if(K['ArrowLeft']||K['a']) pl.vx=-10;
-    else if(K['ArrowRight']||K['d']) pl.vx=10;
+    if(K['ArrowLeft']||K['a']){ pl.vx=-10; pl.facing=-1; }
+    else if(K['ArrowRight']||K['d']){ pl.vx=10; pl.facing=1; }
     else pl.vx=0;
   } else {
-    if(K['ArrowLeft']||K['a']) pl.vx=-def.spd;
-    else if(K['ArrowRight']||K['d']) pl.vx=def.spd;
+    if(K['ArrowLeft']||K['a']){ pl.vx=-def.spd; pl.facing=-1; }
+    else if(K['ArrowRight']||K['d']){ pl.vx=def.spd; pl.facing=1; }
     else pl.vx=0;
   }
 
@@ -3650,12 +3650,15 @@ function drawDuck(cx,cy,def){
   // Show "no jump" hint bubble when flapping — raised higher to avoid name conflict
   if(duckFlapTimer>0 && !pl.inWaterPit){
     var bx=cx, by=cy-62; // raised up well above the name tag
+    // Cancela o flip do personagem para o balão de texto não virar
+    ctx.save();
+    if(pl.facing===-1){ ctx.translate(cx,0); ctx.scale(-1,1); ctx.translate(-cx,0); }
     ctx.fillStyle='rgba(255,255,255,0.95)';
     rrect(bx-32,by-14,64,22,10); ctx.fill();
     ctx.strokeStyle='#FDD835'; ctx.lineWidth=2;
     rrect(bx-32,by-14,64,22,10); ctx.stroke();
     ctx.fillStyle='#E65100'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-    ctx.fillText('so nado! :)',bx,by+3);
+    ctx.fillText('Só nado! :)',bx,by+3);
     // Tail pointing down toward duck
     ctx.fillStyle='rgba(255,255,255,0.95)';
     ctx.beginPath();
@@ -3665,6 +3668,7 @@ function drawDuck(cx,cy,def){
     ctx.beginPath();
     ctx.moveTo(bx-5,by+8); ctx.lineTo(bx,by+16); ctx.lineTo(bx+5,by+8);
     ctx.stroke();
+    ctx.restore();
   }
 }
 function drawBird(cx,cy,def){
@@ -4395,6 +4399,13 @@ function drawPlayer(){
     cx=pollenChargingFlower.x-camX;
     cy=pollenChargingFlower.y-18;
   }
+  // Flip horizontalmente quando o personagem está virado para a esquerda
+  ctx.save();
+  if(pl.facing===-1){
+    ctx.translate(cx,cy);
+    ctx.scale(-1,1);
+    ctx.translate(-cx,-cy);
+  }
   switch(pl.char){
     case 'cat':         drawCat(cx,cy,def);         break;
     case 'dog':         drawDog(cx,cy,def);         break;
@@ -4406,6 +4417,7 @@ function drawPlayer(){
     case 'butterfly':   drawButterfly(cx,cy,def);   break;
     case 'bee':         drawBee(cx,cy,def);         break;
   }
+  ctx.restore();
   if(!isDigging){
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
     ctx.fillText(def.name,cx,sy-5);
@@ -4565,11 +4577,11 @@ function drawP7Flowers(){
         }
         if(pollenChargingFlower===fl){
           var cp=pollenChargeTimer/180;
-          ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(sx-22,sy-34,44,9,4); ctx.fill();
+          ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(sx-22,sy-65,44,9,4); ctx.fill();
           var cg=ctx.createLinearGradient(sx-22,0,sx+22,0);
           cg.addColorStop(0,'#FFD700'); cg.addColorStop(1,'#FF9800');
-          ctx.fillStyle=cg; rrect(sx-22,sy-34,44*cp,9,4); ctx.fill();
-          ctx.strokeStyle='#FF9800'; ctx.lineWidth=1.5; rrect(sx-22,sy-34,44,9,4); ctx.stroke();
+          ctx.fillStyle=cg; rrect(sx-22,sy-65,44*cp,9,4); ctx.fill();
+          ctx.strokeStyle='#FF9800'; ctx.lineWidth=1.5; rrect(sx-22,sy-65,44,9,4); ctx.stroke();
         }
       } else { pLen=7; pW=4; cR=4; cC='#9E9E9E'; alpha=0.4; } // depleted
     } else {
