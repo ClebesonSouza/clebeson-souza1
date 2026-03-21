@@ -3295,6 +3295,29 @@ function drawStars(){
     grad.addColorStop(1,'#FF8F00');
     ctx.fillStyle=grad; ctx.fill();
     ctx.strokeStyle='#E65100'; ctx.lineWidth=1.2; ctx.stroke();
+    // 4) Brilho varrendo da ponta direita até a ponta esquerda
+    // Reconstrói o clip da estrela para confinar o brilho dentro dela
+    ctx.save();
+    ctx.beginPath();
+    for(var pi=0;pi<10;pi++){
+      var ang2=(pi*Math.PI/5)-Math.PI/2;
+      var rad2=pi%2===0?r:r*0.42;
+      var ppx=sx+Math.cos(ang2)*rad2, ppy=cy2+Math.sin(ang2)*rad2;
+      pi===0?ctx.moveTo(ppx,ppy):ctx.lineTo(ppx,ppy);
+    }
+    ctx.closePath();
+    ctx.clip();
+    // Faixa de luz que desliza da direita para a esquerda (ciclo ~2.5s)
+    var sweep=((t*0.55+s.x*0.003)%1); // 0=direita, 1=esquerda
+    var bx=sx+r-(sweep*r*2.8);        // posição horizontal da faixa
+    var bw=r*0.55;                     // largura da faixa
+    var sg=ctx.createLinearGradient(bx-bw,0,bx+bw,0);
+    sg.addColorStop(0,'rgba(255,255,255,0)');
+    sg.addColorStop(0.5,'rgba(255,255,255,0.72)');
+    sg.addColorStop(1,'rgba(255,255,255,0)');
+    ctx.fillStyle=sg;
+    ctx.fillRect(bx-bw,cy2-r,bw*2,r*2);
+    ctx.restore();
     ctx.restore();
   }
 }
