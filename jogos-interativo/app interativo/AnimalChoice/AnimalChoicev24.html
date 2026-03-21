@@ -1989,6 +1989,7 @@ var pollenBouquet=-1;       // qual buque o polen foi coletado
 var pollenGlow=0;           // timer do brilho da borboleta (frames)
 var pollenChargeTimer=0;    // timer de carregamento na flor aberta (0-180)
 var pollenChargingFlower=null; // flor sendo carregada no momento
+var pollinatingFlower=null;    // flor alvo sendo polinizada (estado 'opening')
 var pollinationsTotal=0;    // total de polinizacoes feitas (max 10)
 var pollinationComplete=false; // true quando todas as flores foram polinizadas
 var beeCardTimer=0;         // timer da animacao do card da abelha aparecendo
@@ -2396,6 +2397,7 @@ function genP7Flowers(){
   pollenGlow=0;
   pollenChargeTimer=0;
   pollenChargingFlower=null;
+  pollinatingFlower=null;
   beeCardTimer=0;
 
   var bouquetPositions=[200, 1050, 2200, 3150, 4550];
@@ -2935,7 +2937,8 @@ function update(){
       var fl7=p7Flowers[fi];
       // Flor alvo abrindo gradualmente
       if(fl7.role==='target'&&fl7.state==='opening'){
-        fl7.openTimer++; if(fl7.openTimer>=90) fl7.state='pollinated';
+        if(pollinatingFlower!==fl7) pollinatingFlower=fl7;
+        fl7.openTimer++; if(fl7.openTimer>=90){ fl7.state='pollinated'; pollinatingFlower=null; }
       }
       // Carregamento na flor fonte (borboleta/abelha paira sobre ela)
       if(fl7.role==='source'&&fl7.state==='open'&&isFlier&&!butterflyPollen){
@@ -3257,16 +3260,42 @@ function drawSpeedGates(){
   }
 }
 function drawStars(){
-  var sts=getStars(), t=Date.now()/350;
+  var sts=getStars(), t=Date.now()/600;
+  var plcx=pl.x+pl.w/2-camX, plcy=pl.y+pl.h/2;
   for(var i=0;i<sts.length;i++){
     var s=sts[i]; if(s.got) continue;
-    var sx=s.x-camX; if(sx<-20||sx>CW+20) continue;
-    var bob=Math.sin(t+s.x)*3;
-    ctx.beginPath(); ctx.arc(sx,s.y+bob,s.r,0,Math.PI*2);
-    ctx.fillStyle='#FFD700'; ctx.fill();
-    ctx.strokeStyle='#FFA000'; ctx.lineWidth=2; ctx.stroke();
-    ctx.fillStyle='#E65100'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
-    ctx.fillText('*',sx,s.y+bob+4);
+    var sx=s.x-camX; if(sx<-30||sx>CW+30) continue;
+    var bob=Math.sin(t*1.8+s.x*0.01)*3;
+    var cy2=s.y+bob;
+    // Proximidade do jogador → estrela cresce levemente
+    var dist=Math.sqrt((sx-plcx)*(sx-plcx)+(cy2-plcy)*(cy2-plcy));
+    var scale=dist<90?1+(1-dist/90)*0.28:1;
+    var r=s.r*scale;
+    ctx.save();
+    // 1) Halo pulsante externo
+    var haloR=r*(1.7+Math.sin(t*2.5+s.x)*0.18);
+    var hg=ctx.createRadialGradient(sx,cy2,r*0.4,sx,cy2,haloR);
+    hg.addColorStop(0,'rgba(255,220,0,0.32)');
+    hg.addColorStop(1,'rgba(255,180,0,0)');
+    ctx.fillStyle=hg;
+    ctx.beginPath(); ctx.arc(sx,cy2,haloR,0,Math.PI*2); ctx.fill();
+    // 2) Forma de estrela de 5 pontas
+    ctx.beginPath();
+    for(var p=0;p<10;p++){
+      var ang=(p*Math.PI/5)-Math.PI/2;
+      var rad=p%2===0?r:r*0.42;
+      var px=sx+Math.cos(ang)*rad, py=cy2+Math.sin(ang)*rad;
+      p===0?ctx.moveTo(px,py):ctx.lineTo(px,py);
+    }
+    ctx.closePath();
+    // 3) Gradiente interno dourado
+    var grad=ctx.createRadialGradient(sx,cy2-r*0.2,r*0.08,sx,cy2,r);
+    grad.addColorStop(0,'#FFFDE7');
+    grad.addColorStop(0.38,'#FFD700');
+    grad.addColorStop(1,'#FF8F00');
+    ctx.fillStyle=grad; ctx.fill();
+    ctx.strokeStyle='#E65100'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.restore();
   }
 }
 function drawFinish(){
@@ -4399,6 +4428,11 @@ function drawPlayer(){
     cx=pollenChargingFlower.x-camX;
     cy=pollenChargingFlower.y-18;
   }
+  // When pollinating, land visually on top of the target flower
+  if(phase===7&&pollinatingFlower&&(pl.char==='butterfly'||pl.char==='bee')){
+    cx=pollinatingFlower.x-camX;
+    cy=pollinatingFlower.y-18;
+  }
   // Flip horizontalmente quando o personagem está virado para a esquerda
   ctx.save();
   if(pl.facing===-1){
@@ -4577,6 +4611,16 @@ function drawP7Flowers(){
         }
         if(pollenChargingFlower===fl){
           var cp=pollenChargeTimer/180;
+          // Mensagem "Coletando Pólen" — aparece até 50%, depois some gradualmente
+          var msgAlpha=cp<=0.5?1:Math.max(0,1-(cp-0.5)/0.5);
+          if(msgAlpha>0){
+            ctx.save();
+            ctx.globalAlpha=msgAlpha;
+            ctx.fillStyle='#E65100'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+            ctx.fillText('Coletando Pólen',sx,sy-78);
+            ctx.restore();
+          }
+          // Barra de carregamento
           ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(sx-22,sy-65,44,9,4); ctx.fill();
           var cg=ctx.createLinearGradient(sx-22,0,sx+22,0);
           cg.addColorStop(0,'#FFD700'); cg.addColorStop(1,'#FF9800');
@@ -4588,6 +4632,15 @@ function drawP7Flowers(){
       // target opening/pollinated
       var prog=fl.state==='opening'?(fl.openTimer/90):1;
       pLen=13*prog; pW=7*prog; cR=6; cC='#FFD700'; alpha=0.4+0.6*prog;
+      // Mensagem "Polinizando" durante abertura — aparece e some junto com a animação
+      if(fl.state==='opening'){
+        var polAlpha=prog<=0.5?1:Math.max(0,1-(prog-0.5)/0.5);
+        ctx.save();
+        ctx.globalAlpha=polAlpha;
+        ctx.fillStyle='#7B1FA2'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+        ctx.fillText('Polinizando',sx,sy-72);
+        ctx.restore();
+      }
       if(fl.state==='pollinated'){
         for(var sp=0;sp<3;sp++){
           var sa=t*1.8+sp*(Math.PI*2/3);
