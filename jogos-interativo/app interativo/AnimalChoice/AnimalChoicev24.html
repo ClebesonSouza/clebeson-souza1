@@ -1977,6 +1977,11 @@ var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
 var frogUnlocked=false, frogLongJump=false, frogTongue=0, frogBlinkTimer=0;
 var frogSquash=0;       // frames de achatamento ao pousar (0=nenhum)
 var frogWasInAir=false; // detecta transição ar→chão
+var dogSquash=0;        // frames de achatamento ao pousar (cachorro)
+var dogWasInAir=false;  // detecta transição ar→chão (cachorro)
+var dogBlinkTimer=0;    // piscar a cada ~2s
+var dogIdleTimer=0;     // conta frames parado (para sentar)
+var dogSitProgress=0;   // 0=em pé, 1=sentado (interpola suavemente)
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var beeUnlocked=false;
@@ -3602,178 +3607,297 @@ function drawCat(cx,cy,def){
 
 function drawDog(cx,cy,def){
   var t=Date.now()/110;
-  var run=Math.sin(t)*6;
+
+  // === Estado de animação ===
+  var isMoving=Math.abs(pl.vx)>0.5&&pl.onGround;
+  var inAir=!pl.onGround;
+
+  // Achatamento ao pousar
+  if(dogWasInAir&&pl.onGround) dogSquash=10;
+  dogWasInAir=inAir;
+  if(dogSquash>0) dogSquash--;
+  var squashX=1+dogSquash*0.012;
+  var squashY=1-dogSquash*0.018;
+
+  // Animação de sentar: idle ≥2.5s (150 frames) → sentar suavemente
+  if(!isMoving&&!inAir){
+    dogIdleTimer++;
+    if(dogIdleTimer>150) dogSitProgress=Math.min(1,dogSitProgress+0.025);
+  } else {
+    dogIdleTimer=0;
+    dogSitProgress=Math.max(0,dogSitProgress-0.05);
+  }
+  var sitT=dogSitProgress;
+
+  var hopY=0, walkSin=0;
+  var nearFrontLift=0, farFrontLift=0, nearFrontSwing=0, farFrontSwing=0;
+  var nearBackLift=0, farBackLift=0, nearBackSwing=0, farBackSwing=0;
+  var tailFreq=2.2, tailAmp=0.5;
+
+  if(isMoving){
+    var hc=(t*4.5)%(Math.PI*2);
+    walkSin=Math.sin(hc);
+    var absWS=Math.abs(walkSin);
+    hopY=Math.pow(absWS,2)*5;
+    // Marcha diagonal: pata dianteira perto + pata traseira longe — mesma fase
+    nearFrontLift=Math.max(0, walkSin)*7;
+    farFrontLift =Math.max(0,-walkSin)*5;
+    nearFrontSwing= walkSin*3;
+    farFrontSwing =-walkSin*2.5;
+    nearBackLift =Math.max(0,-walkSin)*6;
+    farBackLift  =Math.max(0, walkSin)*4;
+    nearBackSwing=-walkSin*3;
+    farBackSwing = walkSin*2.5;
+    tailFreq=5; tailAmp=0.7;
+  } else if(inAir){
+    nearFrontLift=4; farFrontLift=2; nearBackLift=5; farBackLift=2;
+  }
+
+  var sitSink=sitT*9;
+  var dcy=cy-hopY+sitSink;
+  var breathe=(!isMoving&&!inAir) ? Math.sin(t*1.4)*0.05 : 0;
+  var tw=Math.sin(t*tailFreq)*tailAmp;
+  // Y local do chão: patas ancoradas em cy+22 (fixo no canvas)
+  // Após translate(cx,dcy) + scale(0.85): localY*0.85 + dcy = cy+22 → localY=(22+hopY-sitSink)/0.85
+  var sc=0.85;
+  var lgY=(22+hopY-sitSink)/sc;
+  // Balanço da orelha durante corrida
+  var earBounce=isMoving ? Math.abs(walkSin)*3 : 0;
+
+  // Paleta do filhote — preto e branco
+  var cBlack='#111111';   // corpo
+  var cDark ='#1e1e1e';   // camada de fundo / sombra
+  var cBelly='#F2F2F2';   // barriga/peito branco
+  var cPaw  ='#E8E8E8';   // patinhas brancas
+  var hx=24, hy=-17;
+
   ctx.save();
-  ctx.translate(cx,cy);
-  ctx.scale(0.85,0.85); // Reduzido 15%
+  ctx.translate(cx,dcy);
+  ctx.scale(sc,sc);
 
-  // ── Rabo (balança feliz) ──────────────────────────────────────────────────
-  var tw=Math.sin(t*2.2)*0.5;
-  ctx.strokeStyle=def.color; ctx.lineWidth=5; ctx.lineCap='round';
+  // ── Rabo (horizontal saindo da traseira, curva na ponta) ─────────────────
+  var twS=tw*(1-sitT*0.8); // rabo quase parado ao sentar
+  var tailEndX=-34+twS*3;
+  var tailEndY=(-20+twS*8)*(1-sitT)+(8+twS*2)*sitT; // desce ao sentar
+  ctx.strokeStyle=cBlack; ctx.lineWidth=3.5; ctx.lineCap='round';
   ctx.beginPath();
-  ctx.moveTo(-17,-2);
-  ctx.quadraticCurveTo(-30+tw*4,-12+tw*8,-26+tw*3,-24+tw*10);
+  ctx.moveTo(-20,-10);
+  ctx.bezierCurveTo(-28+twS*2,-10+twS*2,-36+twS*2,-8+twS*3,tailEndX,tailEndY);
   ctx.stroke();
-  ctx.strokeStyle=def.accent; ctx.lineWidth=2.5;
-  ctx.beginPath();
-  ctx.moveTo(-17,-2);
-  ctx.quadraticCurveTo(-30+tw*4,-12+tw*8,-26+tw*3,-24+tw*10);
-  ctx.stroke();
+  // Ponta branca
+  ctx.fillStyle=cBelly;
+  ctx.beginPath(); ctx.arc(tailEndX,tailEndY,3,0,Math.PI*2); ctx.fill();
 
-  // ── Patas traseiras ───────────────────────────────────────────────────────
-  // Pata traseira fundo
-  ctx.strokeStyle=def.accent; ctx.lineWidth=4.5; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(-12,4); ctx.lineTo(-16,14+run); ctx.lineTo(-19,22+run*0.3); ctx.stroke();
-  ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.ellipse(-20,22+run*0.3,5,2.5,0.2,0,Math.PI*2); ctx.fill();
-  // Pata traseira frente
-  ctx.strokeStyle='#A1887F'; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(-7,5); ctx.lineTo(-9,15-run); ctx.lineTo(-11,22-run*0.3); ctx.stroke();
-  ctx.fillStyle='#A1887F';
-  ctx.beginPath(); ctx.ellipse(-12,22-run*0.3,5,2.5,0.2,0,Math.PI*2); ctx.fill();
+  // ── Patas traseiras — pretas, patinha branca ──────────────────────────────
+  // Interpolação joelho/pata entre em-pé e sentado
+  function lerp(a,b,t){return a+(b-a)*t;}
+  // Far back leg
+  var fbKneeX=lerp(-19,-9,sitT), fbKneeY=lerp(11,4,sitT);
+  var fbBx=lerp(-18+farBackSwing,-20,sitT), fbBy=lerp(lgY-farBackLift,lgY,sitT);
+  ctx.strokeStyle=cDark; ctx.lineWidth=5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(-16,3); ctx.lineTo(fbKneeX,fbKneeY); ctx.lineTo(fbBx,fbBy); ctx.stroke();
+  ctx.fillStyle=cPaw;
+  ctx.beginPath(); ctx.ellipse(fbBx,fbBy,5.5,2.5,0.2,0,Math.PI*2); ctx.fill();
+  // Near back leg
+  var nbKneeX=lerp(-13,-5,sitT), nbKneeY=lerp(11,4,sitT);
+  var nbBx=lerp(-13+nearBackSwing,-15,sitT), nbBy=lerp(lgY-nearBackLift,lgY,sitT);
+  ctx.strokeStyle=cBlack; ctx.lineWidth=5;
+  ctx.beginPath(); ctx.moveTo(-11,4); ctx.lineTo(nbKneeX,nbKneeY); ctx.lineTo(nbBx,nbBy); ctx.stroke();
+  ctx.fillStyle=cPaw;
+  ctx.beginPath(); ctx.ellipse(nbBx,nbBy,5.5,2.5,0.2,0,Math.PI*2); ctx.fill();
 
-  // ── Patas dianteiras ──────────────────────────────────────────────────────
-  // Pata dianteira fundo
-  ctx.strokeStyle=def.accent; ctx.lineWidth=4.5; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(9,4); ctx.lineTo(11,14-run); ctx.lineTo(13,22-run*0.3); ctx.stroke();
-  ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.ellipse(14,22-run*0.3,5,2.5,-0.2,0,Math.PI*2); ctx.fill();
-  // Pata dianteira frente
-  ctx.strokeStyle='#A1887F'; ctx.lineWidth=4;
-  ctx.beginPath(); ctx.moveTo(13,4); ctx.lineTo(17,14+run); ctx.lineTo(20,22+run*0.3); ctx.stroke();
-  ctx.fillStyle='#A1887F';
-  ctx.beginPath(); ctx.ellipse(21,22+run*0.3,5,2.5,-0.2,0,Math.PI*2); ctx.fill();
+  // ── Patas dianteiras — pretas, patinha branca ─────────────────────────────
+  // Far front leg — ombro na frente do corpo
+  ctx.strokeStyle=cDark; ctx.lineWidth=5; ctx.lineCap='round';
+  var ffBx=10+farFrontSwing, ffBy=lgY-farFrontLift;
+  ctx.beginPath(); ctx.moveTo(8,3); ctx.lineTo(9,11); ctx.lineTo(ffBx,ffBy); ctx.stroke();
+  ctx.fillStyle=cPaw;
+  ctx.beginPath(); ctx.ellipse(ffBx,ffBy,5.5,2.5,-0.2,0,Math.PI*2); ctx.fill();
+  // Near front leg
+  ctx.strokeStyle=cBlack; ctx.lineWidth=5;
+  var nfBx=15+nearFrontSwing, nfBy=lgY-nearFrontLift;
+  ctx.beginPath(); ctx.moveTo(12,3); ctx.lineTo(14,11); ctx.lineTo(nfBx,nfBy); ctx.stroke();
+  ctx.fillStyle=cPaw;
+  ctx.beginPath(); ctx.ellipse(nfBx,nfBy,5.5,2.5,-0.2,0,Math.PI*2); ctx.fill();
 
-  // ── Corpo ─────────────────────────────────────────────────────────────────
-  // Sombra/profundidade
-  ctx.fillStyle=def.accent;
+  // ── Corpo alongado (dorso reto, barriga reta — como na foto) ─────────────
+  ctx.save();
+  ctx.scale(squashX*(1+breathe),squashY);
+  // Sombra
+  ctx.fillStyle=cDark;
   ctx.beginPath();
-  ctx.moveTo(-18,6); ctx.bezierCurveTo(-20,-4,-10,-14,6,-10);
-  ctx.bezierCurveTo(16,-7,18,4,15,9);
-  ctx.bezierCurveTo(2,14,-12,12,-18,6);
+  ctx.moveTo(17,6);
+  ctx.bezierCurveTo(22,0,22,-10,16,-15);
+  ctx.bezierCurveTo(8,-19,-6,-18,-16,-14);
+  ctx.bezierCurveTo(-23,-10,-24,-3,-22,4);
+  ctx.bezierCurveTo(-20,10,-13,13,-4,13);
+  ctx.bezierCurveTo(6,13,14,11,17,6);
   ctx.fill();
-  // Corpo principal
-  ctx.fillStyle=def.color;
+  // Corpo principal — dorso reto, barriga levemente reta
+  ctx.fillStyle=cBlack;
   ctx.beginPath();
-  ctx.moveTo(-16,4); ctx.bezierCurveTo(-18,-6,-8,-14,6,-10);
-  ctx.bezierCurveTo(16,-7,17,3,14,8);
-  ctx.bezierCurveTo(2,13,-12,11,-16,4);
+  ctx.moveTo(16,5);
+  // Peito curva para cima até ombro
+  ctx.bezierCurveTo(21,-1,21,-11,15,-16);
+  // Dorso RETO — controle horizontal de ombro à anca
+  ctx.bezierCurveTo(7,-20,-7,-19,-17,-15);
+  // Traseira arredondada
+  ctx.bezierCurveTo(-24,-11,-25,-4,-23,3);
+  // Barriga relativamente reta
+  ctx.bezierCurveTo(-21,9,-14,12,-4,12);
+  ctx.bezierCurveTo(6,12,14,10,16,5);
   ctx.fill();
-  // Barriga mais clara
-  ctx.fillStyle='#D7CCC8';
-  ctx.beginPath();
-  ctx.moveTo(-10,6); ctx.bezierCurveTo(-8,1,0,-2,8,0);
-  ctx.bezierCurveTo(12,2,10,8,6,9);
-  ctx.bezierCurveTo(0,11,-8,10,-10,6);
-  ctx.fill();
+  ctx.restore();
 
   // ── Pescoço ───────────────────────────────────────────────────────────────
-  ctx.fillStyle=def.color;
+  ctx.fillStyle=cBlack;
   ctx.beginPath();
-  ctx.moveTo(10,-9); ctx.bezierCurveTo(12,-20,22,-22,24,-14);
-  ctx.bezierCurveTo(24,-6,18,-4,13,-5);
-  ctx.fill();
-  ctx.strokeStyle=def.accent; ctx.lineWidth=0.8;
-  ctx.beginPath();
-  ctx.moveTo(10,-9); ctx.bezierCurveTo(12,-20,22,-22,24,-14);
-  ctx.bezierCurveTo(24,-6,18,-4,13,-5);
-  ctx.stroke();
-
-  // ── Cabeça ────────────────────────────────────────────────────────────────
-  var hx=24, hy=-17;
-  // Sombra cabeça
-  ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.arc(hx+1,hy+1,12,0,Math.PI*2); ctx.fill();
-  // Cabeça
-  ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.arc(hx,hy,12,0,Math.PI*2); ctx.fill();
-
-  // ── Orelha (floppy, caindo) ───────────────────────────────────────────────
-  ctx.fillStyle=def.accent;
-  ctx.beginPath();
-  ctx.moveTo(hx-5,hy-10);
-  ctx.bezierCurveTo(hx-14,hy-10,hx-18,hy+2,hx-16,hy+12);
-  ctx.bezierCurveTo(hx-14,hy+20,hx-7,hy+20,hx-5,hy+13);
-  ctx.bezierCurveTo(hx-4,hy+6,hx-4,hy-2,hx-5,hy-10);
-  ctx.fill();
-  // Interior orelha
-  ctx.fillStyle='#A1887F';
-  ctx.beginPath();
-  ctx.moveTo(hx-6,hy-6);
-  ctx.bezierCurveTo(hx-11,hy-5,hx-13,hy+4,hx-12,hy+10);
-  ctx.bezierCurveTo(hx-11,hy+15,hx-8,hy+15,hx-7,hy+10);
-  ctx.bezierCurveTo(hx-6,hy+4,hx-6,hy-1,hx-6,hy-6);
+  ctx.moveTo(10,-8); ctx.bezierCurveTo(12,-19,22,-21,24,-13);
+  ctx.bezierCurveTo(24,-6,17,-4,12,-5);
   ctx.fill();
 
-  // ── Focinho ───────────────────────────────────────────────────────────────
-  ctx.fillStyle='#BCAAA4';
+  // ── Mancha branca: pescoço descendo para o peito ──────────────────────────
+  ctx.fillStyle=cBelly;
   ctx.beginPath();
-  ctx.moveTo(hx+5,hy+1);
-  ctx.bezierCurveTo(hx+12,hy-1,hx+16,hy+4,hx+14,hy+9);
-  ctx.bezierCurveTo(hx+10,hy+14,hx+3,hy+12,hx+3,hy+7);
-  ctx.bezierCurveTo(hx+3,hy+3,hx+5,hy+1,hx+5,hy+1);
+  ctx.moveTo(14,-10);
+  ctx.bezierCurveTo(19,-7, 17, 0, 14, 5);
+  ctx.bezierCurveTo(11, 9, 6, 8, 5, 3);
+  ctx.bezierCurveTo(4,-2, 9,-8, 14,-10);
   ctx.fill();
-  ctx.strokeStyle='#8D6E63'; ctx.lineWidth=0.8;
-  ctx.beginPath();
-  ctx.moveTo(hx+5,hy+1);
-  ctx.bezierCurveTo(hx+12,hy-1,hx+16,hy+4,hx+14,hy+9);
-  ctx.bezierCurveTo(hx+10,hy+14,hx+3,hy+12,hx+3,hy+7);
-  ctx.bezierCurveTo(hx+3,hy+3,hx+5,hy+1,hx+5,hy+1);
-  ctx.stroke();
 
-  // ── Nariz ─────────────────────────────────────────────────────────────────
-  ctx.fillStyle='#1a1a1a';
-  ctx.beginPath(); ctx.arc(hx+14,hy+5,3.5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.5)';
-  ctx.beginPath(); ctx.arc(hx+13,hy+4,1.2,0,Math.PI*2); ctx.fill();
-  // Narina
-  ctx.strokeStyle='rgba(0,0,0,0.4)'; ctx.lineWidth=1;
-  ctx.beginPath(); ctx.moveTo(hx+12,hy+6); ctx.lineTo(hx+13,hy+7); ctx.stroke();
-
-  // ── Linguinha (balança) ────────────────────────────────────────────────────
-  var tongueWag=Math.sin(t*1.8)*3;
-  ctx.fillStyle='#E91E63';
+  // ── Cabeça (topo plano, focinho longo — perfil lateral da foto) ──────────
+  // Sombra
+  ctx.fillStyle=cDark;
   ctx.beginPath();
-  ctx.moveTo(hx+7,hy+11);
-  ctx.bezierCurveTo(hx+5,hy+13,hx+4+tongueWag,hy+19,hx+7+tongueWag,hy+21);
-  ctx.bezierCurveTo(hx+11+tongueWag,hy+23,hx+14+tongueWag,hy+20,hx+13,hy+16);
-  ctx.bezierCurveTo(hx+12,hy+13,hx+9,hy+11,hx+7,hy+11);
+  ctx.moveTo(hx-12,hy+6);
+  ctx.bezierCurveTo(hx-18,hy+2,hx-18,hy-10,hx-12,hy-18);
+  ctx.bezierCurveTo(hx-7,hy-22,hx+3,hy-22,hx+7,hy-20);
+  ctx.bezierCurveTo(hx+12,hy-18,hx+13,hy-13,hx+16,hy-9);
+  ctx.bezierCurveTo(hx+20,hy-5,hx+21,hy+1,hx+20,hy+5);
+  ctx.bezierCurveTo(hx+18,hy+9,hx+12,hy+11,hx+5,hy+10);
+  ctx.bezierCurveTo(hx-2,hy+9,hx-8,hy+8,hx-12,hy+6);
   ctx.fill();
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.8;
+  // Cabeça principal
+  ctx.fillStyle=cBlack;
   ctx.beginPath();
-  ctx.moveTo(hx+7,hy+11);
-  ctx.bezierCurveTo(hx+5,hy+13,hx+4+tongueWag,hy+19,hx+7+tongueWag,hy+21);
-  ctx.bezierCurveTo(hx+11+tongueWag,hy+23,hx+14+tongueWag,hy+20,hx+13,hy+16);
-  ctx.stroke();
-  // Divisão da língua
-  ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.8;
-  ctx.beginPath();
-  ctx.moveTo(hx+10,hy+13); ctx.lineTo(hx+10+tongueWag*0.5,hy+20);
-  ctx.stroke();
+  ctx.moveTo(hx-13,hy+5);
+  // Traseira da cabeça, arredondada
+  ctx.bezierCurveTo(hx-19,hy+1,hx-19,hy-11,hx-13,hy-19);
+  // Topo do crânio — PLANO (como na foto)
+  ctx.bezierCurveTo(hx-8,hy-23,hx+2,hy-23,hx+6,hy-21);
+  // Testa desce suavemente até o focinho
+  ctx.bezierCurveTo(hx+11,hy-19,hx+13,hy-14,hx+15,hy-10);
+  // Focinho alongado
+  ctx.bezierCurveTo(hx+19,hy-6,hx+20,hy,hx+19,hy+5);
+  // Queixo arredondado
+  ctx.bezierCurveTo(hx+17,hy+9,hx+11,hy+10,hx+4,hy+9);
+  // Mandíbula de volta
+  ctx.bezierCurveTo(hx-3,hy+8,hx-9,hy+6,hx-13,hy+5);
+  ctx.fill();
 
-  // ── Olho ──────────────────────────────────────────────────────────────────
-  ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(hx+4,hy-7,4.5,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#5D4037';
-  ctx.beginPath(); ctx.arc(hx+5,hy-7,3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#111';
-  ctx.beginPath(); ctx.arc(hx+5.5,hy-7,1.8,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='white';
-  ctx.beginPath(); ctx.arc(hx+6,hy-8,1,0,Math.PI*2); ctx.fill();
+  // ── Orelha floppy grande (cai ao longo do rosto, como na foto) ───────────
+  var eb=earBounce;
+  // Orelha externa
+  ctx.fillStyle=cBlack;
+  ctx.beginPath();
+  ctx.moveTo(hx-9,hy-18);
+  ctx.bezierCurveTo(hx-15,hy-15,hx-20,hy-6,hx-18,hy+5);
+  ctx.bezierCurveTo(hx-16,hy+13+eb,hx-10,hy+17+eb,hx-6,hy+15+eb);
+  ctx.bezierCurveTo(hx-3,hy+13+eb,hx-3,hy+6,hx-5,hy-2);
+  ctx.bezierCurveTo(hx-7,hy-10,hx-9,hy-18,hx-9,hy-18);
+  ctx.fill();
+  // Interior escuro da orelha
+  ctx.fillStyle='#2a2a2a';
+  ctx.beginPath();
+  ctx.moveTo(hx-10,hy-14);
+  ctx.bezierCurveTo(hx-14,hy-10,hx-17,hy-2,hx-16,hy+6);
+  ctx.bezierCurveTo(hx-14,hy+12+eb,hx-10,hy+15+eb,hx-7,hy+13+eb);
+  ctx.bezierCurveTo(hx-5,hy+11+eb,hx-5,hy+5,hx-7,hy-2);
+  ctx.bezierCurveTo(hx-8,hy-9,hx-10,hy-14,hx-10,hy-14);
+  ctx.fill();
+
+  // ── Focinho (muzzle longo — área ligeiramente diferenciada) ───────────────
+  ctx.fillStyle='#1c1c1c';
+  ctx.beginPath();
+  ctx.moveTo(hx+6,hy-4);
+  ctx.bezierCurveTo(hx+11,hy-6,hx+19,hy-2,hx+20,hy+3);
+  ctx.bezierCurveTo(hx+20,hy+8,hx+16,hy+11,hx+10,hy+10);
+  ctx.bezierCurveTo(hx+5,hy+10,hx+4,hy+7,hx+5,hy+3);
+  ctx.bezierCurveTo(hx+5,hy-1,hx+6,hy-4,hx+6,hy-4);
+  ctx.fill();
+
+  // ── Nariz oval na ponta do focinho ────────────────────────────────────────
+  ctx.fillStyle='#0a0a0a';
+  ctx.beginPath(); ctx.ellipse(hx+18,hy+2,4,3,-0.1,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='rgba(255,255,255,0.45)';
+  ctx.beginPath(); ctx.arc(hx+17,hy+0.5,1.4,0,Math.PI*2); ctx.fill();
+  // Narinas
+  ctx.strokeStyle='rgba(0,0,0,0.5)'; ctx.lineWidth=1;
+  ctx.beginPath(); ctx.moveTo(hx+15,hy+3); ctx.quadraticCurveTo(hx+16,hy+4.5,hx+17,hy+3); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(hx+19,hy+3); ctx.quadraticCurveTo(hx+20,hy+4.5,hx+21,hy+3); ctx.stroke();
+
+  // ── Linguinha (pêndulo vertical, só aparece no chão) ─────────────────────
+  if(!inAir){
+    // Balanço vertical (pêndulo): desce e sobe, não vai para os lados
+    var tw2=Math.sin(t*1.8);
+    var tDrop=Math.abs(tw2)*3;      // balanço vertical 0→3px
+    var tCx=hx+11;                  // centro horizontal da língua
+    var tW=3;                       // meia-largura
+    var tBaseY=hy+9;                // sai da boca
+    var tTipY=tBaseY+7+tDrop;       // ponta desce com o pêndulo
+    var tMid=tCx;
+    // Corpo da língua — forma oval/arredondada
+    ctx.fillStyle='#E91E63';
+    ctx.beginPath();
+    ctx.moveTo(tCx-tW, tBaseY);
+    ctx.bezierCurveTo(tCx-tW-1, tBaseY+4, tCx-tW, tTipY-3, tCx-tW+1, tTipY);
+    ctx.bezierCurveTo(tCx-1, tTipY+3, tCx+1, tTipY+3, tCx+tW-1, tTipY);
+    ctx.bezierCurveTo(tCx+tW, tTipY-3, tCx+tW+1, tBaseY+4, tCx+tW, tBaseY);
+    ctx.closePath();
+    ctx.fill();
+    // Destaque central mais claro
+    ctx.fillStyle='#F48FB1';
+    ctx.beginPath();
+    ctx.ellipse(tCx, tBaseY+4+tDrop*0.3, tW*0.45, 3.5+tDrop*0.2, 0, 0, Math.PI*2);
+    ctx.fill();
+    // Contorno
+    ctx.strokeStyle='#C2185B'; ctx.lineWidth=0.8; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(tCx-tW, tBaseY);
+    ctx.bezierCurveTo(tCx-tW-1, tBaseY+4, tCx-tW, tTipY-3, tCx-tW+1, tTipY);
+    ctx.bezierCurveTo(tCx-1, tTipY+3, tCx+1, tTipY+3, tCx+tW-1, tTipY);
+    ctx.bezierCurveTo(tCx+tW, tTipY-3, tCx+tW+1, tBaseY+4, tCx+tW, tBaseY);
+    ctx.stroke();
+    // Ranhura central suave
+    ctx.beginPath();
+    ctx.moveTo(tCx, tBaseY+1);
+    ctx.quadraticCurveTo(tCx, tBaseY+5+tDrop*0.3, tCx, tTipY+1);
+    ctx.stroke();
+  }
+
+  // ── Olho (pisca a cada ~2s) ───────────────────────────────────────────────
+  dogBlinkTimer++;
+  var dogBlink=(dogBlinkTimer%162)<6; // pisca a cada 162 frames (~2.7s), dura 6 frames
+  if(dogBlink){
+    // Olho fechado — linha fina preta
+    ctx.strokeStyle='#0C0C0C'; ctx.lineWidth=1.5; ctx.lineCap='round';
+    ctx.beginPath();
+    ctx.moveTo(hx-0.5,hy-9); ctx.lineTo(hx+4.5,hy-9);
+    ctx.stroke();
+  } else {
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(hx+2,hy-9,2.6,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#0C0C0C';
+    ctx.beginPath(); ctx.arc(hx+2,hy-9,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.9)';
+    ctx.beginPath(); ctx.arc(hx+2.8,hy-9.8,0.8,0,Math.PI*2); ctx.fill();
+  }
 
   // ── Sobrancelha expressiva ────────────────────────────────────────────────
-  ctx.strokeStyle=def.accent; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.strokeStyle='#383838'; ctx.lineWidth=1.8; ctx.lineCap='round';
   ctx.beginPath();
-  ctx.moveTo(hx+1,hy-12); ctx.quadraticCurveTo(hx+5,hy-14,hx+9,hy-12);
+  ctx.moveTo(hx-2,hy-13); ctx.quadraticCurveTo(hx+2,hy-15,hx+7,hy-13);
   ctx.stroke();
-
-  // ── Coleira ───────────────────────────────────────────────────────────────
-  ctx.strokeStyle='#E53935'; ctx.lineWidth=4; ctx.lineCap='butt';
-  ctx.beginPath();
-  ctx.arc(hx,hy,12,0.4,1.2);
-  ctx.stroke();
-  ctx.fillStyle='#FFD700';
-  ctx.beginPath(); ctx.arc(hx+9,hy+9,2.5,0,Math.PI*2); ctx.fill();
 
   ctx.restore();
 }
@@ -4916,7 +5040,7 @@ function drawPlayer(){
   ctx.restore();
   if(!isDigging){
     ctx.fillStyle='rgba(0,0,0,0.55)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
-    ctx.fillText(def.name,cx,sy-5);
+    ctx.fillText(def.name,cx,sy-42);
   }
 }
 
