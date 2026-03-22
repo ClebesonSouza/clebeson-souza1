@@ -1989,6 +1989,8 @@ var catBlinkTimer=0;    // piscar a cada ~3s (gato)
 var catIdleTimer=0;     // conta frames parado (para deitar)
 var catSitProgress=0;   // 0=em pé, 1=deitado/esfinge (interpola suavemente)
 var catTailWagTimer=0;  // temporizador para balançada periódica do rabo ao deitar
+var catJumpPending=false; // pulo do gato aguardando crouch de impulso
+var catJumpCrouch=0;    // frames restantes do crouch pré-pulo
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var beeUnlocked=false;
@@ -2032,8 +2034,14 @@ window.addEventListener('keydown',function(e){
         duckFlapTimer=30;
       }
     } else if(pl.onGround){
-      pl.vy=CHARS[pl.char].jumpF; sndJump(); pl.onGround=false;
-      if(pl.char==='frog'){ frogLongJump=1; sndCroac(); } // Primeiro pulo
+      if(pl.char==='cat'&&catJumpCrouch===0){
+        // Gato agacha para dar impressão de impulso antes de pular
+        catJumpPending=true; catJumpCrouch=14;
+        catSitProgress=1; catIdleTimer=0;
+      } else if(pl.char!=='cat'){
+        pl.vy=CHARS[pl.char].jumpF; sndJump(); pl.onGround=false;
+        if(pl.char==='frog'){ frogLongJump=1; sndCroac(); }
+      }
     }
   }
   if(e.key==='ArrowDown' && state==='playing' && pl.char==='tatu' && pl.onGround && !isDigging) startDig();
@@ -2666,6 +2674,16 @@ function update(){
 
   // Duck flap timer
   if(duckFlapTimer>0) duckFlapTimer--;
+
+  // Cat pre-jump crouch countdown
+  if(catJumpCrouch>0){
+    catJumpCrouch--;
+    if(catJumpCrouch===0&&catJumpPending){
+      catJumpPending=false;
+      pl.vy=CHARS['cat'].jumpF; sndJump(); pl.onGround=false;
+      catSitProgress=0;
+    }
+  }
 
   // Particles
   for(i=particles.length-1;i>=0;i--){
@@ -3537,20 +3555,21 @@ function drawCat(cx,cy,def){
   ctx.scale(sc,sc);
 
   // ── Rabo sinuoso felino ──────────────────────────────────────────────────
-  // Ao deitar: rabo enrola ao lado do corpo com pouco balanço
+  // Durante o impulso de pulo: rabo fica erguido mesmo com corpo agachado
+  var tailSitT = (catJumpCrouch>0) ? 0 : sitT;
   var tailUp=inAir?0.3:0;
-  var twT=tw*(1-sitT*0.8); // balanço reduz ao deitar
+  var twT=tw*(1-tailSitT*0.8); // balanço reduz ao deitar (não no impulso)
   // Balançada periódica do rabo a cada 120 frames (2s) quando deitado
   if(sitT>0.9){ catTailWagTimer++; } else { catTailWagTimer=0; }
   var wagCycle=catTailWagTimer%168;
-  var tailWagExtra=(wagCycle<28)?Math.sin(wagCycle/28*Math.PI*2)*sitT*10:0;
-  // Deitado: rabo desce e curva para trás (lado oposto ao da cabeça), visível rente ao chão
-  var tailEndX=(-30+twT*4)*(1-sitT)+(-28+tailWagExtra)*sitT;
-  var tailEndY=(-30+twT*7+tailUp*12)*(1-sitT)+(lgY-1)*sitT;
-  var tailMid1X=(-30+twT*3)*(1-sitT)+(-14)*sitT;
-  var tailMid1Y=(-6+twT*2)*(1-sitT)+(lgY*0.45)*sitT;
-  var tailMid2X=(-38+twT*2)*(1-sitT)+(-26)*sitT;
-  var tailMid2Y=(-18+twT*4+tailUp*10)*(1-sitT)+(lgY-1)*sitT;
+  var tailWagExtra=(wagCycle<28)?Math.sin(wagCycle/28*Math.PI*2)*tailSitT*10:0;
+  // Deitado: rabo enrola; impulso/ereto: rabo erguido (tailSitT=0 no pulo)
+  var tailEndX=(-30+twT*4)*(1-tailSitT)+(-28+tailWagExtra)*tailSitT;
+  var tailEndY=(-30+twT*7+tailUp*12)*(1-tailSitT)+(lgY-1)*tailSitT;
+  var tailMid1X=(-30+twT*3)*(1-tailSitT)+(-14)*tailSitT;
+  var tailMid1Y=(-6+twT*2)*(1-tailSitT)+(lgY*0.45)*tailSitT;
+  var tailMid2X=(-38+twT*2)*(1-tailSitT)+(-26)*tailSitT;
+  var tailMid2Y=(-18+twT*4+tailUp*10)*(1-tailSitT)+(lgY-1)*tailSitT;
   ctx.strokeStyle=cDark; ctx.lineWidth=4.5; ctx.lineCap='round';
   ctx.beginPath();
   ctx.moveTo(-18,-2);
