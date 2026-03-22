@@ -1975,6 +1975,8 @@ var gameZeroed=false; // true quando o jogador zera o jogo nessa sessao
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
 var frogUnlocked=false, frogLongJump=false, frogTongue=0, frogBlinkTimer=0;
+var frogSquash=0;       // frames de achatamento ao pousar (0=nenhum)
+var frogWasInAir=false; // detecta transição ar→chão
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var beeUnlocked=false;
@@ -4001,9 +4003,14 @@ function drawFrog(cx,cy,def){
   frogBlinkTimer++;
   var blink=(frogBlinkTimer%150)<7;
 
-  // Animação de marcha — 4 patas sincronizadas em marcha diagonal
+  // Detectar pouso → disparar squash
   var isMoving=Math.abs(pl.vx)>0.5&&pl.onGround;
   var inAir=!pl.onGround;
+  if(frogWasInAir&&pl.onGround) frogSquash=10;  // 10 frames de impacto
+  frogWasInAir=inAir;
+  if(frogSquash>0) frogSquash--;
+  var squashX=1+frogSquash*0.015;  // alarga horizontalmente (sutil)
+  var squashY=1-frogSquash*0.022;  // achata verticalmente (sutil)
   var hopY=0, walkSin=0, bodyFlat=1, tilt=-0.10;
   // Patas dianteiras: próxima (near) e distante (far)
   var nearFrontLift=0, farFrontLift=0, nearFrontSwing=0, farFrontSwing=0;
@@ -4090,9 +4097,17 @@ function drawFrog(cx,cy,def){
     ctx.beginPath(); ctx.arc(tx2,ty2,1.5,0,Math.PI*2); ctx.fill();
   }
 
-  // Corpo oval deitado
+  // Respiração no idle — pulso suave de ±1px quando parado
+  var breathe=(!isMoving&&!inAir) ? Math.sin(t*1.4)*0.06 : 0;
+
+  // Corpo oval deitado — com squash de pouso e respiração
   ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx-2,dcy+3,17,11*bodyFlat,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath();
+  ctx.ellipse(cx-2, dcy+3,
+    17*squashX,
+    11*bodyFlat*squashY*(1+breathe),
+    0,0,Math.PI*2);
+  ctx.fill();
 
   // Manchas no dorso
   ctx.fillStyle='rgba(0,70,0,0.25)';
@@ -4169,7 +4184,8 @@ function drawFrog(cx,cy,def){
     ctx.beginPath(); ctx.moveTo(cx+7,dcy+4); ctx.lineTo(cx+21,dcy+4); ctx.stroke();
   }
 
-  // Língua
+  // Língua — sempre em coords locais para a direita;
+  // o espelho do drawPlayer já inverte visualmente quando facing=-1
   if(frogTongue>0){
     frogTongue--;
     var tongLen=frogTongue*3.8;
