@@ -1974,7 +1974,7 @@ var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
 var gameZeroed=false; // true quando o jogador zera o jogo nessa sessao
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
-var frogUnlocked=false, frogLongJump=false, frogTongue=0;
+var frogUnlocked=false, frogLongJump=false, frogTongue=0, frogBlinkTimer=0;
 var caterpillarUnlocked=false, caterpillarBarrierStarsCollected=0;
 var butterflyUnlocked=false;
 var beeUnlocked=false;
@@ -2182,7 +2182,7 @@ var p3={
   ],
   walls:[{x:2750,y:GY-210,w:36,h:210}],
   waterPits:[{x:1600,w:520,ceilY:80,ceilH:40}],
-  gaps:[{x:2450,w:200}],
+  gaps:[{x:2450,w:200},{x:3920,w:110},{x:4320,w:120},{x:4720,w:110}],
   frogGaps:[{x:900,w:260,ceilY:55,ceilH:35}],
   speedGates:[{x:3300,y:GY-5200,w:50,h:5200,passed:false}],
   megaBarriers:[{x:280,y:GY-5000,w:400,h:5000}],//
@@ -2203,8 +2203,22 @@ var p3Insects=[
   {x:3470,y:GY-22,vx:-1.3,w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580},
   {x:3555,y:GY-22,vx:1.1, w:50,h:18,eaten:false,type:'centopeia',minX:3350,maxX:3580}
 ];
+// ── FASE 3 — Novos obstáculos (x:3700-5100) ──────────────────────────────
+// Espinhos no chão
+var p3Spikes=[
+  {x:3700,w:72},
+  {x:4100,w:84},
+  {x:4500,w:72},
+  {x:4900,w:60}
+];
+// Armadilhas escondidas (chão que some e volta)
+var p3HiddenTraps=[
+  {x:3920,w:110,timer:0,  open:false,closedDur:160,openDur:80},
+  {x:4320,w:120,timer:70, open:false,closedDur:160,openDur:80},
+  {x:4720,w:110,timer:130,open:false,closedDur:160,openDur:80}
+];
 
-                     
+
 
                                      // FASE 4
 
@@ -2238,6 +2252,12 @@ var p4Webs=[ // Teias de aranha gigantes como obstáculos
   {x:700,y:GY-120,w:80,h:60},{x:1300,y:GY-150,w:90,h:70},{x:1900,y:GY-130,w:85,h:65},
   {x:2400,y:GY-140,w:95,h:75},{x:2900,y:GY-160,w:100,h:80},{x:3400,y:GY-135,w:88,h:68}
 ];
+// ── FASE 4 — Novos obstáculos (x:4100-5100) ──────────────────────────────
+// Parede Deslizante
+var p4SlidingWall={x:4300,y:GY-260,w:28,h:260,minX:4150,maxX:5000,vx:2.0};
+// Sino de Alarme + pedras caindo
+var p4AlarmBell={x:4780,y:GY-58,w:26,h:32,triggered:false,timer:0,cooldown:0};
+var p4AlarmRocks=[];
 
 // ── FASE 5: FLORESTA ENCANTADA ───────────────────────────────────────────────
 var p5={
@@ -2276,26 +2296,21 @@ var p5Stars=[], p5BarrierStars=[];
 
 // 15 insetos variados para o Sapinho comer no início (x~400)
 var p5Insects=[
-  // Espécies já conhecidas
-  {x:350, y:GY-20,vx:1.2, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
-  {x:420, y:GY-20,vx:-1.0,w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
-  {x:480, y:GY-20,vx:1.5, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
-  {x:550, y:GY-22,vx:0.8, w:50,h:18,eaten:false,type:'centopeia',  minX:300, maxX:600},
-  {x:600, y:GY-25,vx:-1.1,w:28,h:14,eaten:false,type:'borboleta',  minX:300, maxX:600},
-  
-  // 5 novas espécies de insetos
-  {x:360, y:GY-18,vx:1.3, w:20,h:18,eaten:false,type:'formiga',    minX:300, maxX:500},  // Formiga
-  {x:430, y:GY-15,vx:-0.9,w:32,h:20,eaten:false,type:'joaninha',   minX:300, maxX:550},  // Joaninha (ponto vermelho)
-  {x:500, y:GY-22,vx:1.4, w:26,h:16,eaten:false,type:'mosca',      minX:300, maxX:580},  // Mosca
-  {x:570, y:GY-20,vx:-1.2,w:22,h:22,eaten:false,type:'araninha',   minX:300, maxX:620},  // Araninha pequena
-  {x:410, y:GY-25,vx:0.7, w:18,h:14,eaten:false,type:'pulgao',     minX:300, maxX:500},  // Pulgão
-  
-  // Mais insetos para completar os 15
-  {x:380, y:GY-20,vx:1.1, w:24,h:16,eaten:false,type:'barata',     minX:300, maxX:500},
-  {x:460, y:GY-22,vx:-0.95,w:50,h:18,eaten:false,type:'centopeia', minX:300, maxX:600},
-  {x:520, y:GY-18,vx:1.6, w:20,h:18,eaten:false,type:'formiga',    minX:300, maxX:550},
-  {x:590, y:GY-20,vx:-1.3,w:32,h:20,eaten:false,type:'joaninha',   minX:300, maxX:620},
-  {x:440, y:GY-25,vx:0.9, w:26,h:16,eaten:false,type:'mosca',      minX:300, maxX:580}
+  {x:280, y:GY-17,vx:1.2, w:26,h:17,eaten:false,type:'barata',    minX:250,maxX:880},
+  {x:370, y:GY-17,vx:-1.0,w:26,h:17,eaten:false,type:'barata',    minX:250,maxX:880},
+  {x:700, y:GY-17,vx:1.5, w:26,h:17,eaten:false,type:'barata',    minX:250,maxX:880},
+  {x:530, y:GY-16,vx:0.8, w:52,h:16,eaten:false,type:'centopeia', minX:250,maxX:880},
+  {x:800, y:GY-16,vx:-0.9,w:52,h:16,eaten:false,type:'centopeia', minX:250,maxX:880},
+  {x:320, y:GY-16,vx:1.3, w:22,h:16,eaten:false,type:'formiga',   minX:250,maxX:880},
+  {x:650, y:GY-16,vx:-1.1,w:22,h:16,eaten:false,type:'formiga',   minX:250,maxX:880},
+  {x:490, y:GY-16,vx:-0.9,w:28,h:16,eaten:false,type:'joaninha',  minX:250,maxX:880},
+  {x:750, y:GY-16,vx:1.2, w:28,h:16,eaten:false,type:'joaninha',  minX:250,maxX:880},
+  {x:580, y:GY-19,vx:1.4, w:28,h:19,eaten:false,type:'mosca',     minX:250,maxX:880},
+  {x:840, y:GY-19,vx:-1.3,w:28,h:19,eaten:false,type:'mosca',     minX:250,maxX:880},
+  {x:680, y:GY-19,vx:-1.2,w:24,h:19,eaten:false,type:'araninha',  minX:250,maxX:880},
+  {x:400, y:GY-19,vx:0.9, w:24,h:19,eaten:false,type:'araninha',  minX:250,maxX:880},
+  {x:450, y:GY-15,vx:0.7, w:16,h:15,eaten:false,type:'pulgao',    minX:250,maxX:880},
+  {x:770, y:GY-15,vx:-0.8,w:16,h:15,eaten:false,type:'pulgao',    minX:250,maxX:880}
 ];
 
 
@@ -2823,6 +2838,16 @@ function update(){
     }
   }
 
+  // Língua do sapinho — alcance de 65px na direção que está virado
+  function frogCanReach(tx,ty){
+    if(pl.char!=='frog') return false;
+    var plcx=pl.x+pl.w/2, plcy=pl.y+pl.h/2;
+    if(Math.abs(plcy-ty)>28) return false;
+    if(pl.facing===1  && tx>=plcx-10 && tx<=plcx+65) return true;
+    if(pl.facing===-1 && tx<=plcx+10 && tx>=plcx-65) return true;
+    return false;
+  }
+
   // P3 unlock stars + insetos
   if(phase===3){
     var i2;
@@ -2838,10 +2863,32 @@ function update(){
       var ins=p3Insects[i2]; if(ins.eaten) continue;
       ins.x+=ins.vx;
       if(ins.x<ins.minX||ins.x>ins.maxX) ins.vx=-ins.vx;
-      if(pl.x+pl.w>ins.x&&pl.x<ins.x+ins.w&&pl.y+pl.h>ins.y&&pl.y<ins.y+ins.h){
+      var insCX=ins.x+ins.w/2, insCY=ins.y+ins.h/2;
+      if(frogCanReach(insCX,insCY)){
+        ins.eaten=true; score+=15; sndEat(); frogTongue=18;
+        for(var bi=0;bi<8;bi++) spawnBubble(insCX,insCY);
+      } else if(pl.x+pl.w>ins.x&&pl.x<ins.x+ins.w&&pl.y+pl.h>ins.y&&pl.y<ins.y+ins.h){
         if(pl.char==='frog'){ ins.eaten=true; score+=15; sndEat(); frogTongue=18;
-          for(var bi=0;bi<8;bi++) spawnBubble(ins.x+ins.w/2,ins.y+ins.h/2);
+          for(var bi=0;bi<8;bi++) spawnBubble(insCX,insCY);
         } else { sndHit(); respawn(); }
+      }
+    }
+    // Espinhos — dano ao tocar
+    for(i2=0;i2<p3Spikes.length;i2++){
+      var sp3=p3Spikes[i2];
+      if(pl.x+pl.w>sp3.x&&pl.x<sp3.x+sp3.w&&pl.y+pl.h>GY-18&&pl.y+pl.h<=GY+4){
+        sndHit(); respawn();
+      }
+    }
+    // Armadilhas escondidas — ciclo abrir/fechar
+    for(i2=0;i2<p3HiddenTraps.length;i2++){
+      var ht=p3HiddenTraps[i2];
+      ht.timer++;
+      var htCycle=ht.closedDur+ht.openDur;
+      ht.open=(ht.timer%htCycle)>=ht.closedDur;
+      // Quando fechada, age como chão sobre o buraco
+      if(!ht.open&&pl.x+pl.w>ht.x&&pl.x<ht.x+ht.w&&pl.y+pl.h>=GY){
+        pl.y=GY-pl.h; pl.vy=0; pl.onGround=true;
       }
     }
   }
@@ -2853,22 +2900,71 @@ function update(){
       var fins=p4FlyingInsects[fi]; if(fins.eaten) continue;
       fins.y += fins.vy;
       if(Math.abs(fins.y - fins.baseY) > fins.amp) fins.vy = -fins.vy;
-      if(pl.x+pl.w>fins.x&&pl.x<fins.x+fins.w&&pl.y+pl.h>fins.y&&pl.y<fins.y+fins.h){
-        if(pl.char==='frog'){ fins.eaten=true; score+=20; sndEat(); frogTongue=25; // LÍNGUA MAIOR!
-          for(var bi=0;bi<10;bi++) spawnBubble(fins.x+fins.w/2,fins.y+fins.h/2);
+      var finsCX=fins.x+fins.w/2, finsCY=fins.y+fins.h/2;
+      if(frogCanReach(finsCX,finsCY)){
+        fins.eaten=true; score+=20; sndEat(); frogTongue=25;
+        for(var bi=0;bi<10;bi++) spawnBubble(finsCX,finsCY);
+      } else if(pl.x+pl.w>fins.x&&pl.x<fins.x+fins.w&&pl.y+pl.h>fins.y&&pl.y<fins.y+fins.h){
+        if(pl.char==='frog'){ fins.eaten=true; score+=20; sndEat(); frogTongue=25;
+          for(var bi=0;bi<10;bi++) spawnBubble(finsCX,finsCY);
         } else { sndHit(); respawn(); }
       }
     }
     // Teias de aranha como obstáculos
     for(var wi=0;wi<p4Webs.length;wi++){
       var web=p4Webs[wi];
-      if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
-        if(webStuck===0){ webStuck=90; sndHit();
+      var webCX=web.x+web.w/2, webCY=web.y+web.h/2;
+      // Sapinho pode comer a aranha da teia com a língua
+      if(frogCanReach(webCX,webCY)){
+        p4Webs.splice(wi,1); wi--; score+=25; sndEat(); frogTongue=20;
+        for(var bi=0;bi<12;bi++) spawnBubble(webCX,webCY);
+      } else if(pl.x+pl.w>web.x&&pl.x<web.x+web.w&&pl.y+pl.h>web.y&&pl.y<web.y+web.h){
+        if(pl.char==='frog'){ // sapo encostou na teia: come também
+          p4Webs.splice(wi,1); wi--; score+=25; sndEat(); frogTongue=20;
+          for(var bi=0;bi<12;bi++) spawnBubble(webCX,webCY);
+        } else if(webStuck===0){ webStuck=90; sndHit();
           for(var si=0;si<12;si++) particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h/2,vx:(Math.random()-0.5)*3,vy:-Math.random()*3,life:35,color:'rgba(200,230,255,0.9)',type:'web'});
         }
       }
     }
     if(webStuck>0){ webStuck--; pl.vx*=0.05; pl.vy*=0.15; }
+    // Parede deslizante
+    p4SlidingWall.x+=p4SlidingWall.vx;
+    if(p4SlidingWall.x<p4SlidingWall.minX||p4SlidingWall.x>p4SlidingWall.maxX) p4SlidingWall.vx=-p4SlidingWall.vx;
+    var sw4=p4SlidingWall;
+    if(pl.x+pl.w>sw4.x&&pl.x<sw4.x+sw4.w&&pl.y+pl.h>sw4.y&&pl.y<sw4.y+sw4.h){
+      if(sw4.vx>0){
+        // Parede avançando para a direita: empurra jogador em direção ao sino
+        pl.x=sw4.x+sw4.w;
+        pl.vx=sw4.vx+3; // empurrão supera velocidade máxima do jogador
+      } else {
+        // Parede recuando: apenas bloqueia
+        pl.x=sw4.x-pl.w; pl.vx=0;
+      }
+    }
+    // Sino de alarme
+    if(p4AlarmBell.cooldown>0) p4AlarmBell.cooldown--;
+    var ab4=p4AlarmBell;
+    if(!ab4.triggered&&ab4.cooldown===0){
+      if(pl.x+pl.w>ab4.x&&pl.x<ab4.x+ab4.w&&pl.y+pl.h>ab4.y&&pl.y<ab4.y+ab4.h){
+        ab4.triggered=true; ab4.timer=240; sndHit();
+        for(var rk=0;rk<10;rk++){
+          p4AlarmRocks.push({x:ab4.x-150+Math.random()*400,y:-20,vx:(Math.random()-0.5)*2.5,vy:1.5+Math.random()*2,r:7+Math.random()*7,active:true});
+        }
+      }
+    }
+    if(ab4.triggered){
+      ab4.timer--;
+      if(ab4.timer<=0){ ab4.triggered=false; ab4.cooldown=200; p4AlarmRocks=[]; }
+    }
+    for(var rki=p4AlarmRocks.length-1;rki>=0;rki--){
+      var rock4=p4AlarmRocks[rki]; if(!rock4.active) continue;
+      rock4.y+=rock4.vy; rock4.vy+=0.18; rock4.x+=rock4.vx;
+      if(rock4.y>GY+60){ p4AlarmRocks.splice(rki,1); continue; }
+      if(Math.abs(pl.x+pl.w/2-rock4.x)<rock4.r+12&&Math.abs(pl.y+pl.h/2-rock4.y)<rock4.r+12){
+        sndHit(); respawn(); rock4.active=false;
+      }
+    }
   }
 
   // P5 insects + barrier logic (Sapinho come insetos, Tatuzinho entra na barreira)
@@ -2878,9 +2974,13 @@ function update(){
       var inst=p5Insects[ii]; if(inst.eaten) continue;
       inst.x+=inst.vx;
       if(inst.x<inst.minX||inst.x>inst.maxX) inst.vx=-inst.vx;
-      if(pl.x+pl.w>inst.x&&pl.x<inst.x+inst.w&&pl.y+pl.h>inst.y&&pl.y<inst.y+inst.h){
-        if(pl.char==='frog'){ inst.eaten=true; score+=15; sndEat();
-          for(var bi=0;bi<8;bi++) spawnBubble(inst.x+inst.w/2,inst.y+inst.h/2);
+      var instCX=inst.x+inst.w/2, instCY=inst.y+inst.h/2;
+      if(frogCanReach(instCX,instCY)){
+        inst.eaten=true; score+=15; sndEat(); frogTongue=18;
+        for(var bi=0;bi<8;bi++) spawnBubble(instCX,instCY);
+      } else if(pl.x+pl.w>inst.x&&pl.x<inst.x+inst.w&&pl.y+pl.h>inst.y&&pl.y<inst.y+inst.h){
+        if(pl.char==='frog'){ inst.eaten=true; score+=15; sndEat(); frogTongue=18;
+          for(var bi=0;bi<8;bi++) spawnBubble(instCX,instCY);
         } else { sndHit(); respawn(); }
       }
     }
@@ -3895,24 +3995,112 @@ function drawTatu(cx,cy,def){
 }
 function drawFrog(cx,cy,def){
   ctx.save();
-  ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx,cy+4,15,12,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx,cy-6,11,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#A5D6A7'; ctx.beginPath(); ctx.ellipse(cx-7,cy-13,5,5,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.ellipse(cx+7,cy-13,5,5,0,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx-7,cy-13,3,0,Math.PI*2); ctx.arc(cx+7,cy-13,3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx-6,cy-14,1.2,0,Math.PI*2); ctx.arc(cx+8,cy-14,1.2,0,Math.PI*2); ctx.fill();
+  var t=Date.now()/1000;
+
+  // Piscar a cada ~2.5s por ~7 frames
+  frogBlinkTimer++;
+  var blink=(frogBlinkTimer%150)<7;
+
+  // Animação de saltos pequenos ao andar no chão
+  var isMoving=Math.abs(pl.vx)>0.5&&pl.onGround;
+  var inAir=!pl.onGround;
+  var hopY=0, legExt=0, bodyFlat=1, tilt=0;
+  if(isMoving){
+    var hc=(t*4.5)%(Math.PI*2);
+    hopY=Math.abs(Math.sin(hc))*10;
+    legExt=Math.abs(Math.sin(hc));
+    bodyFlat=1-legExt*0.18;
+    tilt=Math.sin(hc)*0.15;
+  } else if(inAir){
+    legExt=1; bodyFlat=0.85; tilt=-0.18;
+  }
+  var dcy=cy-hopY;
+
+  // Inclinar corpo durante o salto
+  ctx.translate(cx,dcy);
+  ctx.rotate(tilt);
+  ctx.translate(-cx,-dcy);
+
+  // Saco vocal pulsante (quando parado)
+  if(!isMoving&&!inAir){
+    var vp=0.55+Math.sin(t*1.8)*0.45;
+    ctx.fillStyle='rgba(200,240,180,'+vp.toFixed(2)+')';
+    ctx.beginPath(); ctx.ellipse(cx+20,dcy+7,8*vp,5*vp,0,0,Math.PI*2); ctx.fill();
+  }
+
+  // Pernas traseiras articuladas
   ctx.strokeStyle=def.accent; ctx.lineWidth=3; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(cx-12,cy+10); ctx.lineTo(cx-20,cy+18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx+12,cy+10); ctx.lineTo(cx+20,cy+18); ctx.stroke();
+  var kneeY=dcy+8+legExt*10, footY=dcy+18+legExt*8;
+  ctx.beginPath(); ctx.moveTo(cx-14,dcy+5); ctx.lineTo(cx-24,kneeY); ctx.lineTo(cx-18,footY); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-11,dcy+7); ctx.lineTo(cx-21,kneeY+2); ctx.lineTo(cx-15,footY+2); ctx.stroke();
+  // Dedos traseiros (pé de sapo)
+  ctx.lineWidth=1.2;
+  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-23,footY+4); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-18,footY+5); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-13,footY+4); ctx.stroke();
+
+  // Corpo oval deitado
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx-2,dcy+3,17,11*bodyFlat,0,0,Math.PI*2); ctx.fill();
+
+  // Manchas no dorso
+  ctx.fillStyle='rgba(0,70,0,0.25)';
+  ctx.beginPath(); ctx.ellipse(cx-8,dcy,4,3,0.4,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx,dcy+2,3.5,2.5,-0.3,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(cx-14,dcy+4,3,2,0.2,0,Math.PI*2); ctx.fill();
+
+  // Barriga levemente mais clara
+  ctx.fillStyle='rgba(180,230,160,0.35)';
+  ctx.beginPath(); ctx.ellipse(cx-2,dcy+6,11,7,0,0,Math.PI*2); ctx.fill();
+
+  // Cabeça
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.arc(cx+14,dcy,9,0,Math.PI*2); ctx.fill();
+
+  // Patas dianteiras curtas
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(cx+6,dcy+8); ctx.lineTo(cx+8,dcy+18); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+8,dcy+18); ctx.lineTo(cx+5,dcy+22); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+8,dcy+18); ctx.lineTo(cx+10,dcy+22); ctx.stroke();
+
+  // Olhos salientes no topo da cabeça
+  ctx.fillStyle='#A5D6A7';
+  ctx.beginPath(); ctx.arc(cx+10,dcy-8,5.5,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.arc(cx+18,dcy-8,5.5,0,Math.PI*2); ctx.fill();
+  if(blink){
+    // Piscada — cobre o olho com a cor do corpo
+    ctx.fillStyle=def.color;
+    ctx.beginPath(); ctx.ellipse(cx+10,dcy-7,5.5,3,0,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.ellipse(cx+18,dcy-7,5.5,3,0,0,Math.PI*2); ctx.fill();
+  } else {
+    ctx.fillStyle='#111';
+    ctx.beginPath(); ctx.arc(cx+10,dcy-8,3.2,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+18,dcy-8,3.2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.arc(cx+11,dcy-9.5,1.3,0,Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(cx+19,dcy-9.5,1.3,0,Math.PI*2); ctx.fill();
+  }
+
+  // Boca (abre levemente no pulo)
+  ctx.strokeStyle=def.accent; ctx.lineWidth=1.5;
+  if(inAir){
+    ctx.beginPath(); ctx.arc(cx+14,dcy+6,6,0.1,Math.PI-0.1); ctx.stroke();
+  } else {
+    ctx.beginPath(); ctx.moveTo(cx+7,dcy+4); ctx.lineTo(cx+21,dcy+4); ctx.stroke();
+  }
+
+  // Língua
   if(frogTongue>0){
     frogTongue--;
-    ctx.strokeStyle='#E91E63'; ctx.lineWidth=3;
-    ctx.beginPath(); ctx.moveTo(cx+10,cy-5); ctx.lineTo(cx+10+frogTongue/1.5,cy-5); ctx.stroke();
-    ctx.fillStyle='#E91E63'; ctx.beginPath(); ctx.arc(cx+10+frogTongue/1.5,cy-5,4,0,Math.PI*2); ctx.fill();
+    var tongLen=frogTongue*3.8;
+    ctx.strokeStyle='#E91E63'; ctx.lineWidth=3; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(cx+22,dcy+1); ctx.lineTo(cx+22+tongLen,dcy+1); ctx.stroke();
+    ctx.fillStyle='#AD1457';
+    ctx.beginPath(); ctx.arc(cx+22+tongLen,dcy+1,5,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#F48FB1';
+    ctx.beginPath(); ctx.arc(cx+22+tongLen,dcy+1,2.5,0,Math.PI*2); ctx.fill();
   }
-  ctx.strokeStyle=def.accent; ctx.lineWidth=1.5;
-  ctx.beginPath(); ctx.moveTo(cx-8,cy-2); ctx.lineTo(cx+8,cy-2); ctx.stroke();
+
   ctx.restore();
 }
 function drawCaterpillar(cx, cy, def) {
@@ -4303,57 +4491,212 @@ function drawInsects(){
   } else if(phase===5){ // INSETOS DA FASE 5
     for(var ii=0;ii<p5Insects.length;ii++){
       var inst=p5Insects[ii]; if(inst.eaten) continue;
-      var sx=inst.x-camX; if(sx>CW+60||sx<-60) continue;
-      if(inst.type==='formiga'){
-        // Formiga vermelha
-        ctx.fillStyle='#E53935'; 
-        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+4,4,3,0,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+10,5,4,0,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.ellipse(sx+10,inst.y+16,6,5,0,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#B71C1C'; ctx.lineWidth=1;
-        for(var lg=-1;lg<=1;lg+=2){
-          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+10); ctx.lineTo(sx+10+lg*8,inst.y+14); ctx.stroke();
+      var isx=inst.x-camX; if(isx>CW+60||isx<-60) continue;
+      var iy=inst.y, walk=Math.sin(t+ii*1.7);
+      ctx.save();
+      // Flip quando andando para a esquerda
+      var icx=isx+inst.w/2;
+      if(inst.vx>0){ ctx.translate(icx,0); ctx.scale(-1,1); ctx.translate(-icx,0); }
+      if(inst.type==='barata'){
+        // Barata — corpo oval marrom, cabeça, antenas e 6 pernas animadas
+        var bx=isx+13, by=iy+10;
+        // pernas (3 de cada lado, animadas)
+        ctx.strokeStyle='#3E2723'; ctx.lineWidth=1.2;
+        for(var lg=0;lg<3;lg++){
+          var ly0=by-3+lg*3, lw=Math.sin(t+lg*1.1)*3;
+          ctx.beginPath(); ctx.moveTo(bx-4,ly0); ctx.lineTo(bx-13,ly0+4+lw); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(bx+4,ly0); ctx.lineTo(bx+13,ly0+4-lw); ctx.stroke();
         }
+        // abdome oval
+        ctx.fillStyle='#4E342E';
+        ctx.beginPath(); ctx.ellipse(bx,by,10,6,0,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#3E2723'; ctx.lineWidth=0.7;
+        ctx.beginPath(); ctx.moveTo(bx-10,by); ctx.lineTo(bx+10,by); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx-7,by-3); ctx.lineTo(bx+7,by-3); ctx.stroke();
+        // tórax
+        ctx.fillStyle='#5D4037';
+        ctx.beginPath(); ctx.ellipse(bx-9,by-1,4,3,0,0,Math.PI*2); ctx.fill();
+        // cabeça
+        ctx.fillStyle='#4E342E';
+        ctx.beginPath(); ctx.arc(bx-14,by,3,0,Math.PI*2); ctx.fill();
+        // olhos
+        ctx.fillStyle='#111';
+        ctx.beginPath(); ctx.arc(bx-15,by-1.5,1,0,Math.PI*2); ctx.fill();
+        // antenas
+        ctx.strokeStyle='#3E2723'; ctx.lineWidth=0.8;
+        ctx.beginPath(); ctx.moveTo(bx-14,by-3); ctx.lineTo(bx-20,by-9+walk); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(bx-14,by-3); ctx.lineTo(bx-18,by-10-walk); ctx.stroke();
+      } else if(inst.type==='centopeia'){
+        // Centopeia — 6 segmentos com pernas em cada
+        var cx0=isx+4, cy0=iy+9;
+        for(var seg=0;seg<6;seg++){
+          var segX=cx0+seg*8, lw2=Math.sin(t+seg*0.8)*4;
+          ctx.strokeStyle='#B71C1C'; ctx.lineWidth=1;
+          ctx.beginPath(); ctx.moveTo(segX,cy0+2); ctx.lineTo(segX-7,cy0+8+lw2); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(segX,cy0+2); ctx.lineTo(segX+7,cy0+8-lw2); ctx.stroke();
+          ctx.fillStyle=seg%2===0?'#C62828':'#B71C1C';
+          ctx.beginPath(); ctx.arc(segX,cy0,5,0,Math.PI*2); ctx.fill();
+          ctx.strokeStyle='#7F0000'; ctx.lineWidth=0.8;
+          ctx.beginPath(); ctx.arc(segX,cy0,5,0,Math.PI*2); ctx.stroke();
+        }
+        // cabeça
+        ctx.fillStyle='#7F0000';
+        ctx.beginPath(); ctx.arc(cx0-6,cy0,6,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#111';
+        ctx.beginPath(); ctx.arc(cx0-8,cy0-2,1.2,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(cx0-4,cy0-2,1.2,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#7F0000'; ctx.lineWidth=0.8;
+        ctx.beginPath(); ctx.moveTo(cx0-6,cy0-6); ctx.lineTo(cx0-10,cy0-12+walk); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(cx0-6,cy0-6); ctx.lineTo(cx0-3,cy0-12-walk); ctx.stroke();
+      } else if(inst.type==='formiga'){
+        // Formiga — 3 segmentos claros, antenas cotovelo, 6 pernas
+        var ax=isx+11, ay=iy+10;
+        // pernas (6, do tórax)
+        ctx.strokeStyle='#4E342E'; ctx.lineWidth=1;
+        for(var fl2=0;fl2<3;fl2++){
+          var flw=Math.sin(t+fl2*1.2)*3;
+          ctx.beginPath(); ctx.moveTo(ax-2,ay-1); ctx.lineTo(ax-9,ay+3+flw); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(ax+2,ay-1); ctx.lineTo(ax+9,ay+3-flw); ctx.stroke();
+        }
+        // abdome (grande, oval)
+        ctx.fillStyle='#212121';
+        ctx.beginPath(); ctx.ellipse(ax+4,ay+1,5,4,0,0,Math.PI*2); ctx.fill();
+        // cintura (fina)
+        ctx.strokeStyle='#212121'; ctx.lineWidth=1.5;
+        ctx.beginPath(); ctx.moveTo(ax,ay); ctx.lineTo(ax+2,ay); ctx.stroke();
+        // tórax
+        ctx.fillStyle='#3E2723';
+        ctx.beginPath(); ctx.ellipse(ax-1,ay,3,2.5,0,0,Math.PI*2); ctx.fill();
+        // cabeça
+        ctx.fillStyle='#212121';
+        ctx.beginPath(); ctx.arc(ax-6,ay,3.5,0,Math.PI*2); ctx.fill();
+        ctx.fillStyle='#FF3D00';
+        ctx.beginPath(); ctx.arc(ax-8,ay-1.5,1,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(ax-4,ay-1.5,1,0,Math.PI*2); ctx.fill();
+        // antenas cotovelo
+        ctx.strokeStyle='#212121'; ctx.lineWidth=0.9;
+        ctx.beginPath(); ctx.moveTo(ax-6,ay-3.5); ctx.lineTo(ax-9,ay-7); ctx.lineTo(ax-13,ay-6+walk); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(ax-6,ay-3.5); ctx.lineTo(ax-8,ay-8); ctx.lineTo(ax-5,ay-12-walk); ctx.stroke();
       } else if(inst.type==='joaninha'){
-        // Joaninha com pontos
-        ctx.fillStyle='#D32F2F'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,7,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#1B5E20'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,4,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#000';
-        ctx.beginPath(); ctx.arc(sx+7,inst.y+5,1.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx+13,inst.y+5,1.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx+7,inst.y+11,1.5,0,Math.PI*2); ctx.fill();
-        ctx.beginPath(); ctx.arc(sx+13,inst.y+11,1.5,0,Math.PI*2); ctx.fill();
-      } else if(inst.type==='mosca'){
-        // Mosca verde
-        ctx.fillStyle='#7CB342'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+9,6,5,0,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#558B2F'; ctx.beginPath(); ctx.arc(sx+10,inst.y+6,3,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#33691E'; ctx.lineWidth=1;
-        for(var w=-1;w<=1;w+=2){
-          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+9); ctx.lineTo(sx+10+w*9,inst.y+6); ctx.stroke();
-          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+9); ctx.lineTo(sx+10+w*8,inst.y+12); ctx.stroke();
+        // Joaninha — élitros vermelhos com pontos negros, cabeça preta, 6 pernas
+        var jx=isx+14, jy=iy+9;
+        // pernas
+        ctx.strokeStyle='#111'; ctx.lineWidth=1;
+        for(var jl=0;jl<3;jl++){
+          var jlw=Math.sin(t+jl*1.3)*2;
+          ctx.beginPath(); ctx.moveTo(jx-4,jy+jl*1.5); ctx.lineTo(jx-11,jy+5+jlw); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(jx+4,jy+jl*1.5); ctx.lineTo(jx+11,jy+5-jlw); ctx.stroke();
         }
+        // corpo (élitros vermelhos)
+        ctx.fillStyle='#D32F2F';
+        ctx.beginPath(); ctx.ellipse(jx,jy,8,6,0,0,Math.PI*2); ctx.fill();
+        // linha divisória dos élitros
+        ctx.strokeStyle='#111'; ctx.lineWidth=1;
+        ctx.beginPath(); ctx.moveTo(jx,jy-6); ctx.lineTo(jx,jy+6); ctx.stroke();
+        // pontos
+        ctx.fillStyle='#111';
+        ctx.beginPath(); ctx.arc(jx-3,jy-2,1.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(jx+3,jy-2,1.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(jx-3,jy+2,1.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(jx+3,jy+2,1.8,0,Math.PI*2); ctx.fill();
+        // cabeça preta
+        ctx.fillStyle='#111';
+        ctx.beginPath(); ctx.arc(jx-9,jy,4,0,Math.PI*2); ctx.fill();
+        // olhos
+        ctx.fillStyle='#fff';
+        ctx.beginPath(); ctx.arc(jx-10,jy-2,1.2,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(jx-8,jy-2,1.2,0,Math.PI*2); ctx.fill();
+      } else if(inst.type==='mosca'){
+        // Mosca — corpo escuro, 2 asas transparentes, olhos compostos, 6 pernas
+        var mx=isx+14, my=iy+10;
+        // asas transparentes
+        ctx.save();
+        ctx.globalAlpha=0.35+Math.abs(Math.sin(t*3))*0.2;
+        ctx.fillStyle='#B3E5FC';
+        ctx.beginPath(); ctx.ellipse(mx-3,my-5,9,5,-0.4,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(mx+3,my-5,9,5,0.4,0,Math.PI*2); ctx.fill();
+        ctx.restore();
+        // pernas
+        ctx.strokeStyle='#333'; ctx.lineWidth=1;
+        for(var ml=0;ml<3;ml++){
+          var mlw=Math.sin(t+ml*1.1)*3;
+          ctx.beginPath(); ctx.moveTo(mx-3,my+ml*2); ctx.lineTo(mx-10,my+6+mlw); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(mx+3,my+ml*2); ctx.lineTo(mx+10,my+6-mlw); ctx.stroke();
+        }
+        // abdome listrado
+        ctx.fillStyle='#424242';
+        ctx.beginPath(); ctx.ellipse(mx+2,my+1,6,4,0,0,Math.PI*2); ctx.fill();
+        ctx.strokeStyle='#222'; ctx.lineWidth=0.7;
+        for(var ms=0;ms<3;ms++) {
+          ctx.beginPath(); ctx.moveTo(mx-4+ms*3,my-2); ctx.lineTo(mx-4+ms*3,my+4); ctx.stroke();
+        }
+        // tórax
+        ctx.fillStyle='#616161';
+        ctx.beginPath(); ctx.ellipse(mx-4,my,4,3,0,0,Math.PI*2); ctx.fill();
+        // cabeça
+        ctx.fillStyle='#333';
+        ctx.beginPath(); ctx.arc(mx-10,my,4,0,Math.PI*2); ctx.fill();
+        // olhos compostos vermelhos
+        ctx.fillStyle='#B71C1C';
+        ctx.beginPath(); ctx.arc(mx-12,my-1,2.5,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(mx-8,my-1,2.5,0,Math.PI*2); ctx.fill();
       } else if(inst.type==='araninha'){
-        // Araninha marrom
-        ctx.fillStyle='#5D4037'; ctx.beginPath(); ctx.arc(sx+10,inst.y+7,4,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#3E2723'; ctx.lineWidth=1;
-        for(var leg=0;leg<8;leg++){
-          var lx=sx+10+Math.cos(leg*Math.PI/4)*6;
-          var ly=inst.y+7+Math.sin(leg*Math.PI/4)*6;
-          ctx.beginPath(); ctx.moveTo(sx+10,inst.y+7); ctx.lineTo(lx,ly); ctx.stroke();
+        // Aranha — cefalotórax + abdome bulboso, 8 pernas articuladas
+        var spx=isx+12, spy=iy+11;
+        // 8 pernas (4 de cada lado) com articulação
+        ctx.strokeStyle='#3E2723'; ctx.lineWidth=1.2;
+        for(var sl=0;sl<4;sl++){
+          var sang=(-0.5+sl*0.35), slw=Math.sin(t+sl*0.9)*4;
+          var midX1=spx-7+sl*1.5, midY1=spy-3+slw;
+          var endX1=spx-16+sl*2,  endY1=spy+4+slw;
+          ctx.beginPath(); ctx.moveTo(spx-2,spy); ctx.lineTo(midX1,midY1); ctx.lineTo(endX1,endY1); ctx.stroke();
+          var midX2=spx+7-sl*1.5, midY2=spy-3-slw;
+          var endX2=spx+16-sl*2,  endY2=spy+4-slw;
+          ctx.beginPath(); ctx.moveTo(spx+2,spy); ctx.lineTo(midX2,midY2); ctx.lineTo(endX2,endY2); ctx.stroke();
+        }
+        // abdome bulboso
+        ctx.fillStyle='#4A148C';
+        ctx.beginPath(); ctx.ellipse(spx+3,spy,7,6,0,0,Math.PI*2); ctx.fill();
+        // padrão no abdome
+        ctx.fillStyle='rgba(255,200,0,0.55)';
+        ctx.beginPath(); ctx.ellipse(spx+3,spy,3,2.5,0,0,Math.PI*2); ctx.fill();
+        // cefalotórax
+        ctx.fillStyle='#6A1B9A';
+        ctx.beginPath(); ctx.arc(spx-4,spy,5,0,Math.PI*2); ctx.fill();
+        // 8 olhinhos
+        ctx.fillStyle='#fff';
+        for(var oe=0;oe<4;oe++){
+          ctx.beginPath(); ctx.arc(spx-6+oe*2,spy-3,0.9,0,Math.PI*2); ctx.fill();
         }
       } else if(inst.type==='pulgao'){
-        // Pulgão pequeno verde
-        ctx.fillStyle='#9CCC65'; ctx.beginPath(); ctx.arc(sx+10,inst.y+8,3,0,Math.PI*2); ctx.fill();
-        ctx.strokeStyle='#558B2F'; ctx.lineWidth=1;
-        ctx.beginPath(); ctx.moveTo(sx+10,inst.y+5); ctx.lineTo(sx+10,inst.y+2); ctx.stroke();
-      } else {
-        // Barata ou centopeia (padrão)
-        ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+8,8,6,0,0,Math.PI*2); ctx.fill();
-        ctx.fillStyle='#6D4C41'; ctx.beginPath(); ctx.ellipse(sx+10,inst.y+6,4,3,0,0,Math.PI*2); ctx.fill();
+        // Pulgão — corpo periforme verde, antenas, 6 pernas finas
+        var px2=isx+8, py2=iy+8;
+        ctx.strokeStyle='#1B5E20'; ctx.lineWidth=0.8;
+        for(var pl2=0;pl2<3;pl2++){
+          var plw=Math.sin(t+pl2)*2;
+          ctx.beginPath(); ctx.moveTo(px2,py2+pl2*1.5); ctx.lineTo(px2-6,py2+5+plw); ctx.stroke();
+          ctx.beginPath(); ctx.moveTo(px2,py2+pl2*1.5); ctx.lineTo(px2+6,py2+5-plw); ctx.stroke();
+        }
+        // abdome periforme
+        ctx.fillStyle='#66BB6A';
+        ctx.beginPath(); ctx.ellipse(px2,py2+2,4,5,0,0,Math.PI*2); ctx.fill();
+        // cabeça
+        ctx.fillStyle='#388E3C';
+        ctx.beginPath(); ctx.arc(px2,py2-4,3,0,Math.PI*2); ctx.fill();
+        // olhos
+        ctx.fillStyle='#111';
+        ctx.beginPath(); ctx.arc(px2-1.5,py2-5,0.8,0,Math.PI*2); ctx.fill();
+        ctx.beginPath(); ctx.arc(px2+1.5,py2-5,0.8,0,Math.PI*2); ctx.fill();
+        // antenas finas
+        ctx.strokeStyle='#1B5E20'; ctx.lineWidth=0.7;
+        ctx.beginPath(); ctx.moveTo(px2-1,py2-7); ctx.lineTo(px2-5,py2-12+walk); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(px2+1,py2-7); ctx.lineTo(px2+5,py2-12-walk); ctx.stroke();
       }
+      ctx.restore();
+      // Indicador pulsante de perigo
       var pulse=0.6+0.4*Math.sin(t*3); ctx.globalAlpha=pulse;
       ctx.fillStyle='#F44336'; ctx.font='bold 9px Arial'; ctx.textAlign='center';
-      ctx.fillText('!',sx+inst.w/2,inst.y-6); ctx.globalAlpha=1;
+      ctx.fillText('!',isx+inst.w/2,inst.y-8); ctx.globalAlpha=1;
     }
   }
 }
@@ -5461,6 +5804,106 @@ function drawP2Tornado(){
   ctx.restore();
 }
 
+function drawP3Obstacles(){
+  if(phase!==3) return;
+  var t=Date.now()/400;
+  // Espinhos
+  for(var si=0;si<p3Spikes.length;si++){
+    var sp=p3Spikes[si];
+    var spx=sp.x-camX; if(spx>CW+100||spx+sp.w<-100) continue;
+    var nSpk=Math.floor(sp.w/12);
+    ctx.fillStyle='#546E7A';
+    for(var n=0;n<nSpk;n++){
+      var bx=spx+n*12;
+      ctx.beginPath(); ctx.moveTo(bx,GY); ctx.lineTo(bx+6,GY-20); ctx.lineTo(bx+12,GY); ctx.closePath(); ctx.fill();
+      ctx.strokeStyle='rgba(255,255,255,0.35)'; ctx.lineWidth=0.8;
+      ctx.beginPath(); ctx.moveTo(bx+3,GY-5); ctx.lineTo(bx+6,GY-18); ctx.stroke();
+    }
+    ctx.strokeStyle='#37474F'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(spx,GY); ctx.lineTo(spx+sp.w,GY); ctx.stroke();
+    ctx.fillStyle='rgba(244,67,54,0.85)'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
+    ctx.fillText('⚡',spx+sp.w/2,GY-28);
+  }
+  // Armadilhas escondidas
+  for(var ti=0;ti<p3HiddenTraps.length;ti++){
+    var ht=p3HiddenTraps[ti];
+    var htx=ht.x-camX; if(htx>CW+100||htx+ht.w<-100) continue;
+    var htCyc=ht.closedDur+ht.openDur;
+    var htT=ht.timer%htCyc;
+    var timeLeft=ht.closedDur-htT;
+    if(!ht.open){
+      var flash=timeLeft<45?(Math.sin(t*14)*0.5+0.5):0;
+      ctx.fillStyle=flash>0.5?'rgba(255,100,80,0.95)':'#795548';
+      ctx.fillRect(htx,GY-7,ht.w,7);
+      ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=1;
+      for(var tx2=0;tx2<=ht.w;tx2+=18){
+        ctx.beginPath(); ctx.moveTo(htx+tx2,GY-7); ctx.lineTo(htx+tx2,GY); ctx.stroke();
+      }
+      if(timeLeft<55){
+        ctx.save(); ctx.globalAlpha=0.65+flash*0.35;
+        ctx.fillStyle='#F44336'; ctx.font='bold 12px Arial'; ctx.textAlign='center';
+        ctx.fillText('⚠',htx+ht.w/2,GY-16);
+        ctx.restore();
+      }
+    } else {
+      ctx.fillStyle='rgba(10,10,10,0.5)';
+      ctx.fillRect(htx,GY-4,ht.w,4);
+    }
+  }
+}
+function drawP4Obstacles(){
+  if(phase!==4) return;
+  var t=Date.now()/400;
+  // Parede deslizante
+  var sw=p4SlidingWall;
+  var swx=sw.x-camX;
+  if(swx>-60&&swx<CW+60){
+    ctx.fillStyle='#455A64';
+    ctx.fillRect(swx,sw.y,sw.w,sw.h);
+    ctx.strokeStyle='rgba(255,255,255,0.12)'; ctx.lineWidth=2;
+    for(var sy2=0;sy2<sw.h;sy2+=22){
+      ctx.beginPath(); ctx.moveTo(swx,sw.y+sy2); ctx.lineTo(swx+sw.w,sw.y+sy2); ctx.stroke();
+    }
+    ctx.strokeStyle='rgba(0,0,0,0.6)'; ctx.lineWidth=2;
+    ctx.strokeRect(swx,sw.y,sw.w,sw.h);
+    ctx.fillStyle='rgba(255,255,255,0.8)'; ctx.font='14px Arial'; ctx.textAlign='center';
+    ctx.fillText('🧱',swx+sw.w/2,sw.y-10);
+  }
+  // Sino de alarme
+  var ab=p4AlarmBell;
+  var abx=ab.x-camX;
+  if(abx>-80&&abx<CW+80){
+    var ring=ab.triggered?Math.sin(t*20)*5:Math.sin(t*1.8)*1.5;
+    ctx.save(); ctx.translate(abx+ab.w/2+ring,ab.y+ab.h/2);
+    ctx.fillStyle=ab.triggered?'#FF5722':'#FF9800';
+    ctx.beginPath();
+    ctx.arc(0,0,14,Math.PI,0); ctx.lineTo(14,18); ctx.lineTo(-14,18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#E65100';
+    ctx.beginPath(); ctx.arc(0,18,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#BF360C';
+    ctx.beginPath(); ctx.arc(ring*0.4,14,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#444'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-8); ctx.stroke();
+    if(ab.triggered){
+      ctx.globalAlpha=0.35+Math.sin(t*16)*0.25;
+      ctx.strokeStyle='#FF9800'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(0,4,22,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+  }
+  // Pedras caindo
+  for(var ri=0;ri<p4AlarmRocks.length;ri++){
+    var rock=p4AlarmRocks[ri]; if(!rock.active) continue;
+    var rx=rock.x-camX; if(rx<-50||rx>CW+50) continue;
+    ctx.fillStyle='#78909C';
+    ctx.beginPath(); ctx.arc(rx,rock.y,rock.r,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#546E7A'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.moveTo(rx-rock.r*0.35,rock.y-rock.r*0.25); ctx.lineTo(rx+rock.r*0.25,rock.y+rock.r*0.35); ctx.stroke();
+  }
+}
+
 function loop(){
   ctx.clearRect(0,0,CW,CH);
   if(state==='menu') drawMenu();
@@ -5471,6 +5914,7 @@ function loop(){
     drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
     drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers();
     drawP2Boulders(); drawP2Bats(); drawP2BreakFloors(); drawP2Tornado();
+    drawP3Obstacles(); drawP4Obstacles();
     drawPlayer(); drawParticles(); drawMetamorph(); drawP2DarkZone(); drawHUD(); drawTutorialBanner();
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
