@@ -4001,18 +4001,30 @@ function drawFrog(cx,cy,def){
   frogBlinkTimer++;
   var blink=(frogBlinkTimer%150)<7;
 
-  // Animação de saltos pequenos ao andar no chão
+  // Animação de marcha — 4 patas sincronizadas em marcha diagonal
   var isMoving=Math.abs(pl.vx)>0.5&&pl.onGround;
   var inAir=!pl.onGround;
-  var hopY=0, legExt=0, bodyFlat=1, tilt=0;
+  var hopY=0, walkSin=0, bodyFlat=1, tilt=-0.10;
+  // Patas dianteiras: próxima (near) e distante (far)
+  var nearFrontLift=0, farFrontLift=0, nearFrontSwing=0, farFrontSwing=0;
+  // Pernas traseiras: próxima e distante
+  var legExtNearBack=0, legExtFarBack=0;
   if(isMoving){
     var hc=(t*4.5)%(Math.PI*2);
-    hopY=Math.abs(Math.sin(hc))*10;
-    legExt=Math.abs(Math.sin(hc));
-    bodyFlat=1-legExt*0.18;
-    tilt=Math.sin(hc)*0.15;
+    walkSin=Math.sin(hc);
+    var absWS=Math.abs(walkSin);
+    hopY=Math.pow(absWS,2)*8;
+    bodyFlat=1-absWS*0.15;
+    tilt=-0.10-Math.pow(absWS,3)*0.14;
+    // Marcha diagonal: pata-da-frente-próxima + perna-traseira-distante sobem juntas
+    nearFrontLift  = Math.max(0,  walkSin)*8;   // pata front próxima levanta
+    farFrontLift   = Math.max(0, -walkSin)*6;   // pata front distante levanta (fase oposta)
+    nearFrontSwing = walkSin*4;                 // balanço frente/trás
+    farFrontSwing  = -walkSin*3;
+    legExtNearBack = Math.max(0, -walkSin);     // traseira próxima empurra fase oposta
+    legExtFarBack  = Math.max(0,  walkSin);     // traseira distante empurra na fase da front próxima
   } else if(inAir){
-    legExt=1; bodyFlat=0.85; tilt=-0.18;
+    legExtNearBack=1; legExtFarBack=0.4; bodyFlat=0.85; tilt=-0.22; nearFrontLift=0; farFrontLift=0;
   }
   var dcy=cy-hopY;
 
@@ -4021,23 +4033,62 @@ function drawFrog(cx,cy,def){
   ctx.rotate(tilt);
   ctx.translate(-cx,-dcy);
 
-  // Saco vocal pulsante (quando parado)
+  // Saco vocal sob a garganta (quando parado) — pequeno, sob a cabeça
   if(!isMoving&&!inAir){
-    var vp=0.55+Math.sin(t*1.8)*0.45;
-    ctx.fillStyle='rgba(200,240,180,'+vp.toFixed(2)+')';
-    ctx.beginPath(); ctx.ellipse(cx+20,dcy+7,8*vp,5*vp,0,0,Math.PI*2); ctx.fill();
+    var vp=0.5+Math.sin(t*1.8)*0.5;
+    ctx.fillStyle='rgba(200,240,180,'+(vp*0.7).toFixed(2)+')';
+    ctx.beginPath(); ctx.ellipse(cx+16,dcy+7,5*vp,4*vp,0,0,Math.PI*2); ctx.fill();
   }
 
-  // Pernas traseiras articuladas
-  ctx.strokeStyle=def.accent; ctx.lineWidth=3; ctx.lineCap='round';
-  var kneeY=dcy+8+legExt*10, footY=dcy+18+legExt*8;
-  ctx.beginPath(); ctx.moveTo(cx-14,dcy+5); ctx.lineTo(cx-24,kneeY); ctx.lineTo(cx-18,footY); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-11,dcy+7); ctx.lineTo(cx-21,kneeY+2); ctx.lineTo(cx-15,footY+2); ctx.stroke();
-  // Dedos traseiros (pé de sapo)
-  ctx.lineWidth=1.2;
-  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-23,footY+4); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-18,footY+5); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx-18,footY); ctx.lineTo(cx-13,footY+4); ctx.stroke();
+  // ── PERNAS TRASEIRAS (2 pernas, fases opostas) ───────────────
+  // Formato em L: coxa horizontal para fora, canela desce — pé ancorado perto do chão.
+  // Rotação base de 15° anti-horária no pivô do quadril.
+  var rotA=-15*Math.PI/180, cosR=Math.cos(rotA), sinR=Math.sin(rotA);
+
+  function calcBackLeg(le){
+    // Quadril fixo no traseiro do corpo
+    var hx=cx-14, hy=dcy+8;
+    // Joelho: coxa horizontal para fora; desce mais quando extende
+    var kx=cx-25, ky=dcy+9+le*6;
+    // Pé: canela desce para o chão; ancorado em cy para não flutuar
+    var fx=cx-24, fy=cy+20-hopY*0.3+le*2;
+    // Aplicar rotação de 15° anti-horária em torno do quadril
+    var rkx=kx-hx, rky=ky-hy;
+    kx=hx+rkx*cosR-rky*sinR; ky=hy+rkx*sinR+rky*cosR;
+    var rfx2=fx-hx, rfy2=fy-hy;
+    fx=hx+rfx2*cosR-rfy2*sinR; fy=hy+rfx2*sinR+rfy2*cosR;
+    return {hx:hx,hy:hy,kx:kx,ky:ky,fx:fx,fy:fy};
+  }
+
+  // ── Perna traseira DISTANTE (fundo — fase legExtFarBack)
+  var bkFar=calcBackLeg(legExtFarBack);
+  ctx.strokeStyle='rgba(60,120,60,0.45)'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(bkFar.hx+3,bkFar.hy+2); ctx.lineTo(bkFar.kx+4,bkFar.ky+2); ctx.lineTo(bkFar.fx+4,bkFar.fy+1); ctx.stroke();
+  // dedos distantes (sem ventosas, mais finos)
+  ctx.lineWidth=0.8;
+  var tspr2=0.28+legExtFarBack*0.3, tlen2=5+legExtFarBack*1.5;
+  var tA5=[- tspr2*2,-tspr2,0,tspr2,tspr2*2];
+  for(var td=0;td<5;td++){
+    var ta=-Math.PI/2+tA5[td];
+    ctx.beginPath(); ctx.moveTo(bkFar.fx+4,bkFar.fy+1);
+    ctx.lineTo(bkFar.fx+4+Math.cos(ta)*tlen2, bkFar.fy+1+Math.sin(ta)*tlen2); ctx.stroke();
+  }
+
+  // ── Perna traseira PRÓXIMA (frente — fase legExtNearBack)
+  var bkNear=calcBackLeg(legExtNearBack);
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(bkNear.hx,bkNear.hy); ctx.lineTo(bkNear.kx,bkNear.ky); ctx.lineTo(bkNear.fx,bkNear.fy); ctx.stroke();
+  // 5 dedos próximos com ventosas
+  ctx.lineWidth=1;
+  var toeSpread=0.32+legExtNearBack*0.38, toeLen=6+legExtNearBack*2;
+  var toeA5=[-toeSpread*2,-toeSpread,0,toeSpread,toeSpread*2];
+  for(var td=0;td<5;td++){
+    var ta=-Math.PI/2+toeA5[td];
+    var tx2=bkNear.fx+Math.cos(ta)*toeLen, ty2=bkNear.fy+Math.sin(ta)*toeLen;
+    ctx.beginPath(); ctx.moveTo(bkNear.fx,bkNear.fy); ctx.lineTo(tx2,ty2); ctx.stroke();
+    ctx.fillStyle=def.accent;
+    ctx.beginPath(); ctx.arc(tx2,ty2,1.5,0,Math.PI*2); ctx.fill();
+  }
 
   // Corpo oval deitado
   ctx.fillStyle=def.color;
@@ -4057,11 +4108,40 @@ function drawFrog(cx,cy,def){
   ctx.fillStyle=def.color;
   ctx.beginPath(); ctx.arc(cx+14,dcy,9,0,Math.PI*2); ctx.fill();
 
-  // Patas dianteiras curtas
-  ctx.strokeStyle=def.accent; ctx.lineWidth=2; ctx.lineCap='round';
-  ctx.beginPath(); ctx.moveTo(cx+6,dcy+8); ctx.lineTo(cx+8,dcy+18); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx+8,dcy+18); ctx.lineTo(cx+5,dcy+22); ctx.stroke();
-  ctx.beginPath(); ctx.moveTo(cx+8,dcy+18); ctx.lineTo(cx+10,dcy+22); ctx.stroke();
+  // ── PATAS DIANTEIRAS (2 patas, fases opostas) ────────────────
+  // Ombro segue o corpo (dcy); pé ancorado perto do chão real (cy) para não flutuar.
+  // Balanço sincronizado em marcha diagonal com as pernas traseiras.
+  var groundY = cy+20;  // nível do chão (fixo, independente do hopY)
+
+  // ── Pata dianteira DISTANTE (fundo — fase oposta à próxima)
+  var fAX2=cx+3, fAY2=dcy+8;        // ombro (distante, ligeiramente à esq)
+  var fBX2=cx+3+farFrontSwing, fBY2=groundY-farFrontLift;
+  ctx.strokeStyle='rgba(60,120,60,0.45)'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(fAX2-1,fAY2+2); ctx.lineTo(fBX2-1,fBY2+1); ctx.stroke();
+  // dedos distantes (finos)
+  ctx.lineWidth=0.8;
+  var ftA4d=[-0.4,-0.13,0.13,0.4];
+  for(var fd=0;fd<4;fd++){
+    var fa=-Math.PI/2+ftA4d[fd];
+    ctx.beginPath(); ctx.moveTo(fBX2-1,fBY2+1);
+    ctx.lineTo(fBX2-1+Math.cos(fa)*4.5, fBY2+1+Math.sin(fa)*4.5); ctx.stroke();
+  }
+
+  // ── Pata dianteira PRÓXIMA (frente)
+  var fAX=cx+5, fAY=dcy+8;          // ombro (próxima)
+  var fBX=cx+5+nearFrontSwing, fBY=groundY-nearFrontLift;
+  ctx.strokeStyle=def.accent; ctx.lineWidth=2.5; ctx.lineCap='round';
+  ctx.beginPath(); ctx.moveTo(fAX,fAY); ctx.lineTo(fBX,fBY); ctx.stroke();
+  // 4 dedos próximos com ventosas
+  ctx.lineWidth=1;
+  var ftA4=[-0.45,-0.15,0.15,0.45];
+  for(var fd=0;fd<4;fd++){
+    var fa=-Math.PI/2+ftA4[fd];
+    var ftx=fBX+Math.cos(fa)*5, fty=fBY+Math.sin(fa)*5;
+    ctx.beginPath(); ctx.moveTo(fBX,fBY); ctx.lineTo(ftx,fty); ctx.stroke();
+    ctx.fillStyle=def.accent;
+    ctx.beginPath(); ctx.arc(ftx,fty,1.4,0,Math.PI*2); ctx.fill();
+  }
 
   // Olhos salientes no topo da cabeça
   ctx.fillStyle='#A5D6A7';
