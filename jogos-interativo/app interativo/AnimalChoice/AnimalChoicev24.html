@@ -1974,6 +1974,9 @@ var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
 var gameZeroed=false; // true quando o jogador zera o jogo nessa sessao
 var particles=[];
 var duckFlapTimer=0;   // conta frames da animacao de asa do patinho
+var duckSquash=0;      // achatamento ao pousar
+var duckWasInAir=false;// detecta transição ar→chão
+var duckBlinkTimer=0;  // piscar
 var frogUnlocked=false, frogLongJump=false, frogTongue=0, frogBlinkTimer=0;
 var frogSquash=0;       // frames de achatamento ao pousar (0=nenhum)
 var frogWasInAir=false; // detecta transição ar→chão
@@ -4073,32 +4076,266 @@ function drawDog(cx,cy,def){
 }
 
 function drawDuck(cx,cy,def){
-  // Wing flap animation when duck tries to jump outside water
-  var wingAngle=0;
-  if(duckFlapTimer>0){
-    wingAngle=Math.sin((30-duckFlapTimer)*0.8)*0.55; // flap angle
+  var t=Date.now()/110;
+
+  var isMoving=Math.abs(pl.vx)>0.5&&pl.onGround;
+  var inAir=!pl.onGround;
+
+  if(duckWasInAir&&pl.onGround) duckSquash=8;
+  duckWasInAir=inAir;
+  if(duckSquash>0) duckSquash--;
+  var squashX=1+duckSquash*0.012;
+  var squashY=1-duckSquash*0.016;
+
+  var hopY=0, walkSin=0;
+  var nearLegLift=0, farLegLift=0, nearLegSwing=0, farLegSwing=0;
+
+  if(isMoving){
+    var hc=(t*4.5)%(Math.PI*2);
+    walkSin=Math.sin(hc);
+    hopY=Math.pow(Math.abs(walkSin),2)*3;
+    nearLegLift=Math.max(0, walkSin)*7;
+    farLegLift =Math.max(0,-walkSin)*5;
+    nearLegSwing= walkSin*3;
+    farLegSwing =-walkSin*2;
+  } else if(inAir){
+    nearLegLift=2; farLegLift=2;
   }
-  // Body
-  ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx,cy+6,17,14,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx,cy-6,11,0,Math.PI*2); ctx.fill();
-  // Beak
-  ctx.fillStyle=def.accent;
-  ctx.beginPath(); ctx.moveTo(cx+8,cy-7); ctx.lineTo(cx+18,cy-5); ctx.lineTo(cx+8,cy-2); ctx.fill();
-  // Animated wing
+
+  var wingFlap=0, wingBob=0;
+  if(duckFlapTimer>0){
+    wingFlap=Math.sin((30-duckFlapTimer)*0.8)*0.6;
+    wingBob=Math.abs(wingFlap)*5;
+  } else if(isMoving){
+    wingBob=Math.abs(walkSin)*2;
+  }
+
+  var dcy=cy-hopY;
+  var breathe=(!isMoving&&!inAir)?Math.sin(t*1.0)*0.04:0;
+  var sc=0.85;
+  var lgY=(22+hopY)/sc;
+
+  // Paleta baseada na foto: patinho branco fofo
+  var cW ='#EEF4FA';        // branco principal
+  var cSh='#B0C4D8';        // sombra azul-acinzentada
+  var cHi='#FFFFFF';        // brilho puro
+  var cBk='#FFC107';        // bico amarelo
+  var cBkL='#E65100';       // borda/mandíbula inferior laranja
+  var cFt='#FF8F00';        // patas âmbar
+  var hx=11, hy=-22;        // centro da cabeça grande
+
   ctx.save();
-  ctx.translate(cx-6,cy+5);
-  ctx.rotate(-wingAngle);
-  ctx.fillStyle='#F9A825';
-  ctx.beginPath(); ctx.ellipse(0,0,10,6,0,0,Math.PI*2); ctx.fill();
+  ctx.translate(cx,dcy);
+  ctx.scale(sc,sc);
+
+  // ── Patas laranja com pés palmados grandes ────────────────────────────────
+  if(pl.inWaterPit){
+    // Animação de nado: patas alternam 90°→0° como remo real
+    var swimT=t*0.75;
+    // Fase de cada pata: varre de 0° (neutro) a 90° (trás)
+    var ang1= (Math.sin(swimT)+1)*0.5          * (Math.PI*0.5);
+    var ang2= (Math.sin(swimT+Math.PI)+1)*0.5  * (Math.PI*0.5);
+
+    // Pata traseira (cFt) — 1.5x na água
+    ctx.save();
+    ctx.translate(-2,16);
+    ctx.rotate(ang1);
+    ctx.scale(1.5,1.5);
+    ctx.fillStyle=cFt;
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-9,-1,-11,6,-7,8);
+    ctx.bezierCurveTo(-3,9,3,9,8,8);
+    ctx.bezierCurveTo(12,6,11,-1,0,0);
+    ctx.fill();
+    ctx.restore();
+
+    // Pata dianteira (#E65100) — 1.5x na água, fase oposta
+    ctx.save();
+    ctx.translate(6,14);
+    ctx.rotate(ang2);
+    ctx.scale(1.5,1.5);
+    ctx.fillStyle='#E65100';
+    ctx.beginPath();
+    ctx.moveTo(0,0);
+    ctx.bezierCurveTo(-9,-1,-11,6,-7,8);
+    ctx.bezierCurveTo(-3,9,3,9,8,8);
+    ctx.bezierCurveTo(12,6,11,-1,0,0);
+    ctx.fill();
+    ctx.restore();
+  } else {
+    var fbLx=-1+farLegSwing, fbLy=lgY-farLegLift;
+    ctx.strokeStyle=cFt; ctx.lineWidth=4; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,10); ctx.lineTo(fbLx,fbLy); ctx.stroke();
+    ctx.fillStyle=cFt;
+    ctx.beginPath();
+    ctx.moveTo(fbLx,fbLy);
+    ctx.bezierCurveTo(fbLx-9,fbLy-1,fbLx-11,fbLy+6,fbLx-7,fbLy+8);
+    ctx.bezierCurveTo(fbLx-3,fbLy+9,fbLx+3,fbLy+9,fbLx+8,fbLy+8);
+    ctx.bezierCurveTo(fbLx+12,fbLy+6,fbLx+11,fbLy-1,fbLx,fbLy);
+    ctx.fill();
+
+    var nbLx=6+nearLegSwing, nbLy=lgY-nearLegLift;
+    ctx.strokeStyle='#E65100'; ctx.lineWidth=4;
+    ctx.beginPath(); ctx.moveTo(6,10); ctx.lineTo(nbLx,nbLy); ctx.stroke();
+    ctx.fillStyle='#E65100';
+    ctx.beginPath();
+    ctx.moveTo(nbLx,nbLy);
+    ctx.bezierCurveTo(nbLx-9,nbLy-1,nbLx-11,nbLy+6,nbLx-7,nbLy+8);
+    ctx.bezierCurveTo(nbLx-3,nbLy+9,nbLx+3,nbLy+9,nbLx+8,nbLy+8);
+    ctx.bezierCurveTo(nbLx+12,nbLy+6,nbLx+11,nbLy-1,nbLx,nbLy);
+    ctx.fill();
+  }
+
+  // ── Corpo redondo e fofo (grande, quase esférico) ─────────────────────────
+  ctx.save();
+  ctx.scale(squashX*(1+breathe),squashY);
+  // Sombra do corpo
+  ctx.fillStyle=cSh;
+  ctx.beginPath(); ctx.ellipse(0,4,22,18,0,0,Math.PI*2); ctx.fill();
+  // Corpo branco principal
+  ctx.fillStyle=cW;
+  ctx.beginPath(); ctx.ellipse(-1,3,21,17,0,0,Math.PI*2); ctx.fill();
+  // Brilho superior do corpo (efeito fofo/3D)
+  ctx.fillStyle='rgba(255,255,255,0.7)';
+  ctx.beginPath(); ctx.ellipse(5,-2,11,8,-0.3,0,Math.PI*2); ctx.fill();
   ctx.restore();
-  // Eye
-  ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx+4,cy-8,3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx+5,cy-9,1.2,0,Math.PI*2); ctx.fill();
-  // Show "no jump" hint bubble when flapping — raised higher to avoid name conflict
-  if(duckFlapTimer>0 && !pl.inWaterPit){
-    var bx=cx, by=cy-62; // raised up well above the name tag
-    // Cancela o flip do personagem para o balão de texto não virar
+
+  // ── Cauda branca fofa ─────────────────────────────────────────────────────
+  ctx.fillStyle=cW;
+  ctx.beginPath();
+  ctx.moveTo(-20,5);
+  ctx.bezierCurveTo(-29,4,-33,-6,-26,-13);
+  ctx.bezierCurveTo(-21,-18,-14,-13,-17,-5);
+  ctx.fill();
+
+  // ── Asa branca fofa com pontinha saindo do corpo ───────────────────────────
+  ctx.save();
+  ctx.translate(0,0+wingBob);
+  ctx.rotate(-wingFlap);
+  ctx.fillStyle=cSh;
+  ctx.beginPath();
+  ctx.moveTo(-1,-5);
+  ctx.bezierCurveTo(-13,-3,-18,6,-15,14);
+  ctx.bezierCurveTo(-11,19,4,17,13,10);
+  ctx.bezierCurveTo(17,5,15,-5,5,-7);
+  ctx.fill();
+  ctx.fillStyle=cW;
+  ctx.beginPath();
+  ctx.moveTo(-1,-4);
+  ctx.bezierCurveTo(-12,-2,-17,6,-14,13);
+  ctx.bezierCurveTo(-10,18,3,16,12,9);
+  ctx.bezierCurveTo(16,4,14,-4,4,-6);
+  ctx.fill();
+  // Brilho da asa
+  ctx.fillStyle='rgba(255,255,255,0.75)';
+  ctx.beginPath(); ctx.ellipse(5,-1,7,5,-0.2,0,Math.PI*2); ctx.fill();
+  // Pontinha primária saindo do corpo
+  ctx.fillStyle=cSh;
+  ctx.beginPath();
+  ctx.moveTo(-13,11);
+  ctx.bezierCurveTo(-18,13,-21,10,-18,7);
+  ctx.bezierCurveTo(-16,4,-12,7,-13,11);
+  ctx.fill();
+  ctx.fillStyle=cW;
+  ctx.beginPath();
+  ctx.moveTo(-12,11);
+  ctx.bezierCurveTo(-16,12,-19,10,-17,8);
+  ctx.bezierCurveTo(-15,6,-11,8,-12,11);
+  ctx.fill();
+  ctx.restore();
+
+  // ── Pescoço curto branco ──────────────────────────────────────────────────
+  ctx.fillStyle=cSh;
+  ctx.beginPath();
+  ctx.moveTo(5,-11); ctx.bezierCurveTo(7,-22,19,-24,21,-15);
+  ctx.bezierCurveTo(21,-7,14,-6,9,-7);
+  ctx.fill();
+  ctx.fillStyle=cW;
+  ctx.beginPath();
+  ctx.moveTo(6,-12); ctx.bezierCurveTo(8,-23,18,-25,20,-16);
+  ctx.bezierCurveTo(20,-8,13,-7,8,-8);
+  ctx.fill();
+
+  // ── Cabeça grande e redonda (destaque da foto) ────────────────────────────
+  ctx.fillStyle=cSh;
+  ctx.beginPath(); ctx.arc(hx+1,hy+1,14,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle=cW;
+  ctx.beginPath(); ctx.arc(hx,hy,14,0,Math.PI*2); ctx.fill();
+  // Brilho da cabeça (efeito pelúcia/3D)
+  ctx.fillStyle='rgba(255,255,255,0.65)';
+  ctx.beginPath(); ctx.ellipse(hx+5,hy-6,8,6,-0.3,0,Math.PI*2); ctx.fill();
+
+  // ── Tufinho no topo da cabeça ─────────────────────────────────────────────
+  ctx.fillStyle=cSh;
+  ctx.beginPath();
+  ctx.moveTo(hx-2,hy-12);
+  ctx.bezierCurveTo(hx-3,hy-19,hx+4,hy-22,hx+7,hy-18);
+  ctx.bezierCurveTo(hx+9,hy-15,hx+6,hy-12,hx+4,hy-12);
+  ctx.fill();
+  ctx.fillStyle=cW;
+  ctx.beginPath();
+  ctx.moveTo(hx-1,hy-13);
+  ctx.bezierCurveTo(hx-2,hy-20,hx+5,hy-23,hx+8,hy-19);
+  ctx.bezierCurveTo(hx+10,hy-15,hx+7,hy-13,hx+5,hy-13);
+  ctx.fill();
+  ctx.fillStyle=cHi;
+  ctx.beginPath();
+  ctx.moveTo(hx+2,hy-15);
+  ctx.bezierCurveTo(hx+2,hy-20,hx+6,hy-21,hx+7,hy-18);
+  ctx.bezierCurveTo(hx+8,hy-16,hx+6,hy-14,hx+4,hy-14);
+  ctx.fill();
+
+  // ── Bico (cor única, mais fino) ───────────────────────────────────────────
+  ctx.fillStyle=cBk;
+  ctx.beginPath();
+  ctx.moveTo(hx+9,hy+1);
+  ctx.bezierCurveTo(hx+14,hy-1,hx+23,hy+1,hx+22,hy+3);
+  ctx.bezierCurveTo(hx+21,hy+5,hx+13,hy+5,hx+9,hy+4);
+  ctx.bezierCurveTo(hx+7,hy+3,hx+7,hy+2,hx+9,hy+1);
+  ctx.fill();
+
+  // ── Olhos grandes e expressivos (proporcionais à cabeça r=14) ─────────────
+  duckBlinkTimer++;
+  var duckBlink=(duckBlinkTimer%160)<5;
+  // Área escura ao redor do olho (pele/sombra)
+  ctx.fillStyle='#4A5E6A';
+  ctx.beginPath(); ctx.ellipse(hx+4,hy-5,7,6,0,0,Math.PI*2); ctx.fill();
+
+  if(duckBlink){
+    ctx.fillStyle=cW;
+    ctx.beginPath(); ctx.ellipse(hx+4,hy-5,6,1.5,0,0,Math.PI*2); ctx.fill();
+  } else {
+    // Branco do olho
+    ctx.fillStyle='white';
+    ctx.beginPath(); ctx.ellipse(hx+4,hy-5,6,5.8,0,0,Math.PI*2); ctx.fill();
+    // Íris azul clara
+    ctx.fillStyle='#42A5F5';
+    ctx.beginPath(); ctx.arc(hx+4,hy-5,4.7,0,Math.PI*2); ctx.fill();
+    // Íris azul escuro (anel interno)
+    ctx.fillStyle='#1565C0';
+    ctx.beginPath(); ctx.arc(hx+4,hy-5,3.5,0,Math.PI*2); ctx.fill();
+    // Pupila preta grande
+    ctx.fillStyle='#0A0F14';
+    ctx.beginPath(); ctx.arc(hx+4,hy-5,2.5,0,Math.PI*2); ctx.fill();
+    // Reflexo grande (principal)
+    ctx.fillStyle='rgba(255,255,255,0.95)';
+    ctx.beginPath(); ctx.arc(hx+5.5,hy-6.5,1.5,0,Math.PI*2); ctx.fill();
+    // Reflexo secundário
+    ctx.fillStyle='rgba(255,255,255,0.55)';
+    ctx.beginPath(); ctx.arc(hx+2.5,hy-3.5,0.8,0,Math.PI*2); ctx.fill();
+  }
+  // Sobrancelha expressiva escura
+  ctx.strokeStyle='#2B3A42'; ctx.lineWidth=2; ctx.lineCap='round';
+  ctx.beginPath();
+  ctx.moveTo(hx-2,hy-12); ctx.quadraticCurveTo(hx+4,hy-14,hx+10,hy-11);
+  ctx.stroke();
+
+  ctx.restore();
+
+  // ── Balão "Só nado!" ──────────────────────────────────────────────────────
+  if(duckFlapTimer>0&&!pl.inWaterPit){
+    var bx=cx, by=cy-62;
     ctx.save();
     if(pl.facing===-1){ ctx.translate(cx,0); ctx.scale(-1,1); ctx.translate(-cx,0); }
     ctx.fillStyle='rgba(255,255,255,0.95)';
@@ -4107,7 +4344,6 @@ function drawDuck(cx,cy,def){
     rrect(bx-32,by-14,64,22,10); ctx.stroke();
     ctx.fillStyle='#E65100'; ctx.font='bold 11px Arial'; ctx.textAlign='center';
     ctx.fillText('Só nado! :)',bx,by+3);
-    // Tail pointing down toward duck
     ctx.fillStyle='rgba(255,255,255,0.95)';
     ctx.beginPath();
     ctx.moveTo(bx-5,by+8); ctx.lineTo(bx+5,by+8); ctx.lineTo(bx,by+16);
