@@ -2683,8 +2683,8 @@ function update(){
   if(pl.char==='duck'){
     if(!pl.inWaterPit && duckWasInWater) duckShakeTimer=25; // acabou de sair da água
     duckWasInWater=pl.inWaterPit;
-    // Bolhas enquanto nada
-    if(pl.inWaterPit && Math.random()<0.12) spawnBubble(pl.x+pl.w/2,pl.y+pl.h*0.8);
+    // Bolhas enquanto nada (não quando está batendo asas pra subir)
+    if(pl.inWaterPit && !(K['ArrowUp']||K[' ']) && Math.random()<0.12) spawnBubble(pl.x+pl.w/2,pl.y+pl.h*0.8);
   }
 
   // Cat pre-jump crouch countdown
@@ -2880,11 +2880,19 @@ function update(){
         bf.timer++; if(bf.timer>=45){ bf.state='broken'; bf.timer=0; }
       }
     }
-    // Tornado — gira e puxa voadores de qualquer posição >= 3130 de volta ao início da zona
+    // Tornado — gira e puxa voadores em direção ao funil central, ejetando ao sair
     p2Tornado.angle+=0.05;
     if(CHARS[pl.char].fly&&pl.x+pl.w/2>=p2Tornado.x){
-      pl.x-=9; // puxão supera spd máximo de qualquer voador (5.5), arrastando de volta
-      if(pl.x<0) pl.x=0;
+      // Puxão progressivo: mais forte quanto mais dentro da zona
+      var distInZone=pl.x-p2Tornado.x;
+      var pull=3+Math.min(distInZone/160,4); // 3 a 7px/frame
+      pl.x-=pull;
+      pl.vy*=0.85; // amortece movimento vertical (efeito de ser sugado)
+      // Ejeção ao chegar na borda da zona
+      if(pl.x<=p2Tornado.x+30){
+        pl.vx=-22; // arremessa para a esquerda
+        pl.x=p2Tornado.x-60;
+      }
     }
   }
 
@@ -4141,14 +4149,15 @@ function drawDuck(cx,cy,def){
   var sc=0.85;
   var lgY=(22+hopY)/sc;
 
-  // Paleta baseada na foto: patinho branco fofo
-  var cW ='#EEF4FA';        // branco principal
-  var cSh='#B0C4D8';        // sombra azul-acinzentada
-  var cHi='#FFFFFF';        // brilho puro
-  var cBk='#FFC107';        // bico amarelo
-  var cBkL='#E65100';       // borda/mandíbula inferior laranja
-  var cFt='#FF8F00';        // patas âmbar
-  var hx=11, hy=-22;        // centro da cabeça grande
+  var cBk='#FF8F00';
+  var cBkL='#E65100';
+  var cFt='#FF8F00';
+  var hx=11, hy=-22;
+
+  // Paleta azul bebê
+  var cW ='#B3E5FC';        // azul bebê principal
+  var cSh='#81D4FA';        // sombra azul médio
+  var cHi='#E1F5FE';        // brilho azul clarinho
 
   ctx.save();
   ctx.translate(cx,dcy);
@@ -6398,10 +6407,10 @@ function drawP2Tornado(){
   bgG.addColorStop(1,'rgba(60,30,5,0)');
   ctx.fillStyle=bgG; ctx.fillRect(clipL,0,clipR-clipL,CH);
 
-  // 2) Rajadas de vento horizontais (animadas para a esquerda)
+  // 2) Rajadas de vento horizontais (animadas em direção ao tornado)
   for(var s=0;s<24;s++){
     var sy=10+s*(CH/24)+Math.sin(s*1.9)*6;
-    var sOff=((ang*220+s*89)%(tz.w));
+    var sOff=tz.w-((ang*220+s*89)%(tz.w));
     var sx=screenL+sOff;
     var slen=55+Math.sin(s*2.6+ang)*38;
     ctx.beginPath();
@@ -6411,15 +6420,15 @@ function drawP2Tornado(){
     ctx.stroke();
   }
 
-  // 3) Três funis (cone real: boca larga no topo, cauda estreita no chão)
-  var funnelRelX=[100,580,1080]; // posições relativas ao início da zona
-  for(var fi=0;fi<3;fi++){
+  // 3) Um único funil que segue o personagem voador
+  var funnelRelX=[CHARS[pl.char].fly ? (pl.x>=tz.x ? Math.max(80,pl.x-tz.x-60) : 80) : 580];
+  for(var fi=0;fi<1;fi++){
     var fcx=screenL+funnelRelX[fi];
-    if(fcx<clipL-80||fcx>clipR+80) continue;
-    var fAng=ang+fi*2.09;
-    var topW=50, botW=5;
+    if(fcx<clipL-120||fcx>clipR+120) continue;
+    var fAng=ang;
+    var topW=100, botW=6;
 
-    // Silhueta do cone (forma de funil com curva de Bezier)
+    // Silhueta do cone
     ctx.beginPath();
     ctx.moveTo(fcx-topW,0);
     ctx.quadraticCurveTo(fcx-topW*0.22, GY*0.55, fcx-botW, GY);
@@ -6428,34 +6437,106 @@ function drawP2Tornado(){
     ctx.closePath();
     var coneG=ctx.createLinearGradient(fcx-topW,0,fcx+topW,0);
     coneG.addColorStop(0,'rgba(130,95,25,0)');
-    coneG.addColorStop(0.5,'rgba(155,110,30,0.2)');
+    coneG.addColorStop(0.5,'rgba(155,110,30,0.25)');
     coneG.addColorStop(1,'rgba(130,95,25,0)');
     ctx.fillStyle=coneG; ctx.fill();
-    ctx.strokeStyle='rgba(195,155,55,0.28)'; ctx.lineWidth=1.2; ctx.stroke();
+    ctx.strokeStyle='rgba(195,155,55,0.32)'; ctx.lineWidth=1.5; ctx.stroke();
 
-    // Elipses giratórias dentro do cone (profundidade 3D)
-    for(var li=0;li<13;li++){
-      var prog=li/13;
-      var ely=GY*prog;
-      var elW=((topW-botW)*(1-prog)+botW)*0.88;
+    // Hélice única: sentido esquerda→direita, face frontal visível
+    var numPaths=1;
+    for(var li=0;li<numPaths;li++){
+      var pathOffset=li*(Math.PI*2/numPaths);
+      var isDry=li%2===0;
+
+      // Linha helicoidal única
       ctx.beginPath();
-      ctx.ellipse(fcx, ely, elW, 4+prog*7, fAng+prog*Math.PI*3.5, 0, Math.PI*2);
-      ctx.strokeStyle='rgba(230,195,100,'+(0.05+0.25*(1-prog))+')';
-      ctx.lineWidth=1+prog*2.5;
+      ctx.strokeStyle='rgba(120,80,25,0.55)';
+      ctx.lineWidth=1;
+      var lstarted=false;
+      for(var py=GY;py>=0;py-=3){
+        var prog=1-py/GY;
+        var elWL=(topW-botW)*prog+botW;
+        var hAng=fAng*0.6-prog*Math.PI*4+pathOffset;
+        var zComp=Math.sin(hAng);
+        if(zComp<0){lstarted=false;continue;}
+        var lpx=fcx+elWL*0.7*Math.cos(hAng);
+        if(!lstarted){ctx.moveTo(lpx,py);lstarted=true;}
+        else ctx.lineTo(lpx,py);
+      }
       ctx.stroke();
-    }
 
-    // Detritos orbitando ao longo do funil
-    for(var d=0;d<12;d++){
-      var da=fAng*3+d*(Math.PI*2/12);
-      var dprog=(d%12)/12;
-      var ely2=GY*dprog;
-      var elW2=(topW-botW)*(1-dprog)+botW;
-      var drad=elW2*0.75*Math.abs(Math.sin(da+d*0.35));
-      var dpx=fcx+Math.cos(da)*drad;
-      var dsz=2.4-dprog*1.9; if(dsz<0.35) dsz=0.35;
-      ctx.beginPath(); ctx.arc(dpx,ely2,dsz,0,Math.PI*2);
-      ctx.fillStyle='rgba(215,170,60,0.72)'; ctx.fill();
+      // 7 objetos com velocidades e fases únicas
+      var leafTimings=[
+        {spd:0.15,off:0.00,type:'leaf',col:'#C17F24'},  // folha seca
+        {spd:0.24,off:0.18,type:'leaf',col:'#4CAF50'},  // folha verde
+        {spd:0.30,off:0.35,type:'leaf',col:'#A0522D'},  // folha seca escura
+        {spd:0.40,off:0.50,type:'leaf',col:'#66BB6A'},  // folha verde clara
+        {spd:0.15,off:0.63,type:'twig',col:'#6D4C41'},  // graveto
+        {spd:0.24,off:0.77,type:'straw',col:'#D4A017'}, // palha
+        {spd:0.30,off:0.91,type:'wood',col:'#8D6E63'}   // pedaço de madeira
+      ];
+      for(var lf=0;lf<7;lf++){
+        var lt=leafTimings[lf];
+        var leafProg=((fAng*lt.spd+lt.off)%1);
+        var leafY=GY*(1-leafProg);
+        var elWF=(topW-botW)*leafProg+botW;
+        var hAngL=fAng*0.6-leafProg*Math.PI*4+pathOffset;
+        var zL=Math.sin(hAngL);
+        if(zL<-0.05) continue;
+        var leafX=fcx+elWF*0.7*Math.cos(hAngL);
+        var leafSz=Math.max(4,11*(0.4+leafProg*0.6)*(0.3+zL*0.7));
+        ctx.save();
+        ctx.translate(leafX,leafY);
+        ctx.rotate(hAngL+Math.PI/2);
+        ctx.globalAlpha=0.7+zL*0.3;
+
+        if(lt.type==='leaf'){
+          // Folha com veia
+          ctx.fillStyle=lt.col;
+          ctx.beginPath();
+          ctx.ellipse(0,0,leafSz,leafSz*0.42,0,0,Math.PI*2);
+          ctx.fill();
+          ctx.strokeStyle='rgba(0,0,0,0.2)'; ctx.lineWidth=0.5;
+          ctx.beginPath(); ctx.moveTo(-leafSz,0); ctx.lineTo(leafSz,0); ctx.stroke();
+
+        } else if(lt.type==='twig'){
+          // Graveto: haste principal + dois galhinhos
+          var tw=leafSz*1.4;
+          ctx.strokeStyle=lt.col; ctx.lineCap='round';
+          ctx.lineWidth=2; ctx.beginPath();
+          ctx.moveTo(-tw,0); ctx.lineTo(tw,0); ctx.stroke();
+          ctx.lineWidth=1.2; ctx.beginPath();
+          ctx.moveTo(-tw*0.2,0); ctx.lineTo(-tw*0.5,-leafSz*0.5); ctx.stroke();
+          ctx.beginPath();
+          ctx.moveTo(tw*0.3,0); ctx.lineTo(tw*0.6,leafSz*0.45); ctx.stroke();
+
+        } else if(lt.type==='straw'){
+          // Palha: bastão fino dourado
+          var sw=leafSz*1.6;
+          ctx.strokeStyle=lt.col; ctx.lineWidth=1.5; ctx.lineCap='round';
+          ctx.beginPath(); ctx.moveTo(-sw,0); ctx.lineTo(sw,0); ctx.stroke();
+          ctx.strokeStyle='rgba(255,220,80,0.5)'; ctx.lineWidth=0.6;
+          ctx.beginPath(); ctx.moveTo(-sw*0.9,-1); ctx.lineTo(sw*0.9,-1); ctx.stroke();
+
+        } else if(lt.type==='wood'){
+          // Pedaço de madeira: retângulo irregular
+          var ww=leafSz*0.9, wh=leafSz*0.45;
+          ctx.fillStyle=lt.col;
+          ctx.beginPath();
+          ctx.moveTo(-ww,-wh*0.6);
+          ctx.lineTo(ww*0.85,-wh);
+          ctx.lineTo(ww,wh*0.7);
+          ctx.lineTo(-ww*0.9,wh);
+          ctx.closePath(); ctx.fill();
+          ctx.strokeStyle='rgba(0,0,0,0.25)'; ctx.lineWidth=0.5; ctx.stroke();
+          // Veio da madeira
+          ctx.strokeStyle='rgba(255,255,255,0.2)'; ctx.lineWidth=0.5;
+          ctx.beginPath(); ctx.moveTo(-ww*0.5,-wh*0.4); ctx.lineTo(ww*0.5,wh*0.5); ctx.stroke();
+        }
+
+        ctx.restore();
+        ctx.globalAlpha=1;
+      }
     }
   }
 
