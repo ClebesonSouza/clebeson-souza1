@@ -1958,7 +1958,7 @@ function rrect(x,y,w,h,r){
 var CHARS = {
   cat:         {name:'Gatinho',     color:'#FF9800',accent:'#E65100',jumpF:-17,spd:4.5,grav:GRAV,    swim:false,fly:false,dig:false,ability:'Pulo Alto'},
   dog:         {name:'Cachorrinho', color:'#8D6E63',accent:'#4E342E',jumpF:-12,spd:9.5,grav:GRAV,    swim:false,fly:false,dig:false,ability:'Corrida Rapida'},
-  duck:        {name:'Patinho',     color:'#FDD835',accent:'#F57F17',jumpF:-10,spd:4,  grav:GRAV,    swim:true, fly:false,dig:false,ability:'Pode Nadar'},
+  duck:        {name:'Patinho',     color:'#FFF59D',accent:'#F9A825',jumpF:-10,spd:4,  grav:GRAV,    swim:true, fly:false,dig:false,ability:'Pode Nadar'},
   bird:        {name:'Passarinho',  color:'#29B6F6',accent:'#0277BD',jumpF:-9, spd:5,  grav:GRAV*0.25,swim:false,fly:true, dig:false,ability:'Pode Voar'},
   tatu:        {name:'Tatuzinho',   color:'#8D6E63',accent:'#5D4037',jumpF:-8, spd:3.5,grav:GRAV,    swim:false,fly:false,dig:true, ability:'Cavar pelo Chao'}
 ,  frog:        {name:'Sapinho',     color:'#4CAF50',accent:'#1B5E20',jumpF:-10,spd:4.2, grav:GRAV,    swim:false,fly:false,dig:false,ability:'Come Insetos'},
@@ -4161,7 +4161,7 @@ function drawDuck(cx,cy,def){
 
   var dcy=cy-hopY+waterBob;
   var breathe=(!isMoving&&!inAir&&!pl.inWaterPit)?Math.sin(t*1.0)*0.04:0;
-  var sc=0.85;
+  var sc=0.73;
   var lgY=(22+hopY)/sc;
 
   var cBk='#FF8F00';
@@ -4169,10 +4169,10 @@ function drawDuck(cx,cy,def){
   var cFt='#FF8F00';
   var hx=11, hy=-22;
 
-  // Paleta azul bebê
-  var cW ='#B3E5FC';        // azul bebê principal
-  var cSh='#81D4FA';        // sombra azul médio
-  var cHi='#E1F5FE';        // brilho azul clarinho
+  // Paleta baseada na cor do personagem
+  var cW = def.color;        // cor principal
+  var cSh= def.accent;       // sombra / destaque
+  var cHi= '#FFFDE7';        // brilho clarinho
 
   ctx.save();
   ctx.translate(cx,dcy);
@@ -4426,19 +4426,133 @@ function drawDuck(cx,cy,def){
   }
 }
 function drawBird(cx,cy,def){
-  var flap=Math.sin(Date.now()/130)*0.5;
+  var t=Date.now();
+  var flap=Math.sin(t/120)*0.55;
+
+  // sombra suave sob o corpo
+  ctx.fillStyle='rgba(0,0,0,0.10)';
+  ctx.beginPath(); ctx.ellipse(cx,cy+16,10,4,0,0,Math.PI*2); ctx.fill();
+
+  // rabinho (desenhado antes do corpo para ficar atrás)
   ctx.fillStyle=def.accent;
-  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-flap);
-  ctx.beginPath(); ctx.ellipse(-13,0,13,6,0.3,0,Math.PI*2); ctx.fill(); ctx.restore();
-  ctx.save(); ctx.translate(cx,cy); ctx.rotate(flap);
-  ctx.beginPath(); ctx.ellipse(13,0,13,6,-0.3,0,Math.PI*2); ctx.fill(); ctx.restore();
+  ctx.beginPath();
+  ctx.moveTo(cx-9,cy+11);
+  ctx.quadraticCurveTo(cx-22,cy+22, cx-17,cy+32);
+  ctx.quadraticCurveTo(cx-11,cy+23, cx-3,cy+14);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx-4,cy+12);
+  ctx.quadraticCurveTo(cx-14,cy+24, cx-8,cy+33);
+  ctx.quadraticCurveTo(cx-2,cy+23, cx+4,cy+14);
+  ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx+2,cy+13);
+  ctx.quadraticCurveTo(cx-4,cy+25, cx+3,cy+33);
+  ctx.quadraticCurveTo(cx+8,cy+23, cx+11,cy+14);
+  ctx.fill();
+  // contorno das penas da cauda
+  ctx.strokeStyle=def.color; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(cx-9,cy+11); ctx.quadraticCurveTo(cx-22,cy+22,cx-17,cy+32); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx-4,cy+12); ctx.quadraticCurveTo(cx-14,cy+24,cx-8,cy+33); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(cx+2,cy+13); ctx.quadraticCurveTo(cx-4,cy+25,cx+3,cy+33); ctx.stroke();
+
+  // asas (com gradiente simulado por duas camadas)
+  // asa esquerda — parte traseira mais escura
+  ctx.fillStyle=def.accent;
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-flap*1.1);
+  ctx.beginPath(); ctx.ellipse(-14,1,14,5,0.35,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // asa direita — parte traseira mais escura
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(flap*1.1);
+  ctx.beginPath(); ctx.ellipse(14,1,14,5,-0.35,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // asa esquerda — parte frontal mais clara
   ctx.fillStyle=def.color;
-  ctx.beginPath(); ctx.ellipse(cx,cy+3,12,11,0,0,Math.PI*2); ctx.fill();
-  ctx.beginPath(); ctx.arc(cx,cy-6,9,0,Math.PI*2); ctx.fill();
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(-flap*0.9);
+  ctx.beginPath(); ctx.ellipse(-12,-1,10,4,0.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+  // asa direita — parte frontal mais clara
+  ctx.save(); ctx.translate(cx,cy); ctx.rotate(flap*0.9);
+  ctx.beginPath(); ctx.ellipse(12,-1,10,4,-0.2,0,Math.PI*2); ctx.fill();
+  ctx.restore();
+
+  // corpo principal
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.ellipse(cx,cy+3,13,12,0,0,Math.PI*2); ctx.fill();
+  // barriga levemente mais clara
+  ctx.fillStyle='rgba(255,255,255,0.18)';
+  ctx.beginPath(); ctx.ellipse(cx+1,cy+5,7,7,0,0,Math.PI*2); ctx.fill();
+
+  // cabeça
+  ctx.fillStyle=def.color;
+  ctx.beginPath(); ctx.arc(cx,cy-7,9,0,Math.PI*2); ctx.fill();
+
+  // bico
   ctx.fillStyle='#FF8F00';
-  ctx.beginPath(); ctx.moveTo(cx+7,cy-7); ctx.lineTo(cx+15,cy-5); ctx.lineTo(cx+7,cy-3); ctx.fill();
+  ctx.beginPath();
+  ctx.moveTo(cx+6,cy-9);
+  ctx.lineTo(cx+16,cy-6);
+  ctx.lineTo(cx+6,cy-3);
+  ctx.closePath(); ctx.fill();
+  // linha do bico
+  ctx.strokeStyle='#E65100'; ctx.lineWidth=0.8;
+  ctx.beginPath(); ctx.moveTo(cx+6,cy-6); ctx.lineTo(cx+16,cy-6); ctx.stroke();
+
+  // olho com piscar a cada 2.8s
+  var blinkCycle=t%2800;
+  var blinkH=(blinkCycle>2600)? Math.max(0,1-(blinkCycle-2600)/100) : 1;
   ctx.fillStyle='#111'; ctx.beginPath(); ctx.arc(cx+3,cy-9,3,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='white'; ctx.beginPath(); ctx.arc(cx+4,cy-10,1.2,0,Math.PI*2); ctx.fill();
+  if(blinkH>0.05){
+    ctx.fillStyle='white'; ctx.beginPath(); ctx.ellipse(cx+4,cy-10,1.3,1.3*blinkH,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle=def.accent; ctx.beginPath(); ctx.ellipse(cx+3.5,cy-9.3,1.2,1.2*blinkH,0,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#111'; ctx.beginPath(); ctx.ellipse(cx+3.5,cy-9.3,0.6,0.6*blinkH,0,0,Math.PI*2); ctx.fill();
+  }
+  // pálpebra fechando
+  if(blinkH<1){
+    ctx.fillStyle=def.color;
+    ctx.beginPath(); ctx.ellipse(cx+3,cy-9,3,3*(1-blinkH),0,0,Math.PI*2); ctx.fill();
+  }
+
+  // pezinhos com animação de caminhada e encolhimento no voo
+  var inAir=!pl.onGround;
+  var isWalking=Math.abs(pl.vx)>0.5&&pl.onGround;
+  var walkSpeed=Math.abs(pl.vx)*0.012;
+  var walkT=t*walkSpeed;
+  var dir=pl.facing||1;
+  var stepL=isWalking? Math.sin(walkT)*6*dir   : 0;
+  var stepR=isWalking? Math.sin(walkT+Math.PI)*6*dir : 0;
+  var liftL=isWalking? Math.max(0,-Math.sin(walkT))*5 : 0;
+  var liftR=isWalking? Math.max(0,-Math.sin(walkT+Math.PI))*5 : 0;
+  // encolhimento no ar: pernas sobem e dedos somem gradualmente
+  var tuck=inAir? Math.min(1,(t%99999)/400) : 0; // sobe até 1 enquanto no ar
+  if(!inAir) tuck=0;
+  var legLen=(1-tuck*0.85)*8;   // perna encolhe
+  var toeScale=(1-tuck);         // dedos desaparecem
+  ctx.strokeStyle='#FF8F00'; ctx.lineWidth=2.2; ctx.lineCap='round';
+  ctx.globalAlpha=Math.max(0.15, 1-tuck*0.7);
+  // perna esquerda
+  var lx=cx-5+stepL*0.4, ly=cy+14-liftL-(tuck*10);
+  var lfx=lx, lfy=ly+legLen;
+  ctx.beginPath(); ctx.moveTo(lx,ly); ctx.lineTo(lfx,lfy); ctx.stroke();
+  if(toeScale>0.1){
+    ctx.globalAlpha*=toeScale;
+    ctx.beginPath(); ctx.moveTo(lfx,lfy); ctx.lineTo(lfx-6,lfy+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lfx,lfy); ctx.lineTo(lfx+1,lfy+6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(lfx,lfy); ctx.lineTo(lfx+6,lfy+5); ctx.stroke();
+    ctx.globalAlpha=Math.max(0.15, 1-tuck*0.7);
+  }
+  // perna direita
+  var rx=cx+5+stepR*0.4, ry=cy+14-liftR-(tuck*10);
+  var rfx=rx, rfy=ry+legLen;
+  ctx.beginPath(); ctx.moveTo(rx,ry); ctx.lineTo(rfx,rfy); ctx.stroke();
+  if(toeScale>0.1){
+    ctx.globalAlpha*=toeScale;
+    ctx.beginPath(); ctx.moveTo(rfx,rfy); ctx.lineTo(rfx-6,rfy+5); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rfx,rfy); ctx.lineTo(rfx+1,rfy+6); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(rfx,rfy); ctx.lineTo(rfx+6,rfy+5); ctx.stroke();
+    ctx.globalAlpha=Math.max(0.15, 1-tuck*0.7);
+  }
+  ctx.globalAlpha=1;
 }
 function drawTatu(cx,cy,def){
   var t=Date.now()/180;
@@ -5205,15 +5319,25 @@ function drawBee(cx,cy,def){
     ctx.lineTo(15+Math.cos(fa)*7,-2+Math.sin(fa)*7);
     ctx.stroke();
   }
-  // Olho composto
+  // Olho composto com piscar a cada 2.8s
+  var beeNow=Date.now();
+  var beeBlinkCycle=beeNow%2800;
+  var beeBlinkH=(beeBlinkCycle>2600)? Math.max(0,1-(beeBlinkCycle-2600)/100) : 1;
   ctx.fillStyle='#4FC3F7';
-  ctx.beginPath(); ctx.ellipse(19,-4,5,4,0.3,0,Math.PI*2); ctx.fill();
-  ctx.strokeStyle='rgba(0,60,120,0.4)'; ctx.lineWidth=0.5;
-  for(var oe=0;oe<3;oe++){
-    ctx.beginPath(); ctx.arc(19,-4,1+oe*1.3,0,Math.PI*2); ctx.stroke();
+  ctx.beginPath(); ctx.ellipse(19,-4,5,4*beeBlinkH,0.3,0,Math.PI*2); ctx.fill();
+  if(beeBlinkH>0.1){
+    ctx.strokeStyle='rgba(0,60,120,0.4)'; ctx.lineWidth=0.5;
+    for(var oe=0;oe<3;oe++){
+      ctx.beginPath(); ctx.arc(19,-4,1+oe*1.3,0,Math.PI*2); ctx.stroke();
+    }
+    ctx.fillStyle='#0D47A1'; ctx.beginPath(); ctx.arc(19,-4,2,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(20,-5,1,0,Math.PI*2); ctx.fill();
   }
-  ctx.fillStyle='#0D47A1'; ctx.beginPath(); ctx.arc(19,-4,2,0,Math.PI*2); ctx.fill();
-  ctx.fillStyle='rgba(255,255,255,0.9)'; ctx.beginPath(); ctx.arc(20,-5,1,0,Math.PI*2); ctx.fill();
+  // pálpebra fechando
+  if(beeBlinkH<1){
+    ctx.fillStyle='#212121';
+    ctx.beginPath(); ctx.ellipse(19,-4,5,4*(1-beeBlinkH),0.3,0,Math.PI*2); ctx.fill();
+  }
 
   // ── Bochechas ────────────────────────────────────────────────────────────
   ctx.fillStyle='rgba(255,120,100,0.3)';
