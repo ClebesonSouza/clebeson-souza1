@@ -1909,6 +1909,32 @@ function sndEat(){
 function sndHit(){
   playTone(140,'sawtooth',0.15,0.18); setTimeout(function(){ playTone(90,'sawtooth',0.1,0.22); },80);
 }
+function sndDeath(){
+  // "wah wah wah wah waaaaah" — trompete triste clássico
+  if(!soundEnabled || !audioUnlocked) return;
+  try {
+    var c = getAudioCtx();
+    var steps = [
+      {freq:392, startFreq:440, t:0.00, dur:0.20},
+      {freq:349, startFreq:392, t:0.22, dur:0.20},
+      {freq:311, startFreq:349, t:0.44, dur:0.20},
+      {freq:277, startFreq:311, t:0.66, dur:0.20},
+      {freq:196, startFreq:277, t:0.88, dur:0.55},
+    ];
+    steps.forEach(function(s){
+      var osc=c.createOscillator(), gain=c.createGain();
+      osc.connect(gain); gain.connect(c.destination);
+      osc.type='sawtooth';
+      osc.frequency.setValueAtTime(s.startFreq, c.currentTime+s.t);
+      osc.frequency.exponentialRampToValueAtTime(s.freq, c.currentTime+s.t+s.dur*0.65);
+      gain.gain.setValueAtTime(0.001, c.currentTime+s.t);
+      gain.gain.linearRampToValueAtTime(0.28, c.currentTime+s.t+0.04);
+      gain.gain.exponentialRampToValueAtTime(0.001, c.currentTime+s.t+s.dur);
+      osc.start(c.currentTime+s.t);
+      osc.stop(c.currentTime+s.t+s.dur+0.02);
+    });
+  } catch(e){}
+}
 function sndPhase3Start(){
   playTone(262,'square',0.1,0.12); setTimeout(function(){ playTone(330,'square',0.12,0.14); },110);
   setTimeout(function(){ playTone(392,'square',0.15,0.18); },220); setTimeout(function(){ playTone(523,'square',0.18,0.22); },330);
@@ -1973,6 +1999,11 @@ var nextBonusLife=20; // próxima marca de moedas para ganhar vida
 var catUnlocked=false, isDigging=false, DIG_Y=GY+14;
 var gameZeroed=false; // true quando o jogador zera o jogo nessa sessao
 var particles=[];
+var deathAnim=0;        // frames da animação de morte (tombo + giro), 0=inativo
+var deathX=0, deathY=0; // posição onde o personagem morreu
+var deathAngle=0;       // ângulo de rotação durante a queda
+var flashTimer=0;       // frames do flash vermelho na tela
+var invincible=0;       // frames de invencibilidade ao ressurgir (personagem pisca)
 var duckFlapTimer=0;    // conta frames da animacao de asa do patinho
 var duckSquash=0;       // achatamento ao pousar
 var duckWasInAir=false; // detecta transição ar→chão
@@ -2559,15 +2590,56 @@ function startGame(){// inicia o jogo, reseta todas as variaveis para o estado i
   }
   metamorphState='none'; metamorphTimer=0; leavesEaten=0;
   frogLongJump=false;
+  deathAnim=0; flashTimer=0; invincible=0; deathX=0; deathY=0; deathAngle=0;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
   refreshLockState();
   stopBgMusic(); startPhase1Music();
 }
+function takeDamage(){
+  if(invincible>0||deathAnim>0) return; // invencível — ignora dano
+  sndHit(); respawn();
+}
+
+function isSafeSpawn(x){
+  // Verifica se a posição x é completamente segura para ressurgir
+  var lv = getLevel(), i;
+  // Não pode estar dentro de gap
+  for(i=0;i<lv.gaps.length;i++)
+    if(x+pl.w > lv.gaps[i].x && x < lv.gaps[i].x+lv.gaps[i].w) return false;
+  // Não pode estar dentro de waterPit
+  for(i=0;i<lv.waterPits.length;i++)
+    if(x+pl.w > lv.waterPits[i].x && x < lv.waterPits[i].x+lv.waterPits[i].w) return false;
+  // Não pode estar dentro de frogGap
+  if(lv.frogGaps) for(i=0;i<lv.frogGaps.length;i++)
+    if(x+pl.w > lv.frogGaps[i].x && x < lv.frogGaps[i].x+lv.frogGaps[i].w) return false;
+  // Não pode estar dentro de megaBarrier
+  for(i=0;i<lv.megaBarriers.length;i++)
+    if(x+pl.w > lv.megaBarriers[i].x && x < lv.megaBarriers[i].x+lv.megaBarriers[i].w) return false;
+  return true;
+}
+
 function respawn(){
   lives--; if(isDigging) stopDig();
   if(lives<=0){state='gameover'; sndGameOver(); stopBgMusic(); return;}
-  pl.x=Math.max(60,camX+80); pl.y=GY-50; pl.vy=0;
+  sndDeath(); // wah wah wah wah waaaaah
+  // Dispara animação de morte — ressurgimento acontece ao fim da animação
+  deathX = pl.x; deathY = pl.y;
+  deathAngle = 0;
+  deathAnim = 50; // duração da animação em frames (~0.8s)
+  flashTimer = 18; // flash vermelho na tela
+  pl.vx = 0; pl.vy = 0;
+}
+
+function doRespawn(){
+  // Chamado ao fim da animação de morte — reposiciona em local seguro
+  var safeX = deathX;
+  while(safeX > 60 && !isSafeSpawn(safeX)) safeX -= 10;
+  safeX = Math.max(60, safeX);
+  pl.x = safeX;
+  pl.y = GY - pl.h;
+  pl.vy = 0; pl.vx = 0;
+  invincible = 120; // ~2 segundos de invencibilidade piscando
 }
 function unlockCaterpillar(){ sndUnlock();
   catUnlocked=true; saveProgress();
@@ -2678,6 +2750,17 @@ function update(){
   if(state!=='playing') return;
   if(tutorialTimer>0) tutorialTimer--; // decrementa banner tutorial
   if(extraLifeTimer>0) extraLifeTimer--;
+
+  // Animação de morte — congela o jogo durante o tombo
+  if(deathAnim>0){
+    deathAnim--;
+    deathAngle += 0.18; // gira o personagem
+    deathY += 4;        // cai para baixo
+    if(deathAnim===0) doRespawn(); // ao fim da animação, ressurge
+    return; // bloqueia todo o resto do update durante a animação
+  }
+  if(invincible>0) invincible--;
+
   var def=CHARS[pl.char], lv=getLevel(), sts=getStars(), i;
 
   // Duck timers
@@ -2758,7 +2841,7 @@ function update(){
     // Non-duck in water: sink fast
     pl.vy+=GRAV*3.5;
     if(Math.random()<0.35) spawnBubble(pl.x+pl.w/2-camX+camX,pl.y+pl.h/2);
-    if(pl.y>GY+70) respawn();
+    if(pl.y>GY+70 && invincible===0 && deathAnim===0) respawn();
   } else if(def.fly&&(K['ArrowUp']||K[' '])){
     pl.vy=-3.5; pl.onGround=false;
   } else {
@@ -2863,7 +2946,7 @@ function update(){
       bo.x+=bo.vx;
       if(bo.x<bo.minX||bo.x>bo.maxX) bo.vx=-bo.vx;
       var bdx=Math.abs(pl.x+pl.w/2-bo.x), bdy=Math.abs(pl.y+pl.h-(GY-bo.r));
-      if(bdx<bo.r+pl.w/2-4&&bdy<bo.r+4){ sndHit(); respawn(); }
+      if(bdx<bo.r+pl.w/2-4&&bdy<bo.r+4){ takeDamage(); }
     }
     // Morcegos
     for(var bti=0;bti<p2Bats.length;bti++){
@@ -2872,7 +2955,7 @@ function update(){
       if(bat.x<bat.minX||bat.x>bat.maxX) bat.vx=-bat.vx;
       bat.y=bat.baseY+Math.sin(t2/300+bti*1.3)*18;
       if(pl.x+pl.w>bat.x&&pl.x<bat.x+bat.w&&pl.y+pl.h>bat.y&&pl.y<bat.y+bat.h){
-        sndHit(); respawn();
+        takeDamage();
       }
     }
     // Piso Quebrável — colisão e lógica de quebra
@@ -2940,14 +3023,14 @@ function update(){
       } else if(pl.x+pl.w>ins.x&&pl.x<ins.x+ins.w&&pl.y+pl.h>ins.y&&pl.y<ins.y+ins.h){
         if(pl.char==='frog'){ ins.eaten=true; score+=15; sndEat(); frogTongue=18;
           for(var bi=0;bi<8;bi++) spawnBubble(insCX,insCY);
-        } else { sndHit(); respawn(); }
+        } else { takeDamage(); }
       }
     }
     // Espinhos — dano ao tocar
     for(i2=0;i2<p3Spikes.length;i2++){
       var sp3=p3Spikes[i2];
       if(pl.x+pl.w>sp3.x&&pl.x<sp3.x+sp3.w&&pl.y+pl.h>GY-18&&pl.y+pl.h<=GY+4){
-        sndHit(); respawn();
+        takeDamage();
       }
     }
     // Armadilhas escondidas — ciclo abrir/fechar
@@ -2977,7 +3060,7 @@ function update(){
       } else if(pl.x+pl.w>fins.x&&pl.x<fins.x+fins.w&&pl.y+pl.h>fins.y&&pl.y<fins.y+fins.h){
         if(pl.char==='frog'){ fins.eaten=true; score+=20; sndEat(); frogTongue=25;
           for(var bi=0;bi<10;bi++) spawnBubble(finsCX,finsCY);
-        } else { sndHit(); respawn(); }
+        } else { takeDamage(); }
       }
     }
     // Teias de aranha como obstáculos
@@ -3032,7 +3115,7 @@ function update(){
       rock4.y+=rock4.vy; rock4.vy+=0.18; rock4.x+=rock4.vx;
       if(rock4.y>GY+60){ p4AlarmRocks.splice(rki,1); continue; }
       if(Math.abs(pl.x+pl.w/2-rock4.x)<rock4.r+12&&Math.abs(pl.y+pl.h/2-rock4.y)<rock4.r+12){
-        sndHit(); respawn(); rock4.active=false;
+        takeDamage(); rock4.active=false;
       }
     }
   }
@@ -3051,7 +3134,7 @@ function update(){
       } else if(pl.x+pl.w>inst.x&&pl.x<inst.x+inst.w&&pl.y+pl.h>inst.y&&pl.y<inst.y+inst.h){
         if(pl.char==='frog'){ inst.eaten=true; score+=15; sndEat(); frogTongue=18;
           for(var bi=0;bi<8;bi++) spawnBubble(instCX,instCY);
-        } else { sndHit(); respawn(); }
+        } else { takeDamage(); }
       }
     }
     
@@ -3163,7 +3246,7 @@ function update(){
     }
   }
 
-  if(pl.y>CH+80) respawn();
+  if(pl.y>CH+80 && invincible===0 && deathAnim===0) respawn();
   camX=Math.max(0,Math.min(pl.x-CW/3,WORLD-CW));
 }
 
@@ -5726,6 +5809,9 @@ function drawP3UnlockStars(){
 }
 function drawPlayer(){
   if(phase===6&&metamorphState!=='none'&&metamorphState!=='done') return;
+  if(deathAnim>0) return; // não desenha player durante animação de morte
+  // Piscar durante invencibilidade — oculta a cada 6 frames
+  if(invincible>0 && Math.floor(invincible/6)%2===0) return;
   var def=CHARS[pl.char], sx=pl.x-camX, sy=pl.y, cx=sx+pl.w/2, cy=sy+pl.h/2;
   // When collecting pollen, land visually on top of the source flower
   if(phase===7&&pollenChargingFlower&&(pl.char==='butterfly'||pl.char==='bee')){
@@ -6617,6 +6703,7 @@ function drawP2BreakFloors(){
 
 function drawP2DarkZone(){
   if(phase!==2) return;
+  if(deathAnim>0) return; // não desenha zona escura durante animação de morte
   var dz=p2DarkZone;
   var screenStart=dz.x-camX, screenEnd=dz.x+dz.w-camX;
   if(screenEnd<0||screenStart>CW) return;
@@ -6926,6 +7013,32 @@ function loop(){
     drawP2Boulders(); drawP2Bats(); drawP2BreakFloors(); drawP2Tornado();
     drawP3Obstacles(); drawP4Obstacles();
     drawPlayer(); drawParticles(); drawMetamorph(); drawP2DarkZone(); drawHUD(); drawTutorialBanner();
+    // Animação de morte: desenha personagem girando e caindo
+    if(deathAnim>0){
+      ctx.save();
+      ctx.globalAlpha = deathAnim/50;
+      ctx.translate(deathX - camX + pl.w/2, deathY + pl.h/2);
+      ctx.rotate(deathAngle);
+      ctx.fillStyle = CHARS[pl.char].color;
+      ctx.beginPath(); ctx.arc(0, 0, pl.w/2, 0, Math.PI*2); ctx.fill();
+      ctx.fillStyle = 'white'; ctx.font = 'bold 18px Arial'; ctx.textAlign = 'center';
+      ctx.fillText('✕', 0, 6);
+      ctx.restore();
+    }
+    // Flash vermelho na tela ao morrer
+    if(flashTimer>0){
+      flashTimer--;
+      ctx.save();
+      ctx.globalAlpha = (flashTimer/18) * 0.45;
+      ctx.fillStyle = '#FF0000';
+      ctx.fillRect(0, 0, CW, CH);
+      ctx.restore();
+    }
+    // Piscar durante invencibilidade — oculta o player a cada 6 frames
+    if(invincible>0 && Math.floor(invincible/6)%2===0){
+      // o drawPlayer já foi chamado acima — cobrimos com um retângulo do bg
+      // na prática o piscar é controlado dentro do drawPlayer via globalAlpha
+    }
   }
   else if(state==='phase2intro'){ drawBG(); drawGround(); drawPhase2Intro(); }
   else if(state==='phase3intro'){ drawBG(); drawGround(); drawPhase3Intro(); }
