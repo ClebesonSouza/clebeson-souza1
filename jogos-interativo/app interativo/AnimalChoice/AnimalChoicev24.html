@@ -2145,6 +2145,9 @@ function spawnDirt(x,y){
 function spawnBubble(x,y){
   particles.push({x:x+(Math.random()-0.5)*20,y:y,vx:(Math.random()-0.5)*1.5,vy:-Math.random()*2-0.5,life:35,color:'rgba(150,220,255,0.85)',type:'bubble'});
 }
+function spawnSmoke(x,y){
+  particles.push({x:x+(Math.random()-0.5)*10,y:y,vx:(Math.random()-0.5)*0.7,vy:-1.3-Math.random()*0.9,life:90,r:4+Math.random()*5,type:'smoke'});
+}
 
 
              
@@ -2317,7 +2320,7 @@ var p4Webs=[ // Teias de aranha gigantes como obstáculos
 // Parede Deslizante
 var p4SlidingWall={x:4300,y:GY-260,w:28,h:260,minX:4150,maxX:5000,vx:2.0};
 // Sino de Alarme + pedras caindo
-var p4AlarmBell={x:4780,y:GY-58,w:26,h:32,triggered:false,timer:0,cooldown:0};
+var p4AlarmBell={x:3900,y:GY-58,w:26,h:32,triggered:false,timer:0,cooldown:0,spawnCount:0,spawnTimer:0};
 var p4AlarmRocks=[];
 
 // ── FASE 5: FLORESTA ENCANTADA ───────────────────────────────────────────────
@@ -2698,6 +2701,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   camX=0; isDigging=false; frogLongJump=0;
   p4.speedGates.forEach(function(g){g.passed=false;});
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
+  p4AlarmRocks=[]; p4AlarmBell.triggered=false; p4AlarmBell.timer=0; p4AlarmBell.cooldown=0; p4AlarmBell.spawnCount=0; p4AlarmBell.spawnTimer=0;
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
   startPhase4Music();
@@ -2795,7 +2799,7 @@ function update(){
   // Particles
   for(i=particles.length-1;i>=0;i--){
     var pt=particles[i];
-    pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=0.2; pt.life--;
+    pt.x+=pt.vx; pt.y+=pt.vy; pt.vy+=(pt.type==='smoke'?0.01:0.2); pt.life--;
     if(pt.life<=0) particles.splice(i,1);
   }
 
@@ -3100,22 +3104,60 @@ function update(){
     var ab4=p4AlarmBell;
     if(!ab4.triggered&&ab4.cooldown===0){
       if(pl.x+pl.w>ab4.x&&pl.x<ab4.x+ab4.w&&pl.y+pl.h>ab4.y&&pl.y<ab4.y+ab4.h){
-        ab4.triggered=true; ab4.timer=240; sndHit();
-        for(var rk=0;rk<10;rk++){
-          p4AlarmRocks.push({x:ab4.x-150+Math.random()*400,y:-20,vx:(Math.random()-0.5)*2.5,vy:1.5+Math.random()*2,r:7+Math.random()*7,active:true});
-        }
+        ab4.triggered=true; ab4.timer=2100; ab4.spawnCount=0; ab4.spawnTimer=66; sndHit();
       }
     }
     if(ab4.triggered){
+      ab4.spawnTimer++;
+      if(ab4.spawnCount<30&&ab4.spawnTimer>=66){
+        ab4.spawnTimer=0; ab4.spawnCount++;
+        var sr=8+Math.floor(Math.random()*22); // raio 8–29
+        var npts=7+Math.floor(Math.random()*4);
+        var apts=[];
+        for(var pk=0;pk<npts;pk++){
+          var ang=Math.PI*2*pk/npts+(Math.random()-0.5)*0.7;
+          var rad=sr*(0.5+Math.random()*0.5);
+          apts.push({a:ang,r:rad});
+        }
+        // Área de queda: 120px após a mega barreira (x=3920) até 50px antes da chegada (x=5270)
+        var rockX=3920+Math.random()*1350;
+        p4AlarmRocks.push({x:rockX,y:-20,vx:(Math.random()-0.5)*2.5,vy:1.5+Math.random()*2,r:sr,pts:apts,rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*0.06,active:true,stuck:false,onFire:true,smokeTimer:0});
+      }
       ab4.timer--;
-      if(ab4.timer<=0){ ab4.triggered=false; ab4.cooldown=200; p4AlarmRocks=[]; }
+      // Pedras NÃO somem — apenas desativa o estado triggered e inicia cooldown
+      if(ab4.timer<=0){ ab4.triggered=false; ab4.cooldown=180; }
     }
     for(var rki=p4AlarmRocks.length-1;rki>=0;rki--){
       var rock4=p4AlarmRocks[rki]; if(!rock4.active) continue;
-      rock4.y+=rock4.vy; rock4.vy+=0.18; rock4.x+=rock4.vx;
-      if(rock4.y>GY+60){ p4AlarmRocks.splice(rki,1); continue; }
-      if(Math.abs(pl.x+pl.w/2-rock4.x)<rock4.r+12&&Math.abs(pl.y+pl.h/2-rock4.y)<rock4.r+12){
-        takeDamage(); rock4.active=false;
+      if(!rock4.stuck){
+        rock4.y+=rock4.vy; rock4.vy+=0.18; rock4.x+=rock4.vx; rock4.rot+=rock4.rotV;
+        // Cravar na grama
+        if(rock4.y+rock4.r*0.5>=GY){
+          rock4.stuck=true; rock4.y=GY-rock4.r*0.52; rock4.vy=0; rock4.vx=0; rock4.rotV=0; rock4.onFire=false; rock4.smokeTimer=240;
+          for(var di=0;di<12;di++) spawnDirt(rock4.x,GY);
+        } else {
+          // Dano enquanto cai
+          if(Math.abs(pl.x+pl.w/2-rock4.x)<rock4.r+12&&Math.abs(pl.y+pl.h/2-rock4.y)<rock4.r+12){
+            takeDamage(); rock4.active=false;
+          }
+        }
+      } else {
+        // Fumaça saindo do rochedo cravado
+        if(rock4.smokeTimer>0){ rock4.smokeTimer--; if(Math.random()<0.25) spawnSmoke(rock4.x, rock4.y-rock4.r*0.6); }
+        // Rochedo cravado — colisão sólida (precisa pular para passar)
+        var rtop4=rock4.y-rock4.r*0.72;
+        var rl4=rock4.x-rock4.r*0.88;
+        var rr4=rock4.x+rock4.r*0.88;
+        if(pl.x+pl.w>rl4&&pl.x<rr4){
+          if(pl.y+pl.h>=rtop4&&pl.y+pl.h<=rtop4+20&&pl.vy>=0){
+            // Aterrissar no topo do rochedo
+            pl.y=rtop4-pl.h; pl.vy=0; pl.onGround=true; frogLongJump=0;
+          } else if(pl.y+pl.h>rtop4+4&&pl.y<GY){
+            // Colisão lateral — bloqueia passagem
+            if(pl.x+pl.w/2<rock4.x){ pl.x=rl4-pl.w; pl.vx=0; }
+            else { pl.x=rr4; pl.vx=0; }
+          }
+        }
       }
     }
   }
@@ -3593,6 +3635,11 @@ function drawParticles(){
     } else if(p.type==='pollen'){
       ctx.fillStyle=p.color;
       ctx.beginPath(); ctx.arc(p.x-camX,p.y,2.5,0,Math.PI*2); ctx.fill();
+    } else if(p.type==='smoke'){
+      ctx.globalAlpha=(p.life/90)*0.52;
+      var sr3=(p.r||4)*(1+(1-p.life/90)*0.6);
+      ctx.fillStyle='#AAAAAA';
+      ctx.beginPath(); ctx.arc(p.x-camX,p.y,sr3,0,Math.PI*2); ctx.fill();
     } else {
       ctx.fillStyle=p.color; ctx.fillRect(p.x-camX-3,p.y-3,6,6);
     }
@@ -6988,16 +7035,112 @@ function drawP4Obstacles(){
       ctx.globalAlpha=1;
     }
     ctx.restore();
+    // Balão de mensagem + seta piscante
+    var msgX2=abx+ab.w/2, msgY2=ab.y-68;
+    var blink2=Math.sin(t*8)>0;
+    if(!ab.triggered&&ab.cooldown===0){
+      ctx.save();
+      ctx.globalAlpha=blink2?1:0.18;
+      // Balão
+      var bw2=112, bh2=30;
+      ctx.fillStyle='#FFF9C4'; ctx.strokeStyle='#F9A825'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(msgX2-bw2/2+8,msgY2-bh2/2); ctx.lineTo(msgX2+bw2/2-8,msgY2-bh2/2);
+      ctx.arcTo(msgX2+bw2/2,msgY2-bh2/2,msgX2+bw2/2,msgY2-bh2/2+8,8);
+      ctx.lineTo(msgX2+bw2/2,msgY2+bh2/2-8);
+      ctx.arcTo(msgX2+bw2/2,msgY2+bh2/2,msgX2+bw2/2-8,msgY2+bh2/2,8);
+      ctx.lineTo(msgX2+8,msgY2+bh2/2); ctx.lineTo(msgX2,msgY2+bh2/2+10); ctx.lineTo(msgX2-8,msgY2+bh2/2);
+      ctx.lineTo(msgX2-bw2/2+8,msgY2+bh2/2);
+      ctx.arcTo(msgX2-bw2/2,msgY2+bh2/2,msgX2-bw2/2,msgY2+bh2/2-8,8);
+      ctx.lineTo(msgX2-bw2/2,msgY2-bh2/2+8);
+      ctx.arcTo(msgX2-bw2/2,msgY2-bh2/2,msgX2-bw2/2+8,msgY2-bh2/2,8);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#5D4037'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+      ctx.fillText('Toque o sino!',msgX2,msgY2+5);
+      ctx.restore();
+      // Seta piscante apontando para o sino
+      ctx.save(); ctx.globalAlpha=blink2?0.95:0.08;
+      ctx.fillStyle='#FFD700'; ctx.strokeStyle='#E65100'; ctx.lineWidth=1.5;
+      var ay=msgY2+bh2/2+14;
+      ctx.beginPath();
+      ctx.moveTo(msgX2,ay+16); ctx.lineTo(msgX2-9,ay+4); ctx.lineTo(msgX2-4,ay+4);
+      ctx.lineTo(msgX2-4,ay-2); ctx.lineTo(msgX2+4,ay-2); ctx.lineTo(msgX2+4,ay+4);
+      ctx.lineTo(msgX2+9,ay+4); ctx.closePath();
+      ctx.fill(); ctx.stroke();
+      ctx.restore();
+    } else if(ab.triggered){
+      ctx.save();
+      // Balão "Chuva de Meteoro!"
+      var bw3=148, bh3=30;
+      ctx.fillStyle='#BF360C'; ctx.strokeStyle='#FF5722'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(msgX2-bw3/2+8,msgY2-bh3/2); ctx.lineTo(msgX2+bw3/2-8,msgY2-bh3/2);
+      ctx.arcTo(msgX2+bw3/2,msgY2-bh3/2,msgX2+bw3/2,msgY2-bh3/2+8,8);
+      ctx.lineTo(msgX2+bw3/2,msgY2+bh3/2-8);
+      ctx.arcTo(msgX2+bw3/2,msgY2+bh3/2,msgX2+bw3/2-8,msgY2+bh3/2,8);
+      ctx.lineTo(msgX2+8,msgY2+bh3/2); ctx.lineTo(msgX2,msgY2+bh3/2+10); ctx.lineTo(msgX2-8,msgY2+bh3/2);
+      ctx.lineTo(msgX2-bw3/2+8,msgY2+bh3/2);
+      ctx.arcTo(msgX2-bw3/2,msgY2+bh3/2,msgX2-bw3/2,msgY2+bh3/2-8,8);
+      ctx.lineTo(msgX2-bw3/2,msgY2-bh3/2+8);
+      ctx.arcTo(msgX2-bw3/2,msgY2-bh3/2,msgX2-bw3/2+8,msgY2-bh3/2,8);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+      ctx.fillText('☄ Chuva de Meteoro!',msgX2,msgY2+5);
+      ctx.restore();
+    }
   }
-  // Pedras caindo
+  // Pedras caindo / cravadas (asteroides)
   for(var ri=0;ri<p4AlarmRocks.length;ri++){
     var rock=p4AlarmRocks[ri]; if(!rock.active) continue;
     var rx=rock.x-camX; if(rx<-50||rx>CW+50) continue;
-    ctx.fillStyle='#78909C';
-    ctx.beginPath(); ctx.arc(rx,rock.y,rock.r,0,Math.PI*2); ctx.fill();
-    ctx.strokeStyle='#546E7A'; ctx.lineWidth=1.2; ctx.stroke();
-    ctx.strokeStyle='rgba(0,0,0,0.3)'; ctx.lineWidth=1;
-    ctx.beginPath(); ctx.moveTo(rx-rock.r*0.35,rock.y-rock.r*0.25); ctx.lineTo(rx+rock.r*0.25,rock.y+rock.r*0.35); ctx.stroke();
+    // Fogo ao redor do meteoro em queda
+    if(!rock.stuck&&rock.onFire){
+      var ft=Date.now()/120;
+      ctx.save(); ctx.translate(rx,rock.y);
+      // Halo de calor
+      var fg=ctx.createRadialGradient(0,0,rock.r*0.4,0,0,rock.r*2.4);
+      fg.addColorStop(0,'rgba(255,210,60,0.75)');
+      fg.addColorStop(0.45,'rgba(255,80,0,0.5)');
+      fg.addColorStop(1,'rgba(200,20,0,0)');
+      ctx.fillStyle=fg;
+      ctx.beginPath(); ctx.arc(0,0,rock.r*2.4,0,Math.PI*2); ctx.fill();
+      // Línguas de fogo animadas
+      for(var fi2=0;fi2<6;fi2++){
+        var fa=ft*2+fi2*Math.PI*2/6;
+        var fl2=rock.r*(0.9+Math.sin(ft*4+fi2*1.3)*0.45);
+        ctx.fillStyle=fi2%2===0?'rgba(255,150,0,0.8)':'rgba(255,50,0,0.7)';
+        ctx.beginPath();
+        ctx.moveTo(Math.cos(fa)*rock.r*0.85,Math.sin(fa)*rock.r*0.85);
+        ctx.lineTo(Math.cos(fa-0.45)*rock.r*0.45,Math.sin(fa-0.45)*rock.r*0.45);
+        ctx.lineTo(Math.cos(fa)*(rock.r*0.85+fl2),Math.sin(fa)*(rock.r*0.85+fl2));
+        ctx.closePath(); ctx.fill();
+      }
+      ctx.restore();
+    }
+    // Anel de impacto na grama (só quando cravado)
+    if(rock.stuck){
+      ctx.save();
+      ctx.translate(rx,GY);
+      ctx.scale(1.0,0.28);
+      ctx.fillStyle='rgba(55,35,10,0.55)';
+      ctx.beginPath(); ctx.arc(0,0,rock.r*1.25,0,Math.PI*2); ctx.fill();
+      ctx.restore();
+    }
+    // Corpo do asteroide
+    ctx.save();
+    ctx.translate(rx,rock.y); ctx.rotate(rock.rot);
+    ctx.fillStyle='#6D7F8C';
+    ctx.beginPath();
+    var ap=rock.pts;
+    ctx.moveTo(Math.cos(ap[0].a)*ap[0].r,Math.sin(ap[0].a)*ap[0].r);
+    for(var pi=1;pi<ap.length;pi++) ctx.lineTo(Math.cos(ap[pi].a)*ap[pi].r,Math.sin(ap[pi].a)*ap[pi].r);
+    ctx.closePath(); ctx.fill();
+    ctx.strokeStyle='#455A64'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='rgba(255,255,255,0.18)';
+    ctx.beginPath(); ctx.arc(-rock.r*0.22,-rock.r*0.26,rock.r*0.28,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='rgba(0,0,0,0.22)';
+    ctx.beginPath(); ctx.arc(rock.r*0.2,rock.r*0.22,rock.r*0.32,0,Math.PI*2); ctx.fill();
+    ctx.restore();
   }
 }
 
