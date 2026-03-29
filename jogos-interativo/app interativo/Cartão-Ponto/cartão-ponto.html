@@ -145,6 +145,16 @@
       background: #f8f8f8;
     }
 
+    /* ===== MODAL BIOMETRIA CADASTRO ===== */
+    #statusBioCadastro {
+      margin-top: 8px;
+      font-size: 0.9em;
+      min-height: 1.2em;
+      color: #555;
+    }
+    #btnCapturarCadastro { background: #2a6eb6; margin-top: 10px; }
+    #btnCancelarBioCadastro { background: #888; margin-top: 8px; }
+
     /* ===== MODAL BIOMETRIA ===== */
     .modal-overlay {
       display: none;
@@ -234,6 +244,7 @@
       background: #1da851;
     }
   </style>
+  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
 </head>
 <body>
   <!-- TELA INICIAL: LOGIN -->
@@ -402,7 +413,58 @@
   </div>
   <canvas id="bioCanvas" style="display:none"></canvas>
 
+  <!-- MODAL BIOMETRIA CADASTRO -->
+  <div class="modal-overlay" id="modalBiometriaCadastro">
+    <div class="modal-box">
+      <h2>Foto de Cadastro</h2>
+      <p style="font-size:0.85em;color:#555;margin-bottom:8px;">
+        Posicione seu rosto centralizado e clique em "Cadastrar rosto".
+      </p>
+      <video id="bioCadastroVideo" autoplay playsinline muted
+             style="width:100%;border-radius:8px;background:#000;display:block;"></video>
+      <div id="statusBioCadastro"></div>
+      <button id="btnCapturarCadastro">Cadastrar rosto</button>
+      <button id="btnCancelarBioCadastro">Cancelar</button>
+    </div>
+  </div>
+  <canvas id="bioCadastroCanvas" style="display:none"></canvas>
+
   <script>
+    // ============================
+    // FACE-API.JS — RECONHECIMENTO FACIAL
+    // ============================
+    const MODEL_URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights";
+    let modelosCarregados = false;
+    let usuarioLogado = null;
+
+    async function carregarModelos() {
+      if (modelosCarregados) return;
+      try {
+        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
+        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+        modelosCarregados = true;
+      } catch (err) {
+        console.error("Erro ao carregar modelos face-api:", err);
+        throw new Error("Não foi possível carregar os modelos de reconhecimento facial.");
+      }
+    }
+
+    async function obterDescriptor(videoElement) {
+      const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+      const resultado = await faceapi
+        .detectSingleFace(videoElement, opcoes)
+        .withFaceLandmarks(true)
+        .withFaceDescriptor();
+      if (!resultado) return null;
+      return resultado.descriptor;
+    }
+
+    function rostoCompativel(descCadastro, descAtual, limiar = 0.5) {
+      const a = Float32Array.from(descCadastro);
+      return faceapi.euclideanDistance(a, descAtual) <= limiar;
+    }
+
     // ============================
     // CONFIGURAÇÃO DO LOCAL (LAT/LNG) - AJUSTE AQUI
     // ============================
@@ -510,16 +572,17 @@
     });
 
     // ============================
-    // CADASTRO DE USUÁRIO
+    // CADASTRO DE USUÁRIO (com biometria)
     // ============================
-    // Armazenando em localStorage (simulando um banco simples)
     const usuarios = JSON.parse(localStorage.getItem("usuarios_bjk")) || [];
+    let dadosCadastroPendente = null;
+    let streamCadastro = null;
 
     function salvarUsuarios() {
       localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
     }
 
-    document.getElementById("cadastroForm").addEventListener("submit", (e) => {
+    document.getElementById("cadastroForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
 
@@ -542,19 +605,90 @@
         return;
       }
 
-      usuarios.push({
-        id: Date.now(),
-        nome,
-        cpf,
-        email,
-        senha, // em produção, use hash seguro no backend
-        cargo,
-        telefone,
-      });
+      dadosCadastroPendente = { nome, cpf, email, senha, cargo, telefone };
 
-      salvarUsuarios();
-      alert("Cadastro realizado com sucesso!");
-      mudarTela("loginScreen");
+      const statusEl = document.getElementById("statusBioCadastro");
+      statusEl.textContent = "Carregando modelos...";
+      statusEl.style.color = "#555";
+
+      try {
+        await carregarModelos();
+      } catch (err) {
+        alert(err.message);
+        dadosCadastroPendente = null;
+        return;
+      }
+
+      document.getElementById("modalBiometriaCadastro").classList.add("ativo");
+      statusEl.textContent = "Posicione seu rosto e clique em Cadastrar rosto.";
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+        .then((stream) => {
+          streamCadastro = stream;
+          document.getElementById("bioCadastroVideo").srcObject = stream;
+        })
+        .catch(() => {
+          alert("Não foi possível acessar a câmera.");
+          fecharBiometriaCadastro();
+        });
+    });
+
+    function fecharBiometriaCadastro() {
+      if (streamCadastro) {
+        streamCadastro.getTracks().forEach(t => t.stop());
+        streamCadastro = null;
+      }
+      document.getElementById("bioCadastroVideo").srcObject = null;
+      document.getElementById("modalBiometriaCadastro").classList.remove("ativo");
+      dadosCadastroPendente = null;
+    }
+
+    document.getElementById("btnCancelarBioCadastro").addEventListener("click", fecharBiometriaCadastro);
+
+    document.getElementById("btnCapturarCadastro").addEventListener("click", async () => {
+      const video = document.getElementById("bioCadastroVideo");
+      const statusEl = document.getElementById("statusBioCadastro");
+      const btn = document.getElementById("btnCapturarCadastro");
+
+      btn.disabled = true;
+      statusEl.textContent = "Detectando rosto...";
+      statusEl.style.color = "#555";
+
+      try {
+        const descriptor = await obterDescriptor(video);
+        if (!descriptor) {
+          statusEl.textContent = "Nenhum rosto detectado. Ajuste a posição e tente novamente.";
+          statusEl.style.color = "red";
+          btn.disabled = false;
+          return;
+        }
+
+        const c = document.getElementById("bioCadastroCanvas");
+        c.width = video.videoWidth;
+        c.height = video.videoHeight;
+        c.getContext("2d").drawImage(video, 0, 0);
+
+        usuarios.push({
+          id: Date.now(),
+          ...dadosCadastroPendente,
+          faceDescriptor: Array.from(descriptor),
+        });
+        salvarUsuarios();
+
+        statusEl.textContent = "Rosto cadastrado com sucesso!";
+        statusEl.style.color = "green";
+
+        setTimeout(() => {
+          fecharBiometriaCadastro();
+          alert("Cadastro realizado com sucesso!");
+          mudarTela("loginScreen");
+        }, 1200);
+
+      } catch (err) {
+        statusEl.textContent = "Erro ao processar rosto. Tente novamente.";
+        statusEl.style.color = "red";
+        btn.disabled = false;
+      }
     });
 
     // ============================
@@ -572,6 +706,8 @@
         alert("E-mail ou senha inválidos.");
         return;
       }
+
+      usuarioLogado = user;
 
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
@@ -767,8 +903,46 @@
 
     document.getElementById("btnCancelarBio").addEventListener("click", fecharBiometria);
 
-    document.getElementById("btnCapturar").addEventListener("click", () => {
+    document.getElementById("btnCapturar").addEventListener("click", async () => {
       const video = document.getElementById("bioVideo");
+      const btn = document.getElementById("btnCapturar");
+
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+
+      try {
+        await carregarModelos();
+      } catch (err) {
+        alert(err.message);
+        btn.disabled = false;
+        btn.textContent = "Tirar foto";
+        return;
+      }
+
+      const descriptorAtual = await obterDescriptor(video);
+      if (!descriptorAtual) {
+        alert("Nenhum rosto detectado. Ajuste a posição e tente novamente.");
+        btn.disabled = false;
+        btn.textContent = "Tirar foto";
+        return;
+      }
+
+      if (!usuarioLogado || !usuarioLogado.faceDescriptor) {
+        alert("Este usuário não possui biometria cadastrada. Refaça o cadastro.");
+        btn.disabled = false;
+        btn.textContent = "Tirar foto";
+        fecharBiometria();
+        return;
+      }
+
+      if (!rostoCompativel(usuarioLogado.faceDescriptor, descriptorAtual)) {
+        alert("Rosto não reconhecido. O ponto não foi registrado.");
+        btn.disabled = false;
+        btn.textContent = "Tirar foto";
+        return;
+      }
+
+      // Rosto validado — registra ponto
       const bioCanvas = document.getElementById("bioCanvas");
       bioCanvas.width = video.videoWidth;
       bioCanvas.height = video.videoHeight;
@@ -790,7 +964,6 @@
       const cargo = document.getElementById("userNome").dataset.cargo || "";
       const tipoTexto = tipoBatidaPendente === "entrada" ? "Entrada" : "Saída";
 
-      // Preenche o cartão
       document.getElementById("fotoCapturada").src = foto;
       document.getElementById("cartaoNome").textContent = nome;
       document.getElementById("cartaoCargo").textContent = cargo;
@@ -799,7 +972,6 @@
       document.getElementById("cartaoHora").textContent = horaStr;
       document.getElementById("cartaoRegistro").classList.add("ativo");
 
-      // Salva a batida
       batidas.push({
         tipo: tipoBatidaPendente,
         usuario: nome,
@@ -809,6 +981,8 @@
       });
       salvarBatidas();
 
+      btn.disabled = false;
+      btn.textContent = "Tirar foto";
       fecharBiometria();
     });
 
