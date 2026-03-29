@@ -1,0 +1,897 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Cartão Ponto BJK</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: Arial, sans-serif;
+      background: #f2f2f2;
+      color: #333;
+    }
+
+    .container {
+      max-width: 400px;
+      margin: 20px auto;
+      padding: 20px;
+      background: white;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 20px;
+      color: #2a6eb6;
+    }
+
+    .clock {
+      text-align: center;
+      margin: 10px 0;
+      font-size: 1.1em;
+      font-weight: bold;
+    }
+
+    .card-title {
+      text-align: center;
+      background: #2a6eb6;
+      color: white;
+      padding: 10px;
+      border-radius: 5px 5px 0 0;
+      margin-bottom: 10px;
+      font-size: 1.2em;
+    }
+
+    .card {
+      border: 1px solid #ddd;
+      border-radius: 5px;
+      overflow: hidden;
+    }
+
+    .card .content {
+      padding: 20px;
+    }
+
+    label {
+      display: block;
+      margin: 8px 0 4px;
+      font-weight: bold;
+    }
+
+    input {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+
+    button {
+      display: block;
+      width: 100%;
+      margin-top: 10px;
+      padding: 10px;
+      background: #2a6eb6;
+      color: white;
+      border: none;
+      border-radius: 4px;
+      font-size: 1em;
+      cursor: pointer;
+    }
+
+    button:hover {
+      background: #1c55a0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .error {
+      color: #c00;
+      margin: 5px 0;
+      font-size: 0.9em;
+    }
+
+    .switch {
+      margin-top: 10px;
+      text-align: center;
+    }
+
+    .switch button {
+      background: none;
+      color: #2a6eb6;
+      text-decoration: underline;
+    }
+
+    .switch button:hover {
+      background: none;
+      color: #1c55a0;
+    }
+
+    .actions {
+      margin-top: 10px;
+    }
+
+    .actions button {
+      background: #4caf50;
+    }
+
+    .actions button:hover {
+      background: #388e3c;
+    }
+
+    .location {
+      font-size: 0.9em;
+      margin: 5px 0;
+      color: #555;
+    }
+
+    .ass assinatura {
+      margin-top: 10px;
+    }
+
+    .ass canvas {
+      border: 1px solid #ddd;
+      display: block;
+      margin: 5px auto;
+      background: #f8f8f8;
+    }
+
+    /* ===== MODAL BIOMETRIA ===== */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.7);
+      z-index: 1000;
+      align-items: center;
+      justify-content: center;
+    }
+    .modal-overlay.ativo {
+      display: flex;
+    }
+    .modal-box {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      width: 340px;
+      max-width: 95vw;
+      text-align: center;
+    }
+    .modal-box h2 {
+      color: #2a6eb6;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    #bioVideo {
+      width: 100%;
+      border-radius: 8px;
+      background: #000;
+      display: block;
+    }
+    #btnCapturar {
+      background: #2a6eb6;
+      margin-top: 10px;
+    }
+    #btnCancelarBio {
+      background: #888;
+      margin-top: 8px;
+    }
+
+    /* ===== CARTÃO DE REGISTRO ===== */
+    .cartao-registro {
+      display: none;
+      border: 2px solid #2a6eb6;
+      border-radius: 10px;
+      overflow: hidden;
+      margin-top: 16px;
+    }
+    .cartao-registro.ativo {
+      display: block;
+    }
+    .cartao-header {
+      background: #2a6eb6;
+      color: white;
+      padding: 8px 12px;
+      font-weight: bold;
+      font-size: 0.95em;
+    }
+    .cartao-body {
+      padding: 12px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
+    }
+    .cartao-body img {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      border: 2px solid #2a6eb6;
+    }
+    .cartao-info {
+      text-align: left;
+      font-size: 0.9em;
+    }
+    .cartao-info strong {
+      display: block;
+      font-size: 1em;
+      color: #2a6eb6;
+    }
+    #btnCompartilhar {
+      background: #25d366;
+      margin-top: 10px;
+    }
+    #btnCompartilhar:hover {
+      background: #1da851;
+    }
+  </style>
+</head>
+<body>
+  <!-- TELA INICIAL: LOGIN -->
+  <div class="container" id="loginScreen">
+    <h1>Cartão Ponto BJK</h1>
+    <div class="clock">
+      <span id="data">--/--/----</span> |
+      <span id="hora">--:--:--</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Faça login para bater ponto</div>
+      <div class="card content">
+        <form id="loginForm">
+          <label>E-mail</label>
+          <input type="email" name="email" required />
+
+          <label>Senha</label>
+          <input type="password" name="senha" required />
+
+          <button type="submit">Entrar</button>
+        </form>
+
+        <div class="switch">
+          <button id="gotoCadastro">Não tenho cadastro</button>
+          <button id="gotoConfig" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">
+            Configurar área de ponto
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA DE CADASTRO -->
+  <div class="container hidden" id="cadastroScreen">
+    <h1>Cartão Ponto BJK</h1>
+
+    <div class="card">
+      <div class="card-title">Cadastre-se</div>
+      <div class="card content">
+        <form id="cadastroForm">
+          <label>Nome completo</label>
+          <input type="text" name="nome" required />
+
+          <label>CPF ou matrícula</label>
+          <input type="text" name="cpf" required />
+
+          <label>E-mail</label>
+          <input type="email" name="email" required />
+
+          <label>Senha</label>
+          <input type="password" name="senha" required />
+
+          <label>Confirmar senha</label>
+          <input type="password" name="confirmarSenha" required />
+
+          <label>Cargo</label>
+          <input type="text" name="cargo" />
+
+          <label>Telefone</label>
+          <input type="tel" name="telefone" />
+
+          <button type="submit">Cadastrar</button>
+        </form>
+
+        <div class="switch">
+          <button id="gotoLogin">Já tenho conta</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA PRINCIPAL DO CARTÃO PONTO -->
+  <div class="container hidden" id="appScreen">
+    <h1>Cartão Ponto BJK</h1>
+
+    <div class="clock">
+      <span id="appData">--/--/----</span> |
+      <span id="appHora">--:--:--</span>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span id="userNome">Funcionário</span>
+      </div>
+      <div class="card content">
+        <p class="location">
+          <span id="localStatus">Verificando localização...</span><br />
+          <span id="coordenadas"></span>
+        </p>
+
+        <div class="actions">
+          <button id="batidaEntrada" disabled>Bater ponto de entrada</button>
+          <button id="batidaSaida" disabled>Bater ponto de saída</button>
+        </div>
+
+        <div class="ass assinatura">
+          <canvas id="assinaturaCanvas" width="300" height="100"></canvas>
+          <button id="limparAssinatura">Limpar assinatura</button>
+          <button id="salvarAssinatura">Assinar ponto</button>
+        </div>
+
+        <!-- CARTÃO DE REGISTRO APÓS BIOMETRIA -->
+        <div class="cartao-registro" id="cartaoRegistro">
+          <div class="cartao-header">Cartão Ponto BJK — Registro Confirmado</div>
+          <div class="cartao-body">
+            <img id="fotoCapturada" src="" alt="Foto" />
+            <div class="cartao-info">
+              <strong id="cartaoNome"></strong>
+              <span id="cartaoCargo" style="color:#555;font-size:0.85em"></span><br/>
+              <span id="cartaoTipo"></span><br/>
+              <span id="cartaoData"></span><br/>
+              <span id="cartaoHora"></span>
+            </div>
+          </div>
+          <button id="btnCompartilhar">Compartilhar comprovante</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA DE CONFIGURAÇÃO DE ÁREA -->
+  <div class="container hidden" id="configScreen">
+    <h1>Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title">Configurar Área de Ponto</div>
+      <div class="card content">
+        <p style="font-size:0.9em;color:#555;margin-bottom:10px;">
+          Defina as coordenadas do local de trabalho e o raio permitido para bater ponto.
+        </p>
+
+        <label>Latitude</label>
+        <input type="number" id="cfgLat" step="0.000001" placeholder="-27.123456" />
+
+        <label>Longitude</label>
+        <input type="number" id="cfgLng" step="0.000001" placeholder="-52.654321" />
+
+        <label>Raio permitido (metros)</label>
+        <input type="number" id="cfgRaio" min="10" max="5000" placeholder="50" />
+
+        <button id="btnUsarMinhaLocalizacao" style="background:#555;margin-top:10px;">
+          Usar minha localização atual
+        </button>
+
+        <button id="btnSalvarConfig" style="background:#2a6eb6;margin-top:6px;">
+          Salvar configuração
+        </button>
+
+        <div id="cfgStatus" style="margin-top:8px;font-size:0.9em;color:#555;"></div>
+
+        <div class="switch">
+          <button id="voltarDoConfig">Voltar ao login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL BIOMETRIA FACIAL -->
+  <div class="modal-overlay" id="modalBiometria">
+    <div class="modal-box">
+      <h2>Biometria Facial</h2>
+      <video id="bioVideo" autoplay playsinline muted></video>
+      <button id="btnCapturar">Tirar foto</button>
+      <button id="btnCancelarBio">Cancelar</button>
+    </div>
+  </div>
+  <canvas id="bioCanvas" style="display:none"></canvas>
+
+  <script>
+    // ============================
+    // CONFIGURAÇÃO DO LOCAL (LAT/LNG) - AJUSTE AQUI
+    // ============================
+    // ============================
+    // CONFIGURAÇÃO DO LOCAL (carregada do localStorage)
+    // ============================
+    function carregarConfig() {
+      const salvo = JSON.parse(localStorage.getItem("config_area_bjk"));
+      return salvo || { lat: -27.1000, lng: -52.6000, raio: 5 };
+    }
+
+    // Navegação para tela de config
+    function mudarTelaConfig() {
+      const cfg = carregarConfig();
+      document.getElementById("cfgLat").value = cfg.lat;
+      document.getElementById("cfgLng").value = cfg.lng;
+      document.getElementById("cfgRaio").value = cfg.raio;
+      document.getElementById("cfgStatus").textContent = "";
+      mudarTela("configScreen");
+    }
+
+    document.getElementById("gotoConfig").addEventListener("click", mudarTelaConfig);
+    document.getElementById("voltarDoConfig").addEventListener("click", () => mudarTela("loginScreen"));
+
+    document.getElementById("btnUsarMinhaLocalizacao").addEventListener("click", () => {
+      const status = document.getElementById("cfgStatus");
+      status.textContent = "Obtendo localização...";
+      status.style.color = "#555";
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          document.getElementById("cfgLat").value = pos.coords.latitude.toFixed(6);
+          document.getElementById("cfgLng").value = pos.coords.longitude.toFixed(6);
+          status.textContent = "Localização capturada! Ajuste o raio e salve.";
+          status.style.color = "green";
+        },
+        () => {
+          status.textContent = "Não foi possível obter a localização. Verifique as permissões do navegador.";
+          status.style.color = "red";
+        }
+      );
+    });
+
+    document.getElementById("btnSalvarConfig").addEventListener("click", () => {
+      const lat = parseFloat(document.getElementById("cfgLat").value);
+      const lng = parseFloat(document.getElementById("cfgLng").value);
+      const raio = parseInt(document.getElementById("cfgRaio").value);
+      const status = document.getElementById("cfgStatus");
+
+      if (isNaN(lat) || isNaN(lng) || isNaN(raio)) {
+        status.textContent = "Preencha todos os campos corretamente.";
+        status.style.color = "red";
+        return;
+      }
+
+      localStorage.setItem("config_area_bjk", JSON.stringify({ lat, lng, raio }));
+      status.textContent = "Configuração salva com sucesso!";
+      status.style.color = "green";
+    });
+
+    // ============================
+    // RELÓGIO DIGITAL
+    // ============================
+    function iniciarRelogio(elemData, elemHora) {
+      function atualizar() {
+        const d = new Date();
+        const dia = String(d.getDate()).padStart(2, "0");
+        const mes = String(d.getMonth() + 1).padStart(2, "0");
+        const ano = d.getFullYear();
+        const hh = String(d.getHours()).padStart(2, "0");
+        const mm = String(d.getMinutes()).padStart(2, "0");
+        const ss = String(d.getSeconds()).padStart(2, "0");
+
+        elemData.textContent = `${dia}/${mes}/${ano}`;
+        elemHora.textContent = `${hh}:${mm}:${ss}`;
+      }
+      atualizar();
+      setInterval(atualizar, 1000);
+    }
+
+    // Inicia relógio na tela inicial
+    iniciarRelogio(document.getElementById("data"), document.getElementById("hora"));
+
+    // Inicia relógio na tela do app
+    iniciarRelogio(
+      document.getElementById("appData"),
+      document.getElementById("appHora")
+    );
+
+    // ============================
+    // TELAS: LOGIN, CADASTRO, APP
+    // ============================
+    function mudarTela(id) {
+      document.getElementById("loginScreen").classList.add("hidden");
+      document.getElementById("cadastroScreen").classList.add("hidden");
+      document.getElementById("appScreen").classList.add("hidden");
+      document.getElementById(id).classList.remove("hidden");
+    }
+
+    document.getElementById("gotoCadastro").addEventListener("click", () => {
+      mudarTela("cadastroScreen");
+    });
+
+    document.getElementById("gotoLogin").addEventListener("click", () => {
+      mudarTela("loginScreen");
+    });
+
+    // ============================
+    // CADASTRO DE USUÁRIO
+    // ============================
+    // Armazenando em localStorage (simulando um banco simples)
+    const usuarios = JSON.parse(localStorage.getItem("usuarios_bjk")) || [];
+
+    function salvarUsuarios() {
+      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+    }
+
+    document.getElementById("cadastroForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+
+      const nome = fd.get("nome");
+      const cpf = fd.get("cpf");
+      const email = fd.get("email");
+      const senha = fd.get("senha");
+      const confirmarSenha = fd.get("confirmarSenha");
+      const cargo = fd.get("cargo");
+      const telefone = fd.get("telefone");
+
+      if (senha !== confirmarSenha) {
+        alert("As senhas não coincidem.");
+        return;
+      }
+
+      const existe = usuarios.some((u) => u.email === email || u.cpf === cpf);
+      if (existe) {
+        alert("Já existe um usuário com esse e-mail ou CPF.");
+        return;
+      }
+
+      usuarios.push({
+        id: Date.now(),
+        nome,
+        cpf,
+        email,
+        senha, // em produção, use hash seguro no backend
+        cargo,
+        telefone,
+      });
+
+      salvarUsuarios();
+      alert("Cadastro realizado com sucesso!");
+      mudarTela("loginScreen");
+    });
+
+    // ============================
+    // LOGIN
+    // ============================
+    document.getElementById("loginForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const email = fd.get("email");
+      const senha = fd.get("senha");
+
+      const user = usuarios.find((u) => u.email === email && u.senha === senha);
+
+      if (!user) {
+        alert("E-mail ou senha inválidos.");
+        return;
+      }
+
+      // Exibe a tela principal do app
+      document.getElementById("userNome").textContent = user.nome;
+      document.getElementById("userNome").dataset.cargo = user.cargo || "";
+      mudarTela("appScreen");
+
+      // Habilita botões imediatamente
+      document.getElementById("batidaEntrada").disabled = false;
+      document.getElementById("batidaSaida").disabled = false;
+
+      // Inicia geolocalização
+      iniciarGeolocalizacao();
+    });
+
+    // ============================
+    // GELOCALIZAÇÃO E VERIFICAÇÃO DE LOCAL
+    // ============================
+    function calcularDistancia(lat1, lng1, lat2, lng2) {
+      const R = 6371e3; // raio da Terra em metros
+      const φ1 = (lat1 * Math.PI) / 180;
+      const φ2 = (lat2 * Math.PI) / 180;
+      const Δφ = ((lat2 - lat1) * Math.PI) / 180;
+      const Δλ = ((lng2 - lng1) * Math.PI) / 180;
+
+      const a =
+        Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+        Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+      return R * c; // distância em metros
+    }
+
+    function iniciarGeolocalizacao() {
+      const localStatus = document.getElementById("localStatus");
+      const coordenadasEl = document.getElementById("coordenadas");
+
+      localStatus.textContent = "Obtendo localização...";
+      coordenadasEl.textContent = "";
+
+      if (!navigator.geolocation) {
+        localStatus.textContent =
+          "Seu navegador não suporta geolocalização.";
+        localStatus.style.color = "red";
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) => {
+          const lat = pos.coords.latitude;
+          const lng = pos.coords.longitude;
+
+          coordenadasEl.textContent = `(${lat.toFixed(6)}, ${lng.toFixed(6)})`;
+
+          const cfg = carregarConfig();
+          const dist = calcularDistancia(lat, lng, cfg.lat, cfg.lng);
+
+          if (dist <= cfg.raio) {
+            localStatus.textContent =
+              "Você está no local permitido para bater ponto.";
+            localStatus.style.color = "green";
+          } else {
+            localStatus.textContent =
+              "Atenção: você está fora do local habitual. O registro será feito mesmo assim.";
+            localStatus.style.color = "orange";
+          }
+          document.getElementById("batidaEntrada").disabled = false;
+          document.getElementById("batidaSaida").disabled = false;
+        },
+        (erro) => {
+          localStatus.textContent = `Localização indisponível. Prossiga normalmente.`;
+          localStatus.style.color = "gray";
+          document.getElementById("batidaEntrada").disabled = false;
+          document.getElementById("batidaSaida").disabled = false;
+        }
+      );
+    }
+
+    // ============================
+    // ASSINATURA DIGITAL (CANVAS)
+    // ============================
+    const canvas = document.getElementById("assinaturaCanvas");
+    const ctx = canvas.getContext("2d");
+    let desenhando = false;
+
+    ctx.lineWidth = 2;
+    ctx.lineCap = "round";
+    ctx.strokeStyle = "#000";
+
+    // Texto de placeholder no canvas
+    ctx.font = "16px Arial";
+    ctx.fillStyle = "#aaa";
+    ctx.textAlign = "center";
+    ctx.fillText("Assine Aqui", canvas.width / 2, canvas.height / 2);
+
+    function desenharPlaceholder() {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      ctx.font = "16px Arial";
+      ctx.fillStyle = "#aaa";
+      ctx.textAlign = "center";
+      ctx.fillText("Assine Aqui", canvas.width / 2, canvas.height / 2);
+    }
+
+    function iniciarDesenho(e) {
+      if (!desenhando) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      desenhando = true;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function desenhar(e) {
+      if (!desenhando) return;
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function pararDesenho() {
+      desenhando = false;
+    }
+
+    canvas.addEventListener("mousedown", iniciarDesenho);
+    canvas.addEventListener("mousemove", desenhar);
+    canvas.addEventListener("mouseup", pararDesenho);
+    canvas.addEventListener("mouseout", pararDesenho);
+
+    // Toques em mobile
+    canvas.addEventListener("touchstart", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      iniciarDesenho({ clientX: x, clientY: y });
+    });
+
+    canvas.addEventListener("touchmove", (e) => {
+      e.preventDefault();
+      const touch = e.touches[0];
+      const rect = canvas.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const y = touch.clientY - rect.top;
+      desenhar({ clientX: x, clientY: y });
+    });
+
+    canvas.addEventListener("touchend", pararDesenho);
+
+    document.getElementById("limparAssinatura").addEventListener("click", () => {
+      desenharPlaceholder();
+    });
+
+    document.getElementById("salvarAssinatura").addEventListener("click", () => {
+      if (!tipoBatidaPendente) {
+        alert("Clique primeiro em 'Bater ponto de entrada' ou 'Bater ponto de saída'.");
+        return;
+      }
+      abrirBiometria(tipoBatidaPendente);
+    });
+
+    // ============================
+    // BIOMETRIA FACIAL
+    // ============================
+    let streamAtivo = null;
+    let tipoBatidaPendente = null;
+
+    function abrirBiometria(tipo) {
+      tipoBatidaPendente = tipo;
+      const modal = document.getElementById("modalBiometria");
+      modal.classList.add("ativo");
+
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+        .then((stream) => {
+          streamAtivo = stream;
+          document.getElementById("bioVideo").srcObject = stream;
+        })
+        .catch(() => {
+          alert("Não foi possível acessar a câmera.");
+          fecharBiometria();
+        });
+    }
+
+    function fecharBiometria() {
+      if (streamAtivo) {
+        streamAtivo.getTracks().forEach(t => t.stop());
+        streamAtivo = null;
+      }
+      document.getElementById("bioVideo").srcObject = null;
+      document.getElementById("modalBiometria").classList.remove("ativo");
+    }
+
+    document.getElementById("btnCancelarBio").addEventListener("click", fecharBiometria);
+
+    document.getElementById("btnCapturar").addEventListener("click", () => {
+      const video = document.getElementById("bioVideo");
+      const bioCanvas = document.getElementById("bioCanvas");
+      bioCanvas.width = video.videoWidth;
+      bioCanvas.height = video.videoHeight;
+      bioCanvas.getContext("2d").drawImage(video, 0, 0);
+
+      const foto = bioCanvas.toDataURL("image/png");
+      const agora = new Date();
+
+      const dia = String(agora.getDate()).padStart(2, "0");
+      const mes = String(agora.getMonth() + 1).padStart(2, "0");
+      const ano = agora.getFullYear();
+      const hh = String(agora.getHours()).padStart(2, "0");
+      const mm = String(agora.getMinutes()).padStart(2, "0");
+      const ss = String(agora.getSeconds()).padStart(2, "0");
+
+      const dataStr = `${dia}/${mes}/${ano}`;
+      const horaStr = `${hh}:${mm}:${ss}`;
+      const nome = document.getElementById("userNome").textContent;
+      const cargo = document.getElementById("userNome").dataset.cargo || "";
+      const tipoTexto = tipoBatidaPendente === "entrada" ? "Entrada" : "Saída";
+
+      // Preenche o cartão
+      document.getElementById("fotoCapturada").src = foto;
+      document.getElementById("cartaoNome").textContent = nome;
+      document.getElementById("cartaoCargo").textContent = cargo;
+      document.getElementById("cartaoTipo").textContent = tipoTexto;
+      document.getElementById("cartaoData").textContent = dataStr;
+      document.getElementById("cartaoHora").textContent = horaStr;
+      document.getElementById("cartaoRegistro").classList.add("ativo");
+
+      // Salva a batida
+      batidas.push({
+        tipo: tipoBatidaPendente,
+        usuario: nome,
+        data_hora: agora.toISOString(),
+        coordenadas: document.getElementById("coordenadas").textContent,
+        foto,
+      });
+      salvarBatidas();
+
+      fecharBiometria();
+    });
+
+    // Botões de batida apenas definem o tipo e mostram feedback visual
+    document.getElementById("batidaEntrada").addEventListener("click", () => {
+      tipoBatidaPendente = "entrada";
+      document.getElementById("batidaEntrada").style.outline = "3px solid #fff";
+      document.getElementById("batidaSaida").style.outline = "";
+      alert("Tipo selecionado: Entrada. Agora clique em 'Assinar ponto' para registrar com biometria.");
+    });
+    document.getElementById("batidaSaida").addEventListener("click", () => {
+      tipoBatidaPendente = "saida";
+      document.getElementById("batidaSaida").style.outline = "3px solid #fff";
+      document.getElementById("batidaEntrada").style.outline = "";
+      alert("Tipo selecionado: Saída. Agora clique em 'Assinar ponto' para registrar com biometria.");
+    });
+
+    // Compartilhar comprovante
+    document.getElementById("btnCompartilhar").addEventListener("click", async () => {
+      const bioCanvas = document.getElementById("bioCanvas");
+
+      // Monta cartao como imagem no canvas
+      const c = document.createElement("canvas");
+      c.width = 400;
+      c.height = 160;
+      const cx = c.getContext("2d");
+
+      cx.fillStyle = "#2a6eb6";
+      cx.fillRect(0, 0, 400, 40);
+      cx.fillStyle = "white";
+      cx.font = "bold 14px Arial";
+      cx.fillText("Cartao Ponto BJK - Registro Confirmado", 10, 26);
+
+      cx.fillStyle = "#f5f5f5";
+      cx.fillRect(0, 40, 400, 120);
+
+      const img = document.getElementById("fotoCapturada");
+      cx.drawImage(img, 10, 50, 80, 80);
+
+      cx.fillStyle = "#2a6eb6";
+      cx.font = "bold 15px Arial";
+      cx.fillText(document.getElementById("cartaoNome").textContent, 105, 68);
+      cx.fillStyle = "#777";
+      cx.font = "12px Arial";
+      cx.fillText(document.getElementById("cartaoCargo").textContent, 105, 85);
+      cx.fillStyle = "#333";
+      cx.font = "13px Arial";
+      cx.fillText(document.getElementById("cartaoTipo").textContent, 105, 102);
+      cx.fillText(document.getElementById("cartaoData").textContent, 105, 118);
+      cx.fillText(document.getElementById("cartaoHora").textContent, 105, 134);
+
+      c.toBlob(async (blob) => {
+        if (navigator.share) {
+          const file = new File([blob], "comprovante-ponto.png", { type: "image/png" });
+          try {
+            await navigator.share({ files: [file], title: "Comprovante de Ponto BJK" });
+          } catch {
+            baixarImagem(c);
+          }
+        } else {
+          baixarImagem(c);
+        }
+      });
+    });
+
+    function baixarImagem(c) {
+      const a = document.createElement("a");
+      a.href = c.toDataURL("image/png");
+      a.download = "comprovante-ponto.png";
+      a.click();
+    }
+
+    // ============================
+    // BATIDAS DE PONTO (EXEMPLO DE LOG)
+    // ============================
+    // Em um app real, você guardaria em localStorage ou banco
+    const batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || [];
+
+    function salvarBatidas() {
+      localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+    }
+
+    // Batidas agora tratadas pela biometria facial acima
+  </script>
+</body>
+</html>

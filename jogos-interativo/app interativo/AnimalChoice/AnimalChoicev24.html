@@ -1730,6 +1730,77 @@ function sndPhase7Start(){
   setTimeout(function(){ playTone(1568,'sine',0.22,0.26); },560);
 }
 
+// ── BGM 8 — O Voo da Abelha ───────────────────────────────────────────────
+var BGM8_BPM=110,BGM8_Q=Math.round(60000/110),BGM8_H=BGM8_Q*2,BGM8_E=Math.round(BGM8_Q/2),BGM8_BEATS=128,BGM8_DUR_S=BGM8_Q*128/1000;
+var BGM8_MELODY=[
+  [N.E5,BGM8_E],[N.G5,BGM8_E],[N.A5,BGM8_Q],[N.G5,BGM8_E],[N.E5,BGM8_E],[N.C5,BGM8_Q],
+  [N.D5,BGM8_E],[N.F5,BGM8_E],[N.A5,BGM8_Q],[N.G5,BGM8_Q],[N.E5,BGM8_Q],
+  [N.C5,BGM8_E],[N.E5,BGM8_E],[N.G5,BGM8_Q],[N.A5,BGM8_E],[N.G5,BGM8_E],[N.E5,BGM8_Q],
+  [N.D5,BGM8_E],[N.E5,BGM8_E],[N.G5,BGM8_Q],[N.E5,BGM8_Q],[N.C5,BGM8_Q],
+  [N.F5,BGM8_E],[N.A5,BGM8_E],[N.C6,BGM8_Q],[N.B5,BGM8_E],[N.A5,BGM8_E],[N.G5,BGM8_Q],
+  [N.E5,BGM8_E],[N.G5,BGM8_E],[N.A5,BGM8_Q],[N.G5,BGM8_Q],[N.E5,BGM8_Q],
+  [N.A5,BGM8_E],[N.G5,BGM8_E],[N.E5,BGM8_E],[N.D5,BGM8_E],[N.C5,BGM8_E],[N.E5,BGM8_E],[N.G5,BGM8_Q],
+  [N.D5,BGM8_E],[N.F5,BGM8_E],[N.A5,BGM8_H],[N.E5,BGM8_Q],[N.C5,BGM8_Q],
+];
+var BGM8_CHORDS=(function(){
+  var prog=[[N.C4,N.E4,N.G4],[N.F3,N.A3,N.C4],[N.G3,N.B3,N.D4],[N.C4,N.E4,N.G4],[N.A3,N.C4,N.E4],[N.F3,N.A3,N.C4],[N.G3,N.B3,N.D4],[N.C4,N.E4,N.G4]];
+  var out=[],DUR=BGM8_Q*1.9/1000,DURL=BGM8_Q*3.9/1000;
+  for(var i=0;i<32;i++){var b=BGM8_Q*i*4,last=(i===31);out.push({beat:b,ch:prog[i%8],dur:last?DURL:DUR});out.push({beat:b+BGM8_Q*2,ch:prog[(i+1)%8],dur:last?DURL:DUR});}
+  return out;
+})();
+function bgm8BuildNoteList(){
+  var notes=[],t=0,targetMs=BGM8_Q*BGM8_BEATS,mi=0;
+  while(t<targetMs){var note=BGM8_MELODY[mi%BGM8_MELODY.length],rem=targetMs-t,d=Math.min(note[1],rem);if(note[0]>0)notes.push({t:t/1000,freq:note[0],dur:d/1000,type:'mel'});t+=d;mi++;}
+  for(var ci=0;ci<BGM8_CHORDS.length;ci++){var c=BGM8_CHORDS[ci];notes.push({t:c.beat/1000,freqs:c.ch,dur:c.dur,type:'chd'});}
+  for(var bi=0;bi<BGM8_CHORDS.length;bi+=2){var bc=BGM8_CHORDS[bi];notes.push({t:bc.beat/1000,freq:bc.ch[0],dur:BGM8_Q*3.8/1000,type:'bas'});}
+  notes.sort(function(a,b){return a.t-b.t;}); return notes;
+}
+function bgm8RunScheduler(){
+  if(!musicIsPlaying) return;
+  var ctx=getAudioCtx(),now=ctx.currentTime,horizon=now+BGM_LOOKAHEAD;
+  var fp=bgmLoopStart+BGM8_DUR_S-BGM8_Q*8/1000;
+  if(!bgmFadeScheduled&&musicFadeGain&&fp<=horizon){
+    bgmFadeScheduled=true;var le=bgmLoopStart+BGM8_DUR_S;
+    musicFadeGain.gain.cancelScheduledValues(fp-0.05);musicFadeGain.gain.setValueAtTime(1.0,Math.max(now,fp));
+    musicFadeGain.gain.linearRampToValueAtTime(0.12,le);musicFadeGain.gain.setValueAtTime(0.12,le);musicFadeGain.gain.linearRampToValueAtTime(1.0,le+BGM8_Q*2/1000);
+  }
+  while(bgmNoteIdx<bgmNoteList.length){
+    var n=bgmNoteList[bgmNoteIdx],abs=bgmLoopStart+n.t;if(abs>horizon)break;bgmNoteIdx++;if(abs<now-0.01)continue;
+    var delay=Math.max(0,(abs-now)*1000),barIdx=Math.floor(n.t*1000/(BGM8_Q*4)),dm=1.0;
+    if(barIdx>=8&&barIdx<16)dm=1.10;if(barIdx>=16&&barIdx<24)dm=1.18;if(barIdx>=24)dm=0.95;
+    if(n.type==='mel')bgmPianoNote(n.freq,n.dur,0.040*dm,delay);
+    else if(n.type==='chd')bgmChord(n.freqs,n.dur,dm,delay);
+    else if(n.type==='bas')bgmBassNote(n.freq,n.dur,0.038*dm,delay);
+  }
+  if(bgmNoteIdx>=bgmNoteList.length){var nls=bgmLoopStart+BGM8_DUR_S;if(nls<=horizon+0.05){bgmLoopStart=nls;bgmNoteIdx=0;bgmFadeScheduled=false;}}
+  musicLoopTimeout=setTimeout(bgm8RunScheduler,BGM_SCHED_INT);
+}
+function startPhase8Music(){
+  if(musicIsPlaying) return;
+  var ctx=getAudioCtx();
+  ctx.resume().then(function(){
+    if(musicIsPlaying) return;
+    var sc=ctx.createDynamicsCompressor();sc.threshold.value=-16;sc.knee.value=10;sc.ratio.value=3.5;sc.attack.value=0.003;sc.release.value=0.20;
+    musicMasterGain=ctx.createGain();var sl=document.getElementById('volSlider');
+    musicMasterGain.gain.value=soundEnabled?(sl?parseFloat(sl.value):0.75):0;
+    musicFadeGain=ctx.createGain();musicFadeGain.gain.value=1.0;
+    musicMasterGain.connect(musicFadeGain);musicFadeGain.connect(sc);sc.connect(ctx.destination);
+    musicReverbNode=createMusicReverb(ctx,2.0);musicReverbNode.connect(musicMasterGain);
+    musicIsPlaying=true;bgmFadeScheduled=false;bgmNoteList=bgm8BuildNoteList();bgmNoteIdx=0;bgmLoopStart=ctx.currentTime+0.10;bgm8RunScheduler();
+  });
+}
+function sndPhase8Start(){
+  playTone(659,'sine',0.14,0.16);setTimeout(function(){playTone(784,'sine',0.16,0.18);},90);
+  setTimeout(function(){playTone(1047,'sine',0.18,0.20);},180);setTimeout(function(){playTone(1319,'sawtooth',0.10,0.25);},300);
+}
+function sndNectarCollect(){
+  playTone(880,'sine',0.14,0.18);setTimeout(function(){playTone(1047,'sine',0.12,0.20);},70);setTimeout(function(){playTone(1319,'sine',0.10,0.16);},140);
+}
+function sndHiveDeposit(){
+  playTone(523,'sine',0.16,0.20);setTimeout(function(){playTone(659,'sine',0.14,0.22);},80);
+  setTimeout(function(){playTone(784,'sine',0.12,0.18);},160);setTimeout(function(){playTone(1047,'triangle',0.10,0.28);},260);
+}
+
 function sndPollinate(){
   // Som magico de polinizacao — acorde ascendente brilhante
   playTone(784,'sine',0.15,0.18);
@@ -2093,6 +2164,7 @@ window.addEventListener('keydown',function(e){
   if(e.key===' ' && state==='phase5intro') beginPhase5();
   if(e.key===' ' && state==='phase6intro') beginPhase6();
   if(e.key===' ' && state==='phase7intro') beginPhase7();
+  if(e.key===' ' && state==='phase8intro') beginPhase8();
 });
 window.addEventListener('keyup',function(e){ K[e.key]=false; });
 canvas.addEventListener('click',function(){
@@ -2104,6 +2176,7 @@ canvas.addEventListener('click',function(){
   if(state==='phase5intro') beginPhase5();
   if(state==='phase6intro') beginPhase6();
   if(state==='phase7intro') beginPhase7();
+  if(state==='phase8intro') beginPhase8();
 });
 
 // ── Player ───────────────────────────────────────────────────────────────────
@@ -2322,6 +2395,12 @@ var p4SlidingWall={x:4300,y:GY-260,w:28,h:260,minX:4150,maxX:5000,vx:2.0};
 // Sino de Alarme + pedras caindo
 var p4AlarmBell={x:3900,y:GY-58,w:26,h:32,triggered:false,timer:0,cooldown:0,spawnCount:0,spawnTimer:0};
 var p4AlarmRocks=[];
+// Sinos ocultos a cada 250px após o sino principal (x=3900) até a chegada (x≈5320)
+var p4HiddenBells=(function(){
+  var bells=[], bx=4150;
+  while(bx<5320){ bells.push({x:bx,y:GY-58,w:26,h:32,visible:false,triggered:false,timer:0,spawnCount:0,spawnTimer:0}); bx+=250; }
+  return bells;
+})();
 
 // ── FASE 5: FLORESTA ENCANTADA ───────────────────────────────────────────────
 var p5={
@@ -2464,6 +2543,25 @@ var p7={
   finish:{x:WORLD-180,y:GY-110,w:18,h:110}
 };
 
+// ── FASE 8: O VOO DA ABELHA ──────────────────────────────────────────────────
+var p8={
+  platforms:[
+    {x:300,y:282,w:95,h:18},{x:650,y:265,w:90,h:18},{x:1050,y:278,w:100,h:18},
+    {x:1500,y:262,w:95,h:18},{x:1980,y:272,w:110,h:18},{x:2420,y:262,w:95,h:18},
+    {x:3800,y:278,w:130,h:18},{x:4200,y:260,w:110,h:18},{x:4620,y:282,w:120,h:18}
+  ],
+  gaps:[{x:580,w:150},{x:1380,w:170},{x:2880,w:140}],
+  walls:[],waterPits:[],speedGates:[],megaBarriers:[],
+  finish:{x:WORLD-180,y:GY-110,w:18,h:110}
+};
+var p8Flowers=[],p8Vespas=[],p8Webs=[],p8Lizards=[],p8LizardProj=[];
+var p8NectarCarried=false,p8NectarChargeTimer=0,p8NectarChargingFlower=null;
+var p8HexFilled=0;
+var p8HiveState='outside'; // 'outside'|'inside'|'exiting'|'transforming'|'eggs'|'hatching'|'done'
+var p8HiveTimer=0,p8HiveAlpha=0,p8BabyBees=[],p8WebStuck=0;
+var p8HiveX=3350,p8HiveY=GY-195,p8HiveW=150,p8HiveH=195;
+var p8HiveEntrX=3385,p8HiveEntrY=GY-68,p8HiveEntrW=80,p8HiveEntrH=55;
+
 // ── Gerador de flores da Fase 7 ──────────────────────────────────────────────
 // 5 buques × 3 flores (1 aberta=source, 2 fechadas=target)
 // Distribuidos ao longo do nivel em zonas seguras
@@ -2516,7 +2614,27 @@ function genP7Flowers(){
 }
 genP7Flowers();
 
-function getLevel(){ return phase===1?p1:phase===2?p2:phase===3?p3:phase===4?p4:phase===5?p5:phase===6?p6:p7; }
+function genP8(){
+  var fpos=[430,860,1280,1720,2180,2660];
+  var preds=['vespa','web','lizard','vespa','web','lizard'];
+  p8Flowers=[];
+  for(var i=0;i<6;i++) p8Flowers.push({x:fpos[i],y:GY-52,state:'open',predator:preds[i],chargeTimer:0});
+  p8Vespas=[
+    {fi:0,angle:0,spd:0.028,r:68,dir:1,x:0,y:0},
+    {fi:3,angle:Math.PI,spd:0.022,r:75,dir:-1,x:0,y:0}
+  ];
+  p8Webs=[];
+  var webFlowers=[1,4];
+  for(var wi=0;wi<2;wi++){var wf=p8Flowers[webFlowers[wi]];p8Webs.push({x:wf.x-38,y:GY-92,w:18,h:92,fi:webFlowers[wi]});}
+  p8Lizards=[];
+  var lizFlowers=[2,5];
+  for(var li=0;li<2;li++){var lf=p8Flowers[lizFlowers[li]];p8Lizards.push({x:lf.x+85,y:GY-22,timer:160+li*40,fi:lizFlowers[li]});}
+  p8LizardProj=[];p8BabyBees=[];p8WebStuck=0;
+  p8NectarCarried=false;p8NectarChargeTimer=0;p8NectarChargingFlower=null;
+  p8HexFilled=0;p8HiveState='outside';p8HiveTimer=0;p8HiveAlpha=0;
+}
+
+function getLevel(){ return phase===1?p1:phase===2?p2:phase===3?p3:phase===4?p4:phase===5?p5:phase===6?p6:phase===7?p7:p8; }
 function getStars(){ return phase===1?p1Stars:phase===2?p2Stars:phase===3?p3Stars:phase===4?p4Stars:phase===5?p5Stars:phase===6?p6Stars:[]; }
 
 function groundAt(x){// funcao para verificar se tem chao em determinada posicao x, usada para detectar se o jogador esta no chao ou caindo em um buraco, a funcao verifica se a posicao x esta dentro de algum dos buracos (gaps) ou buracos d'agua (waterPits) da fase atual, se estiver dentro de algum desses elementos, significa que nao tem chao naquela posicao e a funcao retorna false, caso contrario, retorna true, indicando que tem chao naquela posicao
@@ -2702,6 +2820,7 @@ function beginPhase4(){ // NOVA FUNÇÃO PARA INICIAR FASE 4
   p4.speedGates.forEach(function(g){g.passed=false;});
   p4FlyingInsects.forEach(function(ins){ins.eaten=false;});
   p4AlarmRocks=[]; p4AlarmBell.triggered=false; p4AlarmBell.timer=0; p4AlarmBell.cooldown=0; p4AlarmBell.spawnCount=0; p4AlarmBell.spawnTimer=0;
+  p4HiddenBells.forEach(function(hb){hb.visible=false;hb.triggered=false;hb.timer=0;hb.spawnCount=0;hb.spawnTimer=0;});
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-cat').classList.add('active');
   startPhase4Music();
@@ -2731,6 +2850,17 @@ function beginPhase7(){
   document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
   document.getElementById('btn-caterpillar').classList.add('active');
   startPhase7Music();
+}
+function beginPhase8(){
+  stopBgMusic(); sndPhase8Start();
+  phase=8; state='playing';
+  tutorialTimer=420;
+  pl.x=100; pl.y=GY-80; pl.vx=0; pl.vy=0; pl.char='bee'; pl.w=38; pl.h=38;
+  camX=0; isDigging=false; frogLongJump=0;
+  genP8();
+  document.querySelectorAll('.cbtn').forEach(function(b){b.classList.remove('active');});
+  document.getElementById('btn-bee').classList.add('active');
+  startPhase8Music();
 }
 function beginPhase6(){
   stopBgMusic(); sndPhase6Start();
@@ -3127,6 +3257,34 @@ function update(){
       // Pedras NÃO somem — apenas desativa o estado triggered e inicia cooldown
       if(ab4.timer<=0){ ab4.triggered=false; ab4.cooldown=180; }
     }
+    // Sinos ocultos — aparecem e disparam ao toque
+    for(var hbi=0;hbi<p4HiddenBells.length;hbi++){
+      var hb=p4HiddenBells[hbi];
+      // Detecta colisão com o jogador enquanto ainda não foi ativado
+      if(!hb.triggered){
+        if(pl.x+pl.w>hb.x&&pl.x<hb.x+hb.w&&pl.y+pl.h>hb.y&&pl.y<hb.y+hb.h){
+          hb.visible=true; hb.triggered=true; hb.timer=2100; hb.spawnCount=0; hb.spawnTimer=66; sndHit();
+        }
+      }
+      if(hb.triggered){
+        hb.spawnTimer++;
+        if(hb.spawnCount<30&&hb.spawnTimer>=66){
+          hb.spawnTimer=0; hb.spawnCount++;
+          var hsr=8+Math.floor(Math.random()*22);
+          var hnpts=7+Math.floor(Math.random()*4);
+          var hapts=[];
+          for(var hpk=0;hpk<hnpts;hpk++){
+            var hang=Math.PI*2*hpk/hnpts+(Math.random()-0.5)*0.7;
+            var hrad=hsr*(0.5+Math.random()*0.5);
+            hapts.push({a:hang,r:hrad});
+          }
+          var hrockX=3920+Math.random()*1350;
+          p4AlarmRocks.push({x:hrockX,y:-20,vx:(Math.random()-0.5)*2.5,vy:1.5+Math.random()*2,r:hsr,pts:hapts,rot:Math.random()*Math.PI*2,rotV:(Math.random()-0.5)*0.06,active:true,stuck:false,onFire:true,smokeTimer:0});
+        }
+        hb.timer--;
+        if(hb.timer<=0){ hb.triggered=false; } // permanece visível mas para de disparar
+      }
+    }
     for(var rki=p4AlarmRocks.length-1;rki>=0;rki--){
       var rock4=p4AlarmRocks[rki]; if(!rock4.active) continue;
       if(!rock4.stuck){
@@ -3267,6 +3425,98 @@ function update(){
       }
     }
   }
+  // ── FASE 8: O Voo da Abelha ────────────────────────────────────────────────
+  if(phase===8){
+    var plcx8=pl.x+pl.w/2,plcy8=pl.y+pl.h/2;
+    // Trilha de néctar dourada ao carregar
+    if(p8NectarCarried&&!pl.onGround&&Math.random()<0.3)
+      particles.push({x:plcx8,y:plcy8,vx:(Math.random()-0.5)*1.5,vy:-0.5,life:35,color:'#FFD700',type:'pollen'});
+    // Baby bees após eclosão
+    for(var bbi=p8BabyBees.length-1;bbi>=0;bbi--){
+      var bb=p8BabyBees[bbi];
+      bb.x+=bb.vx;bb.y+=bb.vy;bb.vy+=0.04;bb.vx+=(Math.random()-0.5)*0.2;bb.life--;bb.alpha=Math.min(1,bb.life/60);
+      if(bb.life<=0)p8BabyBees.splice(bbi,1);
+    }
+    // Máquina de estados da colmeia
+    if(p8HiveState!=='outside'&&p8HiveState!=='done'){
+      p8HiveTimer++;
+      if(p8HiveState==='inside'){
+        p8HiveAlpha=Math.min(1,p8HiveAlpha+0.06);
+        if(p8HiveTimer===60){
+          var dep=Math.min(2,10-p8HexFilled);p8HexFilled+=dep;p8NectarCarried=false;sndHiveDeposit();
+          if(p8HexFilled>=10){p8HiveState='transforming';p8HiveTimer=0;sndVictory();}
+          else{p8HiveState='exiting';}
+        }
+      }else if(p8HiveState==='exiting'){
+        p8HiveAlpha=Math.max(0,p8HiveAlpha-0.025);if(p8HiveTimer>=40){p8HiveState='outside';p8HiveTimer=0;}
+      }else if(p8HiveState==='transforming'){
+        if(p8HiveTimer>=150){p8HiveState='eggs';p8HiveTimer=0;}
+      }else if(p8HiveState==='eggs'){
+        if(p8HiveTimer>=180){
+          p8HiveState='hatching';p8HiveTimer=0;
+          for(var bbi2=0;bbi2<12;bbi2++){
+            var bba=Math.PI/2+((bbi2/12)-0.5)*Math.PI*1.5;
+            p8BabyBees.push({x:p8HiveEntrX+p8HiveEntrW/2,y:p8HiveEntrY,vx:Math.cos(bba)*3.5,vy:-Math.abs(Math.sin(bba))*5-1,life:260,alpha:1});
+          }
+        }
+      }else if(p8HiveState==='hatching'){
+        p8HiveAlpha=Math.max(0,p8HiveAlpha-0.006);if(p8HiveTimer>=250){p8HiveState='done';p8HiveTimer=0;p8HiveAlpha=0;}
+      }
+    }
+    // Vespas em órbita
+    for(var vi8=0;vi8<p8Vespas.length;vi8++){
+      var v8=p8Vespas[vi8];v8.angle+=v8.spd*v8.dir;
+      var vfl=p8Flowers[v8.fi];v8.x=vfl.x+Math.cos(v8.angle)*v8.r;v8.y=vfl.y+Math.sin(v8.angle)*v8.r*0.45;
+      if(Math.abs(plcx8-v8.x)<18&&Math.abs(plcy8-v8.y)<18)takeDamage();
+    }
+    // Teias
+    if(p8WebStuck>0){p8WebStuck--;pl.vx=0;pl.vy=0;}
+    else{
+      for(var wi8=0;wi8<p8Webs.length;wi8++){
+        var wb8=p8Webs[wi8];
+        if(pl.x+pl.w>wb8.x&&pl.x<wb8.x+wb8.w&&pl.y+pl.h>wb8.y&&pl.y<wb8.y+wb8.h){p8WebStuck=120;sndHit();break;}
+      }
+    }
+    // Lagartos cuspidores
+    for(var li8=0;li8<p8Lizards.length;li8++){
+      var lz=p8Lizards[li8];lz.timer--;
+      if(lz.timer<=0){
+        lz.timer=160+Math.floor(Math.random()*60);
+        var dx8=plcx8-lz.x,dy8=plcy8-lz.y,d8=Math.sqrt(dx8*dx8+dy8*dy8)||1;
+        p8LizardProj.push({x:lz.x,y:lz.y-10,vx:dx8/d8*4.5,vy:dy8/d8*4.5-0.5,active:true});
+      }
+    }
+    for(var pi8=p8LizardProj.length-1;pi8>=0;pi8--){
+      var pr8=p8LizardProj[pi8];if(!pr8.active){p8LizardProj.splice(pi8,1);continue;}
+      pr8.x+=pr8.vx;pr8.y+=pr8.vy;pr8.vy+=0.15;
+      if(pr8.y>GY+20){p8LizardProj.splice(pi8,1);continue;}
+      if(Math.abs(plcx8-pr8.x)<14&&Math.abs(plcy8-pr8.y)<14){takeDamage();pr8.active=false;}
+    }
+    // Coleta de néctar (apenas Abelha)
+    if(pl.char==='bee'&&!p8NectarCarried&&p8HiveState==='outside'){
+      var col8=false;
+      for(var fli=0;fli<p8Flowers.length;fli++){
+        var fl8=p8Flowers[fli];if(fl8.state!=='open')continue;
+        var fdx8=Math.abs(plcx8-fl8.x),fdy8=Math.abs(plcy8-fl8.y);
+        if(fdx8<26&&fdy8<34){
+          if(p8NectarChargingFlower!==fl8){p8NectarChargingFlower=fl8;p8NectarChargeTimer=0;}
+          p8NectarChargeTimer++;col8=true;
+          if(p8NectarChargeTimer>=120){
+            p8NectarCarried=true;fl8.state='depleted';p8NectarChargingFlower=null;p8NectarChargeTimer=0;sndNectarCollect();
+            for(var bpi=0;bpi<10;bpi++)particles.push({x:fl8.x,y:fl8.y,vx:(Math.random()-0.5)*5,vy:-Math.random()*4-1,life:50,color:'#FFD700',type:'pollen'});
+          }
+          break;
+        }
+      }
+      if(!col8&&p8NectarChargingFlower){p8NectarChargingFlower=null;p8NectarChargeTimer=0;}
+    }
+    // Entrar na colmeia com néctar
+    if(p8NectarCarried&&p8HiveState==='outside'){
+      if(pl.x+pl.w>p8HiveEntrX&&pl.x<p8HiveEntrX+p8HiveEntrW&&pl.y+pl.h>p8HiveEntrY&&pl.y<p8HiveEntrY+p8HiveEntrH){
+        p8HiveState='inside';p8HiveTimer=0;p8HiveAlpha=0;
+      }
+    }
+  }
   // Finish
   if(pl.x+pl.w>lv.finish.x){
     if(phase===1){
@@ -3278,12 +3528,15 @@ function update(){
     } else if(phase===4){ state='phase5intro'; // NOVA TRANSIÇÃO PARA FASE 5
     } else if(phase===5){ state='phase6intro';
     } else if(phase===6){ state='phase7intro';
-    } else {
-      // phase 7 — exige polinização completa
+    } else if(phase===7){
+      // fase 7 — exige polinização completa para ir à fase 8
       if(!pollinationComplete) return;
+      beeUnlocked=true; refreshLockState(); state='phase8intro';
+    } else {
+      // fase 8 — vitória final
       state='win'; sndVictory();
-      gameZeroed=true; beeUnlocked=true;
-      catUnlocked=true; frogUnlocked=true; caterpillarUnlocked=true; butterflyUnlocked=true;
+      gameZeroed=true;
+      catUnlocked=true; frogUnlocked=true; caterpillarUnlocked=true; butterflyUnlocked=true; beeUnlocked=true;
       refreshLockState();
     }
   }
@@ -5968,7 +6221,13 @@ function drawHUD(){
     ctx.fillStyle=bd?'#FFD700':'#aef'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
     ctx.fillText('⭐ Barreira: '+bg+'/20'+(bd?' 🦋 Desbloqueada!':' (Tatuzinho cava!)'),18,100+oy);
   }
-  if(phase===7){
+  if(phase===8){
+    var hd=(p8HiveState==='done'||p8HexFilled>=10);
+    ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,240,26,8); ctx.fill();
+    ctx.strokeStyle=hd?'#FFD700':'rgba(255,200,100,0.6)'; ctx.lineWidth=1.5; rrect(10,84+oy,240,26,8); ctx.stroke();
+    ctx.fillStyle=hd?'#FFD700':'#FFF9C4'; ctx.font='bold 11px Arial'; ctx.textAlign='left';
+    ctx.fillText('🍯 Hexágonos: '+p8HexFilled+'/10'+(hd?' ✅ Chegue ao fim!':' (colete néctar!)'),18,100+oy);
+  } else if(phase===7){
     var pd=pollinationComplete;
     ctx.fillStyle='rgba(0,0,0,0.5)'; rrect(10,84+oy,220,26,8); ctx.fill();
     ctx.strokeStyle=pd?'#FFD700':'rgba(255,200,255,0.6)'; ctx.lineWidth=1.5; rrect(10,84+oy,220,26,8); ctx.stroke();
@@ -6121,6 +6380,202 @@ function drawP7Flowers(){
     ctx.fillText('Chegue à linha de chegada para vencer!',CW/2,cby+88);
     ctx.restore();
   }
+}
+
+// ── FASE 8: Desenho das flores, predadores, colmeia ──────────────────────────
+function drawP8Flowers(){
+  if(phase!==8) return;
+  var t=Date.now()/400,plcx8=pl.x+pl.w/2,plcy8=pl.y+pl.h/2;
+  // Flores
+  for(var fi=0;fi<p8Flowers.length;fi++){
+    var fl=p8Flowers[fi],sx=fl.x-camX;
+    if(sx<-80||sx>CW+80) continue;
+    var sy=fl.y;
+    ctx.strokeStyle='#2E7D32';ctx.lineWidth=3;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(sx,sy+14);ctx.lineTo(sx,GY);ctx.stroke();
+    ctx.fillStyle='#4CAF50';
+    ctx.beginPath();ctx.ellipse(sx-9,sy+8,9,4,0.5,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(sx+9,sy+12,9,4,-0.5,0,Math.PI*2);ctx.fill();
+    if(fl.state==='open'){
+      ctx.save();ctx.translate(sx,sy);
+      var pc=['#FF6B6B','#FF9800','#FFD700','#FF4081','#FFA000','#FF6B6B'];
+      for(var pi2=0;pi2<6;pi2++){ctx.save();ctx.rotate(pi2*Math.PI/3+Math.sin(t*0.5)*0.04);ctx.fillStyle=pc[pi2];ctx.beginPath();ctx.ellipse(0,-13,6,8,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      ctx.save();ctx.globalAlpha=0.35+Math.sin(t*4)*0.15;ctx.fillStyle='#FFEB3B';ctx.beginPath();ctx.arc(sx,sy,7+Math.sin(t*4)*2,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+      if(p8NectarChargingFlower===fl){
+        var cp=p8NectarChargeTimer/120;
+        ctx.fillStyle='#E65100';ctx.font='bold 10px Arial';ctx.textAlign='center';ctx.fillText('Coletando néctar',sx,sy-80);
+        ctx.fillStyle='rgba(0,0,0,0.5)';rrect(sx-22,sy-72,44,9,4);ctx.fill();
+        var cg=ctx.createLinearGradient(sx-22,0,sx+22,0);cg.addColorStop(0,'#FFD700');cg.addColorStop(1,'#FF9800');
+        ctx.fillStyle=cg;rrect(sx-22,sy-72,44*cp,9,4);ctx.fill();
+        ctx.strokeStyle='#FF9800';ctx.lineWidth=1.5;rrect(sx-22,sy-72,44,9,4);ctx.stroke();
+      } else if(!p8NectarCarried&&Math.abs(plcx8-fl.x)<150&&Math.abs(plcy8-fl.y)<120){
+        ctx.save();ctx.globalAlpha=0.5+Math.sin(t*3)*0.3;ctx.fillStyle='#FFD700';ctx.font='bold 18px Arial';ctx.textAlign='center';ctx.fillText('▼',sx,sy-30);ctx.globalAlpha=1;ctx.restore();
+      }
+    } else {
+      ctx.save();ctx.translate(sx,sy);ctx.globalAlpha=0.4;
+      for(var pi3=0;pi3<6;pi3++){ctx.save();ctx.rotate(pi3*Math.PI/3);ctx.fillStyle='#9E9E9E';ctx.beginPath();ctx.ellipse(0,-8,4,5,0,0,Math.PI*2);ctx.fill();ctx.restore();}
+      ctx.fillStyle='#757575';ctx.beginPath();ctx.arc(0,0,4,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+    }
+  }
+  // Vespas
+  var wft=Date.now()/50;
+  for(var vi=0;vi<p8Vespas.length;vi++){
+    var v=p8Vespas[vi],vsx=v.x-camX;
+    if(vsx<-50||vsx>CW+50) continue;
+    ctx.save();ctx.translate(vsx,v.y);
+    ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(0,0,11,7,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=2;
+    for(var si=0;si<3;si++){ctx.beginPath();ctx.moveTo(-4+si*4,-7);ctx.lineTo(-4+si*4,7);ctx.stroke();}
+    var wf2=Math.sin(wft)*0.4;
+    ctx.save();ctx.globalAlpha=0.65;ctx.fillStyle='rgba(200,240,255,0.85)';
+    ctx.beginPath();ctx.ellipse(-3,-10+wf2,8,5,-0.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(3,-10+wf2,8,5,0.3,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.fillStyle='#333';ctx.beginPath();ctx.moveTo(-11,0);ctx.lineTo(-16,-2);ctx.lineTo(-16,2);ctx.closePath();ctx.fill();
+    ctx.restore();
+  }
+  // Teias
+  for(var wi=0;wi<p8Webs.length;wi++){
+    var wb=p8Webs[wi],wsx2=wb.x-camX;
+    if(wsx2<-80||wsx2>CW+80) continue;
+    var wcx=wsx2+wb.w/2,wcy=wb.y+wb.h/2;
+    ctx.strokeStyle='rgba(255,255,255,0.7)';ctx.lineWidth=1;
+    for(var si2=0;si2<8;si2++){var ang=si2*Math.PI/4;ctx.beginPath();ctx.moveTo(wcx,wcy);ctx.lineTo(wcx+Math.cos(ang)*wb.w/2,wcy+Math.sin(ang)*wb.h/2);ctx.stroke();}
+    for(var ri=1;ri<=3;ri++){ctx.beginPath();ctx.ellipse(wcx,wcy,wb.w/2*ri/3,wb.h/2*ri/3,0,0,Math.PI*2);ctx.stroke();}
+    ctx.fillStyle='#222';ctx.beginPath();ctx.arc(wcx,wcy-4,5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#555';ctx.beginPath();ctx.arc(wcx,wcy+2,3.5,0,Math.PI*2);ctx.fill();
+    if(p8WebStuck>0){ctx.save();ctx.globalAlpha=0.4+Math.sin(t*8)*0.2;ctx.strokeStyle='#FFD700';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(wcx,wcy,wb.w/2+5,wb.h/2+5,0,0,Math.PI*2);ctx.stroke();ctx.globalAlpha=1;ctx.restore();}
+  }
+  // Lagartos
+  for(var li=0;li<p8Lizards.length;li++){
+    var lz=p8Lizards[li],lsx=lz.x-camX;
+    if(lsx<-80||lsx>CW+80) continue;
+    ctx.save();ctx.translate(lsx,lz.y);
+    ctx.fillStyle='#4CAF50';ctx.beginPath();ctx.ellipse(-8,0,16,8,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#388E3C';ctx.beginPath();ctx.ellipse(-20,0,10,7,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(-23,-2,3,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(-23,-2,1.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#388E3C';ctx.lineWidth=4;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(8,0);ctx.quadraticCurveTo(20,-8,28,4);ctx.stroke();
+    ctx.strokeStyle='#2E7D32';ctx.lineWidth=2;
+    ctx.beginPath();ctx.moveTo(-5,7);ctx.lineTo(-8,15);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(5,7);ctx.lineTo(8,15);ctx.stroke();
+    ctx.restore();
+  }
+  // Projéteis dos lagartos
+  for(var pi4=0;pi4<p8LizardProj.length;pi4++){
+    var pr4=p8LizardProj[pi4];if(!pr4.active)continue;
+    var prx=pr4.x-camX;if(prx<-20||prx>CW+20)continue;
+    ctx.fillStyle='#8BC34A';ctx.beginPath();ctx.arc(prx,pr4.y,5,0,Math.PI*2);ctx.fill();
+    ctx.save();ctx.globalAlpha=0.4;ctx.fillStyle='#8BC34A';ctx.beginPath();ctx.arc(prx,pr4.y,9,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+  }
+  // Baby bees
+  for(var bbi=0;bbi<p8BabyBees.length;bbi++){
+    var bb=p8BabyBees[bbi],bbsx=bb.x-camX;
+    if(bbsx<-20||bbsx>CW+20)continue;
+    ctx.save();ctx.globalAlpha=bb.alpha;
+    ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(bbsx,bb.y,8,5,0,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#333';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(bbsx-2,bb.y-5);ctx.lineTo(bbsx-2,bb.y+5);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(bbsx+2,bb.y-5);ctx.lineTo(bbsx+2,bb.y+5);ctx.stroke();
+    ctx.globalAlpha=0.6*bb.alpha;ctx.fillStyle='rgba(200,240,255,0.85)';
+    ctx.beginPath();ctx.ellipse(bbsx-2,bb.y-7,7,4,-0.3,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.ellipse(bbsx+2,bb.y-7,7,4,0.3,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.restore();
+  }
+  // Colmeia exterior
+  var hvsx=p8HiveX-camX;
+  if(hvsx>-200&&hvsx<CW+200){
+    ctx.fillStyle='#6D4C41';ctx.fillRect(hvsx+p8HiveW/2-5,GY-55,10,55);
+    ctx.save();ctx.translate(hvsx,p8HiveY);
+    ctx.fillStyle='#FF8F00';
+    ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(p8HiveW-20,0);ctx.lineTo(p8HiveW,p8HiveH-20);ctx.lineTo(0,p8HiveH-20);ctx.closePath();ctx.fill();
+    ctx.strokeStyle='#E65100';ctx.lineWidth=2;ctx.stroke();
+    ctx.strokeStyle='rgba(180,60,0,0.3)';ctx.lineWidth=1;
+    for(var hl=0;hl<5;hl++){ctx.beginPath();ctx.moveTo(8,hl*36+20);ctx.lineTo(p8HiveW-8,hl*36+20);ctx.stroke();}
+    for(var hlv=0;hlv<3;hlv++){ctx.beginPath();ctx.moveTo(hlv*48+24,8);ctx.lineTo(hlv*48+24,p8HiveH-22);ctx.stroke();}
+    ctx.fillStyle='#4A2C0A';ctx.beginPath();ctx.ellipse(p8HiveW/2,p8HiveH-12,24,14,0,0,Math.PI*2);ctx.fill();
+    if(p8NectarCarried&&Math.abs(pl.x+pl.w/2-p8HiveX-p8HiveW/2)<200){
+      ctx.save();ctx.globalAlpha=0.3+Math.sin(Date.now()/200)*0.2;ctx.fillStyle='#FFD700';ctx.beginPath();ctx.ellipse(p8HiveW/2,p8HiveH-12,32,18,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+      ctx.fillStyle='#FFD700';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillText('Entre na colmeia!',p8HiveW/2,p8HiveH-38);
+    }
+    ctx.restore();
+    // Abelhazinhas decorativas ao redor da colmeia
+    var bt=Date.now()/500;
+    for(var bi2=0;bi2<3;bi2++){
+      var ba=bt+bi2*Math.PI*2/3,bsx2=hvsx+p8HiveW/2+Math.cos(ba)*38,bsy2=p8HiveY+p8HiveH-35+Math.sin(ba)*14;
+      ctx.save();ctx.globalAlpha=0.6;ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(bsx2,bsy2,6,4,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+    }
+  }
+  // Indicador de néctar na abelha
+  if(p8NectarCarried){
+    var psx=pl.x+pl.w/2-camX,psy=pl.y-14;
+    ctx.save();ctx.globalAlpha=0.7+Math.sin(Date.now()/200)*0.2;
+    ctx.fillStyle='#FF8F00';ctx.beginPath();ctx.arc(psx,psy,9,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#FFD700';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillText('🍯',psx,psy+4);
+    ctx.globalAlpha=1;ctx.restore();
+  }
+  // Overlay da colmeia interior
+  if(p8HiveState!=='outside'&&p8HiveAlpha>0.01) drawHive8Interior();
+}
+
+function drawHive8Interior(){
+  var t8=Date.now()/1000;
+  ctx.save();ctx.globalAlpha=p8HiveAlpha*0.97;
+  ctx.fillStyle='#2E1500';ctx.fillRect(50,40,CW-100,CH-80);
+  ctx.strokeStyle='#FF8F00';ctx.lineWidth=3;ctx.strokeRect(50,40,CW-100,CH-80);
+  ctx.globalAlpha=p8HiveAlpha;
+  ctx.fillStyle='#FFD700';ctx.font='bold 20px Arial';ctx.textAlign='center';
+  ctx.shadowColor='#FF8F00';ctx.shadowBlur=10;ctx.fillText('🐝  Colmeia  🍯',CW/2,70);ctx.shadowBlur=0;
+  // 10 hexágonos: 5 em cima + 5 embaixo (staggered)
+  var hR=26;
+  var hexPos=[{x:260,y:135},{x:330,y:135},{x:400,y:135},{x:470,y:135},{x:540,y:135},{x:295,y:200},{x:365,y:200},{x:435,y:200},{x:505,y:200},{x:575,y:200}];
+  var isTrans=(p8HiveState==='transforming'||p8HiveState==='eggs'||p8HiveState==='hatching'||p8HiveState==='done');
+  for(var hi=0;hi<10;hi++){
+    var hx=hexPos[hi].x,hy=hexPos[hi].y,filled=(hi<p8HexFilled);
+    var hfill;
+    if(filled){
+      if(isTrans){var gp=0.8+Math.sin(t8*3+hi*0.4)*0.2;hfill='rgba('+(Math.floor(220*gp))+','+(Math.floor(135*gp))+',0,1)';}
+      else hfill='#FFB300';
+    } else hfill='rgba(50,20,0,0.85)';
+    ctx.beginPath();
+    for(var hpi=0;hpi<6;hpi++){var ha=Math.PI/6+hpi*Math.PI/3;if(hpi===0)ctx.moveTo(hx+hR*Math.cos(ha),hy+hR*Math.sin(ha));else ctx.lineTo(hx+hR*Math.cos(ha),hy+hR*Math.sin(ha));}
+    ctx.closePath();ctx.fillStyle=hfill;ctx.fill();ctx.strokeStyle=filled?'#FF8F00':'rgba(180,80,0,0.45)';ctx.lineWidth=2;ctx.stroke();
+    if(filled){ctx.save();ctx.globalAlpha=0.22;ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(hx-hR*0.25,hy-hR*0.3,hR*0.28,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();}
+    if((p8HiveState==='eggs'||p8HiveState==='hatching')&&filled&&hi<5){
+      ctx.fillStyle=p8HiveState==='hatching'?'rgba(255,200,0,0.9)':'rgba(255,248,200,0.95)';
+      ctx.beginPath();ctx.ellipse(hx,hy,10,13,0,0,Math.PI*2);ctx.fill();
+      ctx.strokeStyle='rgba(200,140,0,0.8)';ctx.lineWidth=1;ctx.stroke();
+      if(p8HiveState==='hatching'){ctx.strokeStyle='#FF8F00';ctx.lineWidth=1.5;ctx.beginPath();ctx.moveTo(hx-4,hy-8);ctx.lineTo(hx,hy-3);ctx.lineTo(hx+4,hy-8);ctx.stroke();}
+    }
+  }
+  // Abelha Rainha no centro
+  var qx=CW/2,qy=285;
+  ctx.fillStyle='#FFD700';ctx.beginPath();ctx.moveTo(qx-18,qy-42);ctx.lineTo(qx-12,qy-54);ctx.lineTo(qx-4,qy-45);ctx.lineTo(qx,qy-57);ctx.lineTo(qx+4,qy-45);ctx.lineTo(qx+12,qy-54);ctx.lineTo(qx+18,qy-42);ctx.closePath();ctx.fill();
+  ctx.strokeStyle='#FF8F00';ctx.lineWidth=1.5;ctx.stroke();
+  ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(qx,qy,22,14,0,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle='#333';ctx.lineWidth=2.5;
+  for(var qs=0;qs<3;qs++){ctx.beginPath();ctx.moveTo(qx-8+qs*8,qy-14);ctx.lineTo(qx-8+qs*8,qy+14);ctx.stroke();}
+  ctx.save();ctx.globalAlpha=0.7;ctx.fillStyle='rgba(200,240,255,0.85)';
+  ctx.beginPath();ctx.ellipse(qx-6,qy-18,18,10,-0.3,0,Math.PI*2);ctx.fill();
+  ctx.beginPath();ctx.ellipse(qx+6,qy-18,18,10,0.3,0,Math.PI*2);ctx.fill();ctx.restore();
+  ctx.fillStyle='#111';ctx.beginPath();ctx.arc(qx-18,qy-3,4,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FFF';ctx.beginPath();ctx.arc(qx-17,qy-4,1.5,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle='#FFD700';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('Abelha Rainha',qx,qy+34);
+  // Mensagem de status
+  var msg8='';
+  if(p8HiveState==='inside')msg8='Depositando néctar... 🍯';
+  else if(p8HiveState==='transforming')msg8='✨ O néctar se transforma em mel! ✨';
+  else if(p8HiveState==='eggs')msg8='👑 A Rainha está botando ovos!';
+  else if(p8HiveState==='hatching')msg8='🐣 Os ovos estão eclodindo!';
+  if(msg8){
+    ctx.fillStyle='rgba(0,0,0,0.6)';rrect(CW/2-150,CH-100,300,30,8);ctx.fill();
+    ctx.fillStyle='#FFF9C4';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText(msg8,CW/2,CH-79);
+  }
+  ctx.fillStyle='rgba(0,0,0,0.5)';rrect(CW/2-75,CH-62,150,22,6);ctx.fill();
+  ctx.fillStyle=p8HexFilled>=10?'#FFD700':'#FFF9C4';ctx.font='bold 12px Arial';ctx.textAlign='center';
+  ctx.fillText('🍯 '+p8HexFilled+'/10 hexágonos',CW/2,CH-45);
+  ctx.restore();
 }
 
 function drawMetamorph(){
@@ -6350,6 +6805,27 @@ function drawPhase7Intro(){
   ctx.fillText('🐝 Abelha',CW/2,cby+52+pulse);
   ctx.fillStyle='rgba(255,255,255,0.55)'; ctx.font='13px Arial';
   ctx.fillText('Pressione ESPAÇO ou clique para começar',CW/2,CH-12);
+}
+
+function drawPhase8Intro(){
+  ctx.fillStyle='rgba(15,8,0,0.93)';ctx.fillRect(0,0,CW,CH);
+  var t8i=Date.now()/600;ctx.textAlign='center';
+  ctx.fillStyle='#FFD700';ctx.font='bold 30px Arial';
+  ctx.shadowColor='#FF8F00';ctx.shadowBlur=22;ctx.fillText('🐝 FASE 8 — O VOO DA ABELHA 🍯',CW/2,88);ctx.shadowBlur=0;
+  ctx.fillStyle='white';ctx.font='16px Arial';
+  ctx.fillText('A Abelha coleta néctar das flores do campo',CW/2,130);
+  ctx.fillText('e leva até a colmeia para produzir mel!',CW/2,154);
+  ctx.fillStyle='#FFD700';ctx.font='bold 13px Arial';
+  ctx.fillText('Paire sobre a flor por 2s para carregar o néctar',CW/2,188);
+  ctx.fillStyle='#FFF9C4';ctx.font='13px Arial';
+  ctx.fillText('⚠️ Cuidado: Vespas, Teias de Aranha e Lagartos guardam as flores!',CW/2,216);
+  ctx.fillText('Encha 10 hexágonos → Rainha bota ovos → enxame eclode! 🐝',CW/2,238);
+  var pulse=Math.sin(t8i*2)*3,cby=262-pulse/2;
+  ctx.fillStyle='rgba(255,215,0,0.18)';rrect(CW/2-52,cby,104,60+pulse,12);ctx.fill();
+  ctx.strokeStyle='rgba(255,215,0,0.65)';ctx.lineWidth=2;rrect(CW/2-52,cby,104,60+pulse,12);ctx.stroke();
+  ctx.font='28px Arial';ctx.fillStyle='#FFD700';ctx.fillText('🐝',CW/2,cby+32);
+  ctx.fillStyle='#FFD700';ctx.font='bold 11px Arial';ctx.fillText('Abelha',CW/2,cby+52+pulse);
+  ctx.fillStyle='rgba(255,255,255,0.55)';ctx.font='13px Arial';ctx.fillText('Pressione ESPAÇO ou clique para começar',CW/2,CH-12);
 }
 
 function drawMenu(){
@@ -7089,6 +7565,52 @@ function drawP4Obstacles(){
       ctx.restore();
     }
   }
+  // Sinos ocultos — só desenha quando visíveis
+  for(var hdi=0;hdi<p4HiddenBells.length;hdi++){
+    var hbd=p4HiddenBells[hdi];
+    if(!hbd.visible) continue;
+    var hbx=hbd.x-camX;
+    if(hbx<-80||hbx>CW+80) continue;
+    var hring=hbd.triggered?Math.sin(t*20)*5:0;
+    ctx.save(); ctx.translate(hbx+hbd.w/2+hring,hbd.y+hbd.h/2);
+    ctx.fillStyle=hbd.triggered?'#FF5722':'#FF9800';
+    ctx.beginPath();
+    ctx.arc(0,0,14,Math.PI,0); ctx.lineTo(14,18); ctx.lineTo(-14,18); ctx.closePath(); ctx.fill();
+    ctx.fillStyle='#E65100';
+    ctx.beginPath(); ctx.arc(0,18,4,0,Math.PI*2); ctx.fill();
+    ctx.fillStyle='#BF360C';
+    ctx.beginPath(); ctx.arc(hring*0.4,14,3,0,Math.PI*2); ctx.fill();
+    ctx.strokeStyle='#444'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.moveTo(0,-14); ctx.lineTo(0,-8); ctx.stroke();
+    if(hbd.triggered){
+      ctx.globalAlpha=0.35+Math.sin(t*16)*0.25;
+      ctx.strokeStyle='#FF9800'; ctx.lineWidth=1.5;
+      ctx.beginPath(); ctx.arc(0,4,22,0,Math.PI*2); ctx.stroke();
+      ctx.globalAlpha=1;
+    }
+    ctx.restore();
+    // Balão "Chuva de Meteoro!" quando ativo
+    if(hbd.triggered){
+      var hmX=hbx+hbd.w/2, hmY=hbd.y-68;
+      ctx.save();
+      var bw4=148, bh4=30;
+      ctx.fillStyle='#BF360C'; ctx.strokeStyle='#FF5722'; ctx.lineWidth=2;
+      ctx.beginPath();
+      ctx.moveTo(hmX-bw4/2+8,hmY-bh4/2); ctx.lineTo(hmX+bw4/2-8,hmY-bh4/2);
+      ctx.arcTo(hmX+bw4/2,hmY-bh4/2,hmX+bw4/2,hmY-bh4/2+8,8);
+      ctx.lineTo(hmX+bw4/2,hmY+bh4/2-8);
+      ctx.arcTo(hmX+bw4/2,hmY+bh4/2,hmX+bw4/2-8,hmY+bh4/2,8);
+      ctx.lineTo(hmX+8,hmY+bh4/2); ctx.lineTo(hmX,hmY+bh4/2+10); ctx.lineTo(hmX-8,hmY+bh4/2);
+      ctx.lineTo(hmX-bw4/2+8,hmY+bh4/2);
+      ctx.arcTo(hmX-bw4/2,hmY+bh4/2,hmX-bw4/2,hmY+bh4/2-8,8);
+      ctx.lineTo(hmX-bw4/2,hmY-bh4/2+8);
+      ctx.arcTo(hmX-bw4/2,hmY-bh4/2,hmX-bw4/2+8,hmY-bh4/2,8);
+      ctx.closePath(); ctx.fill(); ctx.stroke();
+      ctx.fillStyle='#FFD700'; ctx.font='bold 13px Arial'; ctx.textAlign='center';
+      ctx.fillText('☄ Chuva de Meteoro!',hmX,hmY+5);
+      ctx.restore();
+    }
+  }
   // Pedras caindo / cravadas (asteroides)
   for(var ri=0;ri<p4AlarmRocks.length;ri++){
     var rock=p4AlarmRocks[ri]; if(!rock.active) continue;
@@ -7152,7 +7674,7 @@ function loop(){
     drawBG(); drawGround(); drawPlatforms(); drawWalls();
     drawMegaBarriers(); drawWaterPits(); drawGaps(); drawFrogGaps();
     drawSpeedGates(); drawStars(); drawInsects(); drawWebs(); drawFinish();
-    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers();
+    drawDigTunnel(); drawP3UnlockStars(); drawP6Leaves(); drawP7Flowers(); drawP8Flowers();
     drawP2Boulders(); drawP2Bats(); drawP2BreakFloors(); drawP2Tornado();
     drawP3Obstacles(); drawP4Obstacles();
     drawPlayer(); drawParticles(); drawMetamorph(); drawP2DarkZone(); drawHUD(); drawTutorialBanner();
@@ -7189,6 +7711,7 @@ function loop(){
   else if(state==='phase5intro'){ drawBG(); drawGround(); drawPhase5Intro(); }
   else if(state==='phase6intro'){ drawBG(); drawGround(); drawPhase6Intro(); }
   else if(state==='phase7intro'){ drawBG(); drawGround(); drawPhase7Intro(); }
+  else if(state==='phase8intro'){ drawBG(); drawGround(); drawPhase8Intro(); }
   else if(state==='win')        { drawBG(); drawGround(); drawWin(); }
   else if(state==='gameover')   { drawBG(); drawGround(); drawGameOver(); }
   requestAnimationFrame(loop);
