@@ -196,6 +196,53 @@
       margin-top: 8px;
     }
 
+    /* ===== CÂMERA COM CÍRCULO FACIAL ===== */
+    .bio-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border-radius: 8px;
+      overflow: hidden;
+    }
+    .bio-container video {
+      width: 100%;
+      display: block;
+      border-radius: 8px;
+    }
+    .bio-circulo {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: 68%;
+      aspect-ratio: 1 / 1;
+      border: 3px solid rgba(255,255,255,0.85);
+      border-radius: 50%;
+      pointer-events: none;
+      z-index: 2;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
+      transition: border-color 0.25s, box-shadow 0.25s;
+    }
+    .bio-circulo.detectado {
+      border-color: #4caf50;
+      border-width: 4px;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 18px rgba(76,175,80,0.8);
+    }
+    .bio-label {
+      position: absolute;
+      bottom: 10px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(0,0,0,0.6);
+      color: #fff;
+      font-size: 0.8em;
+      padding: 4px 14px;
+      border-radius: 12px;
+      pointer-events: none;
+      z-index: 3;
+      white-space: nowrap;
+    }
+
     /* ===== CARTÃO DE REGISTRO ===== */
     .cartao-registro {
       display: none;
@@ -236,15 +283,70 @@
       font-size: 1em;
       color: #2a6eb6;
     }
-    #btnCompartilhar {
+    .btn-compartilhar {
       background: #25d366;
       margin-top: 10px;
     }
-    #btnCompartilhar:hover {
+    .btn-compartilhar:hover {
       background: #1da851;
     }
+    #listaCartoes {
+      display: flex;
+      flex-direction: column;
+      gap: 0;
+    }
+    #btnCompartilharTodos {
+      display: none;
+      background: #1565c0;
+      margin-top: 10px;
+    }
+    #btnCompartilharTodos:hover {
+      background: #0d47a1;
+    }
+
+    /* ===== CAMPO DE SENHA COM TOGGLE ===== */
+    .senha-wrapper {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+    .senha-wrapper input {
+      flex: 1;
+      padding-right: 38px;
+    }
+    .btn-toggle-senha {
+      position: absolute;
+      right: 6px;
+      background: none;
+      border: none;
+      width: auto;
+      margin: 0;
+      padding: 4px 6px;
+      cursor: pointer;
+      font-size: 1.1em;
+      color: #888;
+      display: inline;
+    }
+    .btn-toggle-senha:hover { background: none; color: #333; }
+
+    /* ===== TELA ADMIN ===== */
+    .admin-user-card {
+      border: 1px solid #ddd;
+      border-radius: 6px;
+      padding: 10px 12px;
+      margin-bottom: 8px;
+      background: #fafafa;
+    }
+    .admin-user-card .user-name { font-weight: bold; color: #2a6eb6; }
+    .admin-user-card .user-info { font-size: 0.85em; color: #555; margin: 2px 0; }
+    .admin-user-actions { display: flex; gap: 8px; margin-top: 8px; }
+    .admin-user-actions button { flex: 1; margin-top: 0; padding: 7px; font-size: 0.85em; }
+    .btn-editar { background: #2a6eb6; }
+    .btn-excluir { background: #e53935; }
+    .btn-excluir:hover { background: #b71c1c; }
+    #btnSairAdmin { background: #888; margin-top: 16px; }
   </style>
-  <script src="https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/dist/face-api.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
 <body>
   <!-- TELA INICIAL: LOGIN -->
@@ -263,16 +365,50 @@
           <input type="email" name="email" required />
 
           <label>Senha</label>
-          <input type="password" name="senha" required />
+          <div class="senha-wrapper">
+            <input type="password" name="senha" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
+          </div>
 
           <button type="submit">Entrar</button>
         </form>
 
         <div class="switch">
           <button id="gotoCadastro">Não tenho cadastro</button>
+          <button id="gotoLoginAdmin" style="background:none;color:#2a6eb6;text-decoration:underline;font-size:0.85em;">
+            Entrar como administrador
+          </button>
           <button id="gotoConfig" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">
             Configurar área de ponto
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA LOGIN ADMINISTRADOR -->
+  <div class="container hidden" id="loginAdminScreen">
+    <h1>Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title">Acesso Administrativo</div>
+      <div class="card content">
+        <form id="loginAdminForm">
+          <label>E-mail</label>
+          <input type="email" name="emailAdmin" required />
+
+          <label>Senha</label>
+          <div class="senha-wrapper">
+            <input type="password" name="senhaAdmin" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
+          </div>
+
+          <button type="submit">Entrar como administrador</button>
+        </form>
+        <div class="switch">
+          <button id="gotoCadastroAdminFromLogin" style="background:none;color:#2a6eb6;text-decoration:underline;font-size:0.85em;">
+            Cadastrar administrador
+          </button>
+          <button id="voltarDoLoginAdmin">Voltar ao login</button>
         </div>
       </div>
     </div>
@@ -296,10 +432,16 @@
           <input type="email" name="email" required />
 
           <label>Senha</label>
-          <input type="password" name="senha" required />
+          <div class="senha-wrapper">
+            <input type="password" name="senha" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
+          </div>
 
           <label>Confirmar senha</label>
-          <input type="password" name="confirmarSenha" required />
+          <div class="senha-wrapper">
+            <input type="password" name="confirmarSenha" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
+          </div>
 
           <label>Cargo</label>
           <input type="text" name="cargo" />
@@ -347,21 +489,9 @@
           <button id="salvarAssinatura">Assinar ponto</button>
         </div>
 
-        <!-- CARTÃO DE REGISTRO APÓS BIOMETRIA -->
-        <div class="cartao-registro" id="cartaoRegistro">
-          <div class="cartao-header">Cartão Ponto BJK — Registro Confirmado</div>
-          <div class="cartao-body">
-            <img id="fotoCapturada" src="" alt="Foto" />
-            <div class="cartao-info">
-              <strong id="cartaoNome"></strong>
-              <span id="cartaoCargo" style="color:#555;font-size:0.85em"></span><br/>
-              <span id="cartaoTipo"></span><br/>
-              <span id="cartaoData"></span><br/>
-              <span id="cartaoHora"></span>
-            </div>
-          </div>
-          <button id="btnCompartilhar">Compartilhar comprovante</button>
-        </div>
+        <!-- CARTÕES DE REGISTRO APÓS BIOMETRIA -->
+        <div id="listaCartoes"></div>
+        <button id="btnCompartilharTodos">Compartilhar todos os comprovantes</button>
       </div>
     </div>
   </div>
@@ -395,6 +525,12 @@
 
         <div id="cfgStatus" style="margin-top:8px;font-size:0.9em;color:#555;"></div>
 
+        <hr style="margin:16px 0;border:none;border-top:1px solid #ddd;" />
+        <p style="font-size:0.85em;color:#888;text-align:center;margin-bottom:6px;">Área restrita</p>
+        <button id="gotoCadastroAdminFromConfig" style="background:#555;font-size:0.9em;">
+          Cadastrar primeiro administrador
+        </button>
+
         <div class="switch">
           <button id="voltarDoConfig">Voltar ao login</button>
         </div>
@@ -402,12 +538,92 @@
     </div>
   </div>
 
+  <!-- TELA ADMIN -->
+  <div class="container hidden" id="adminScreen">
+    <h1>Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title">Área Administrativa</div>
+      <div class="card content">
+        <p style="font-size:0.9em;color:#555;margin-bottom:12px;">Gerencie os funcionários cadastrados.</p>
+        <div id="listaUsuariosAdmin"></div>
+        <button id="btnCadastrarNovoAdmin" style="background:#2a6eb6;margin-top:12px;">Cadastrar novo administrador</button>
+        <button id="btnResetarCadastros" style="background:#e53935;margin-top:6px;">Resetar todos os cadastros</button>
+        <button id="btnSairAdmin">Sair</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA CADASTRO ADMINISTRADOR -->
+  <div class="container hidden" id="cadastroAdminScreen">
+    <h1>Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title">Cadastrar Administrador</div>
+      <div class="card content">
+        <form id="cadastroAdminForm">
+          <label>Nome</label>
+          <input type="text" name="nomeAdmin" placeholder="Seu nome" required />
+
+          <label>E-mail</label>
+          <input type="email" name="emailAdmin" required />
+
+          <label>Senha</label>
+          <div class="senha-wrapper">
+            <input type="password" name="senhaAdmin" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+          </div>
+
+          <label>Código de acesso</label>
+          <div class="senha-wrapper">
+            <input type="password" name="codigoAdmin" placeholder="Código fornecido pela empresa" required />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+          </div>
+
+          <div id="statusCadastroAdmin" style="font-size:0.85em;min-height:1.2em;margin:6px 0;color:#555;"></div>
+          <button type="submit">Cadastrar administrador</button>
+        </form>
+        <div class="switch">
+          <button id="voltarDoCadastroAdmin">Voltar</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR USUÁRIO -->
+  <div class="modal-overlay" id="modalEditarUsuario">
+    <div class="modal-box" style="text-align:left;max-height:90vh;overflow-y:auto;">
+      <h2 style="text-align:center;">Editar Funcionário</h2>
+      <label>Nome</label>
+      <input type="text" id="editNome" />
+      <label>CPF ou matrícula</label>
+      <input type="text" id="editCpf" />
+      <label>E-mail</label>
+      <input type="email" id="editEmail" />
+      <label>Cargo</label>
+      <input type="text" id="editCargo" />
+      <label>Telefone</label>
+      <input type="tel" id="editTelefone" />
+      <label>Nova senha <span style="font-weight:normal;color:#888;font-size:0.85em">(em branco = manter atual)</span></label>
+      <div class="senha-wrapper">
+        <input type="password" id="editSenha" placeholder="••••••" />
+        <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+      </div>
+      <button id="btnResetarBiometria" style="background:#f57c00;margin-top:12px;">Resetar biometria</button>
+      <div id="editStatus" style="font-size:0.85em;margin:8px 0;min-height:1.2em;"></div>
+      <button id="btnSalvarEdicao">Salvar alterações</button>
+      <button id="btnFecharEdicao" style="background:#888;margin-top:6px;">Cancelar</button>
+    </div>
+  </div>
+
   <!-- MODAL BIOMETRIA FACIAL -->
   <div class="modal-overlay" id="modalBiometria">
     <div class="modal-box">
       <h2>Biometria Facial</h2>
-      <video id="bioVideo" autoplay playsinline muted></video>
-      <button id="btnCapturar">Tirar foto</button>
+      <div class="bio-container">
+        <video id="bioVideo" autoplay playsinline muted></video>
+        <div class="bio-circulo" id="circuloPonto"></div>
+        <div class="bio-label" id="labelPonto">Posicione o rosto no círculo</div>
+      </div>
+      <button id="btnCapturar" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
       <button id="btnCancelarBio">Cancelar</button>
     </div>
   </div>
@@ -417,13 +633,13 @@
   <div class="modal-overlay" id="modalBiometriaCadastro">
     <div class="modal-box">
       <h2>Foto de Cadastro</h2>
-      <p style="font-size:0.85em;color:#555;margin-bottom:8px;">
-        Posicione seu rosto centralizado e clique em "Cadastrar rosto".
-      </p>
-      <video id="bioCadastroVideo" autoplay playsinline muted
-             style="width:100%;border-radius:8px;background:#000;display:block;"></video>
-      <div id="statusBioCadastro"></div>
-      <button id="btnCapturarCadastro">Cadastrar rosto</button>
+      <div class="bio-container">
+        <video id="bioCadastroVideo" autoplay playsinline muted></video>
+        <div class="bio-circulo" id="circuloCadastro"></div>
+        <div class="bio-label" id="labelCadastro">Posicione o rosto no círculo</div>
+      </div>
+      <div id="statusBioCadastro" style="margin-top:6px;"></div>
+      <button id="btnCapturarCadastro" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
       <button id="btnCancelarBioCadastro">Cancelar</button>
     </div>
   </div>
@@ -431,24 +647,31 @@
 
   <script>
     // ============================
-    // FACE-API.JS — RECONHECIMENTO FACIAL
+    // RECONHECIMENTO FACIAL (@vladmandic/face-api)
     // ============================
-    const MODEL_URL = "https://cdn.jsdelivr.net/npm/face-api.js@0.22.2/weights";
+    const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
     let modelosCarregados = false;
     let usuarioLogado = null;
+    let _promessaModelos = null;
 
-    async function carregarModelos() {
-      if (modelosCarregados) return;
-      try {
-        await faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL);
-        await faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL);
+    function carregarModelos() {
+      if (modelosCarregados) return Promise.resolve();
+      if (_promessaModelos) return _promessaModelos;
+      _promessaModelos = Promise.all([
+        faceapi.nets.tinyFaceDetector.loadFromUri(MODEL_URL),
+        faceapi.nets.faceLandmark68TinyNet.loadFromUri(MODEL_URL),
+        faceapi.nets.faceRecognitionNet.loadFromUri(MODEL_URL),
+      ]).then(() => {
         modelosCarregados = true;
-      } catch (err) {
-        console.error("Erro ao carregar modelos face-api:", err);
-        throw new Error("Não foi possível carregar os modelos de reconhecimento facial.");
-      }
+      }).catch(err => {
+        _promessaModelos = null;
+        throw err;
+      });
+      return _promessaModelos;
     }
+
+    // Inicia o carregamento assim que a página abre (em segundo plano)
+    carregarModelos().catch(() => {});
 
     async function obterDescriptor(videoElement) {
       const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
@@ -463,6 +686,46 @@
     function rostoCompativel(descCadastro, descAtual, limiar = 0.5) {
       const a = Float32Array.from(descCadastro);
       return faceapi.euclideanDistance(a, descAtual) <= limiar;
+    }
+
+    // ============================
+    // AUTO-CAPTURA COM CÍRCULO
+    // ============================
+    function iniciarAutoCaptura(videoEl, circuloEl, labelEl, onCapturado) {
+      let ativo = true;
+      let frames = 0;
+      const FRAMES_PARA_CAPTURAR = 10; // ~1 segundo
+
+      async function loop() {
+        if (!ativo || !videoEl.srcObject) return;
+        try {
+          const det = await faceapi.detectSingleFace(
+            videoEl,
+            new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+          );
+          if (det) {
+            frames++;
+            circuloEl.classList.add("detectado");
+            const seg = Math.ceil((FRAMES_PARA_CAPTURAR - frames) / 10);
+            labelEl.textContent = frames >= FRAMES_PARA_CAPTURAR
+              ? "Capturando..."
+              : `Rosto detectado — aguarde ${seg}s`;
+            if (frames >= FRAMES_PARA_CAPTURAR) {
+              ativo = false;
+              onCapturado();
+              return;
+            }
+          } else {
+            frames = 0;
+            circuloEl.classList.remove("detectado");
+            labelEl.textContent = "Posicione o rosto no círculo";
+          }
+        } catch (_) {}
+        if (ativo) setTimeout(loop, 100);
+      }
+
+      loop();
+      return () => { ativo = false; };
     }
 
     // ============================
@@ -557,18 +820,54 @@
     // TELAS: LOGIN, CADASTRO, APP
     // ============================
     function mudarTela(id) {
-      document.getElementById("loginScreen").classList.add("hidden");
-      document.getElementById("cadastroScreen").classList.add("hidden");
-      document.getElementById("appScreen").classList.add("hidden");
+      ["loginScreen","loginAdminScreen","cadastroScreen","cadastroAdminScreen","appScreen","adminScreen","configScreen"].forEach(s => {
+        document.getElementById(s).classList.add("hidden");
+      });
       document.getElementById(id).classList.remove("hidden");
+    }
+
+    function toggleSenha(btn) {
+      const input = btn.previousElementSibling;
+      if (input.type === "password") {
+        input.type = "text";
+        btn.textContent = "🙈";
+      } else {
+        input.type = "password";
+        btn.textContent = "👁";
+      }
     }
 
     document.getElementById("gotoCadastro").addEventListener("click", () => {
       mudarTela("cadastroScreen");
     });
 
+    document.getElementById("gotoLoginAdmin").addEventListener("click", () => {
+      mudarTela("loginAdminScreen");
+    });
+
+    document.getElementById("voltarDoLoginAdmin").addEventListener("click", () => {
+      mudarTela("loginScreen");
+    });
+
     document.getElementById("gotoLogin").addEventListener("click", () => {
       mudarTela("loginScreen");
+    });
+
+    document.getElementById("loginAdminForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const email = fd.get("emailAdmin");
+      const senha = fd.get("senhaAdmin");
+
+      const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senha);
+      if (!admin) {
+        alert("E-mail ou senha inválidos.");
+        return;
+      }
+
+      usuarioLogado = admin;
+      renderAdminUsers();
+      mudarTela("adminScreen");
     });
 
     // ============================
@@ -599,33 +898,55 @@
         return;
       }
 
-      const existe = usuarios.some((u) => u.email === email || u.cpf === cpf);
+      // Verifica duplicidade por e-mail ou CPF entre funcionários
+      const existe = usuarios.some((u) => !u.admin && (u.email === email || u.cpf === cpf));
       if (existe) {
-        alert("Já existe um usuário com esse e-mail ou CPF.");
+        alert("Já existe um cadastro com esse e-mail ou CPF.");
         return;
       }
 
       dadosCadastroPendente = { nome, cpf, email, senha, cargo, telefone };
 
       const statusEl = document.getElementById("statusBioCadastro");
-      statusEl.textContent = "Carregando modelos...";
+      const btnCadastrar = e.target.querySelector("button[type=submit]");
+
+      statusEl.textContent = modelosCarregados ? "Pronto." : "Aguardando modelos de reconhecimento...";
       statusEl.style.color = "#555";
+      if (btnCadastrar) btnCadastrar.disabled = true;
 
       try {
         await carregarModelos();
       } catch (err) {
-        alert(err.message);
+        if (btnCadastrar) btnCadastrar.disabled = false;
         dadosCadastroPendente = null;
+        alert(
+          "Não foi possível carregar o reconhecimento facial.\n\n" +
+          "Verifique sua conexão com a internet e tente novamente.\n" +
+          "Os modelos precisam ser baixados uma única vez (~5MB)."
+        );
         return;
       }
 
+      if (btnCadastrar) btnCadastrar.disabled = false;
       document.getElementById("modalBiometriaCadastro").classList.add("ativo");
       statusEl.textContent = "Posicione seu rosto e clique em Cadastrar rosto.";
+
+      document.getElementById("circuloCadastro").classList.remove("detectado");
+      document.getElementById("labelCadastro").textContent = "Posicione o rosto no círculo";
 
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then((stream) => {
           streamCadastro = stream;
-          document.getElementById("bioCadastroVideo").srcObject = stream;
+          const video = document.getElementById("bioCadastroVideo");
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            _stopAutoCadastro = iniciarAutoCaptura(
+              video,
+              document.getElementById("circuloCadastro"),
+              document.getElementById("labelCadastro"),
+              () => document.getElementById("btnCapturarCadastro").click()
+            );
+          };
         })
         .catch(() => {
           alert("Não foi possível acessar a câmera.");
@@ -633,7 +954,10 @@
         });
     });
 
+    let _stopAutoCadastro = null;
+
     function fecharBiometriaCadastro() {
+      if (_stopAutoCadastro) { _stopAutoCadastro(); _stopAutoCadastro = null; }
       if (streamCadastro) {
         streamCadastro.getTracks().forEach(t => t.stop());
         streamCadastro = null;
@@ -709,9 +1033,18 @@
 
       usuarioLogado = user;
 
+      if (user.admin) {
+        renderAdminUsers();
+        mudarTela("adminScreen");
+        return;
+      }
+
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
       document.getElementById("userNome").dataset.cargo = user.cargo || "";
+      // Limpa cartões de sessões anteriores
+      document.getElementById("listaCartoes").innerHTML = "";
+      document.getElementById("btnCompartilharTodos").style.display = "none";
       mudarTela("appScreen");
 
       // Habilita botões imediatamente
@@ -720,6 +1053,185 @@
 
       // Inicia geolocalização
       iniciarGeolocalizacao();
+    });
+
+    // ============================
+    // ÁREA ADMINISTRATIVA
+    // ============================
+    let usuarioEditando = null;
+
+    function renderAdminUsers() {
+      const lista = document.getElementById("listaUsuariosAdmin");
+      const funcionarios = usuarios.filter(u => !u.admin);
+      if (funcionarios.length === 0) {
+        lista.innerHTML = '<p style="color:#888;font-size:0.9em;text-align:center;padding:12px 0;">Nenhum funcionário cadastrado.</p>';
+        return;
+      }
+      lista.innerHTML = funcionarios.map(u => `
+        <div class="admin-user-card">
+          <div class="user-name">${u.nome}</div>
+          <div class="user-info">CPF/Mat.: ${u.cpf} &nbsp;|&nbsp; Cargo: ${u.cargo || '—'}</div>
+          <div class="user-info">E-mail: ${u.email}</div>
+          <div class="user-info">Biometria: ${u.faceDescriptor ? '✔ Cadastrada' : '✘ Não cadastrada'}</div>
+          <div class="admin-user-actions">
+            <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
+            <button class="btn-excluir" onclick="excluirUsuario(${u.id})">Excluir</button>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function abrirEdicao(id) {
+      const u = usuarios.find(u => u.id === id);
+      if (!u) return;
+      usuarioEditando = u;
+      document.getElementById("editNome").value = u.nome;
+      document.getElementById("editCpf").value = u.cpf;
+      document.getElementById("editEmail").value = u.email;
+      document.getElementById("editCargo").value = u.cargo || "";
+      document.getElementById("editTelefone").value = u.telefone || "";
+      document.getElementById("editSenha").value = "";
+      document.getElementById("editSenha").type = "password";
+      document.querySelector("#modalEditarUsuario .btn-toggle-senha").textContent = "👁";
+      document.getElementById("editStatus").textContent = "";
+      document.getElementById("modalEditarUsuario").classList.add("ativo");
+    }
+
+    function excluirUsuario(id) {
+      const u = usuarios.find(u => u.id === id);
+      if (!u) return;
+      if (!confirm(`Excluir o funcionário "${u.nome}"?\nEsta ação não pode ser desfeita.`)) return;
+      usuarios.splice(usuarios.indexOf(u), 1);
+      salvarUsuarios();
+      renderAdminUsers();
+    }
+
+    document.getElementById("btnResetarBiometria").addEventListener("click", () => {
+      if (!usuarioEditando) return;
+      if (!confirm("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.")) return;
+      usuarioEditando.faceDescriptor = null;
+      const s = document.getElementById("editStatus");
+      s.textContent = "Biometria resetada. Clique em Salvar para confirmar.";
+      s.style.color = "orange";
+    });
+
+    document.getElementById("btnSalvarEdicao").addEventListener("click", () => {
+      if (!usuarioEditando) return;
+      const statusEl = document.getElementById("editStatus");
+      const novoNome = document.getElementById("editNome").value.trim();
+      const novoCpf = document.getElementById("editCpf").value.trim();
+      const novoEmail = document.getElementById("editEmail").value.trim();
+      const novoCargo = document.getElementById("editCargo").value.trim();
+      const novoTelefone = document.getElementById("editTelefone").value.trim();
+      const novaSenha = document.getElementById("editSenha").value;
+
+      if (!novoNome || !novoCpf || !novoEmail) {
+        statusEl.textContent = "Nome, CPF e e-mail são obrigatórios.";
+        statusEl.style.color = "red";
+        return;
+      }
+      const conflito = usuarios.some(u => u.id !== usuarioEditando.id && (u.cpf === novoCpf || u.email === novoEmail));
+      if (conflito) {
+        statusEl.textContent = "CPF ou e-mail já usado por outro funcionário.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      usuarioEditando.nome = novoNome;
+      usuarioEditando.cpf = novoCpf;
+      usuarioEditando.email = novoEmail;
+      usuarioEditando.cargo = novoCargo;
+      usuarioEditando.telefone = novoTelefone;
+      if (novaSenha) usuarioEditando.senha = novaSenha;
+
+      salvarUsuarios();
+      statusEl.textContent = "Alterações salvas com sucesso!";
+      statusEl.style.color = "green";
+      setTimeout(() => {
+        document.getElementById("modalEditarUsuario").classList.remove("ativo");
+        usuarioEditando = null;
+        renderAdminUsers();
+      }, 1000);
+    });
+
+    document.getElementById("btnFecharEdicao").addEventListener("click", () => {
+      document.getElementById("modalEditarUsuario").classList.remove("ativo");
+      usuarioEditando = null;
+    });
+
+    document.getElementById("btnSairAdmin").addEventListener("click", () => {
+      usuarioLogado = null;
+      mudarTela("loginScreen");
+    });
+
+    document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
+      document.getElementById("statusCadastroAdmin").textContent = "";
+      document.getElementById("cadastroAdminForm").reset();
+      mudarTela("cadastroAdminScreen");
+    });
+
+    document.getElementById("btnResetarCadastros").addEventListener("click", () => {
+      const funcionarios = usuarios.filter(u => !u.admin);
+      if (funcionarios.length === 0) {
+        alert("Não há funcionários cadastrados para resetar.");
+        return;
+      }
+      if (!confirm(`Isso vai apagar ${funcionarios.length} funcionário(s).\nEsta ação não pode ser desfeita. Continuar?`)) return;
+      const admins = usuarios.filter(u => u.admin);
+      usuarios.splice(0, usuarios.length, ...admins);
+      salvarUsuarios();
+      renderAdminUsers();
+    });
+
+    document.getElementById("voltarDoCadastroAdmin").addEventListener("click", () => {
+      mudarTela("adminScreen");
+    });
+
+    document.getElementById("gotoCadastroAdminFromConfig").addEventListener("click", () => {
+      document.getElementById("statusCadastroAdmin").textContent = "";
+      document.getElementById("cadastroAdminForm").reset();
+      mudarTela("cadastroAdminScreen");
+    });
+
+    document.getElementById("gotoCadastroAdminFromLogin").addEventListener("click", () => {
+      document.getElementById("statusCadastroAdmin").textContent = "";
+      document.getElementById("cadastroAdminForm").reset();
+      mudarTela("cadastroAdminScreen");
+    });
+
+    // Ao voltar da tela de cadastro de admin, se vier da config volta pra config
+    // (simplificado: sempre volta pra adminScreen ou loginScreen dependendo se há admin logado)
+
+    document.getElementById("cadastroAdminForm").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const nome = fd.get("nomeAdmin").trim();
+      const email = fd.get("emailAdmin").trim();
+      const senha = fd.get("senhaAdmin");
+      const codigo = fd.get("codigoAdmin");
+      const statusEl = document.getElementById("statusCadastroAdmin");
+
+      if (codigo !== "BJK@ADMIN2024") {
+        statusEl.textContent = "Código de acesso inválido.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      const jaExiste = usuarios.some(u => u.admin && u.email === email);
+      if (jaExiste) {
+        statusEl.textContent = "Já existe um administrador com esse e-mail.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      usuarios.push({ id: Date.now(), nome, email, senha, admin: true });
+      salvarUsuarios();
+      statusEl.textContent = "Administrador cadastrado com sucesso!";
+      statusEl.style.color = "green";
+      e.target.reset();
+      setTimeout(() => {
+        mudarTela(usuarioLogado ? "adminScreen" : "loginScreen");
+      }, 1500);
     });
 
     // ============================
@@ -876,15 +1388,27 @@
     let streamAtivo = null;
     let tipoBatidaPendente = null;
 
+    let _stopAutoPonto = null;
+
     function abrirBiometria(tipo) {
       tipoBatidaPendente = tipo;
-      const modal = document.getElementById("modalBiometria");
-      modal.classList.add("ativo");
+      document.getElementById("modalBiometria").classList.add("ativo");
+      document.getElementById("circuloPonto").classList.remove("detectado");
+      document.getElementById("labelPonto").textContent = "Posicione o rosto no círculo";
 
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then((stream) => {
           streamAtivo = stream;
-          document.getElementById("bioVideo").srcObject = stream;
+          const video = document.getElementById("bioVideo");
+          video.srcObject = stream;
+          video.onloadedmetadata = () => {
+            _stopAutoPonto = iniciarAutoCaptura(
+              video,
+              document.getElementById("circuloPonto"),
+              document.getElementById("labelPonto"),
+              () => document.getElementById("btnCapturar").click()
+            );
+          };
         })
         .catch(() => {
           alert("Não foi possível acessar a câmera.");
@@ -893,6 +1417,7 @@
     }
 
     function fecharBiometria() {
+      if (_stopAutoPonto) { _stopAutoPonto(); _stopAutoPonto = null; }
       if (streamAtivo) {
         streamAtivo.getTracks().forEach(t => t.stop());
         streamAtivo = null;
@@ -964,13 +1489,38 @@
       const cargo = document.getElementById("userNome").dataset.cargo || "";
       const tipoTexto = tipoBatidaPendente === "entrada" ? "Entrada" : "Saída";
 
-      document.getElementById("fotoCapturada").src = foto;
-      document.getElementById("cartaoNome").textContent = nome;
-      document.getElementById("cartaoCargo").textContent = cargo;
-      document.getElementById("cartaoTipo").textContent = tipoTexto;
-      document.getElementById("cartaoData").textContent = dataStr;
-      document.getElementById("cartaoHora").textContent = horaStr;
-      document.getElementById("cartaoRegistro").classList.add("ativo");
+      // Cria e adiciona novo cartão para esta batida
+      const cardId = "cartao_" + Date.now();
+      const novoCartao = document.createElement("div");
+      novoCartao.className = "cartao-registro ativo";
+      novoCartao.id = cardId;
+      novoCartao.innerHTML = `
+        <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
+        <div class="cartao-body">
+          <img src="${foto}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />
+          <div class="cartao-info">
+            <strong style="display:block;font-size:1em;color:#2a6eb6;">${nome}</strong>
+            <span style="color:#555;font-size:0.85em">${cargo}</span><br/>
+            <span>${tipoTexto}</span><br/>
+            <span>${dataStr}</span><br/>
+            <span>${horaStr}</span>
+          </div>
+        </div>
+        <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
+      `;
+      document.getElementById("listaCartoes").appendChild(novoCartao);
+
+      // Mostra botão "compartilhar todos" se houver mais de um cartão
+      const totalCartoes = document.getElementById("listaCartoes").children.length;
+      if (totalCartoes > 1) {
+        document.getElementById("btnCompartilharTodos").style.display = "block";
+      }
+
+      // Listener do botão de compartilhar deste cartão
+      novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
+        const c = gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr);
+        await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
+      });
 
       batidas.push({
         tipo: tipoBatidaPendente,
@@ -1000,11 +1550,8 @@
       alert("Tipo selecionado: Saída. Agora clique em 'Assinar ponto' para registrar com biometria.");
     });
 
-    // Compartilhar comprovante
-    document.getElementById("btnCompartilhar").addEventListener("click", async () => {
-      const bioCanvas = document.getElementById("bioCanvas");
-
-      // Monta cartao como imagem no canvas
+    // Gera canvas de um cartão
+    function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr) {
       const c = document.createElement("canvas");
       c.width = 400;
       c.height = 160;
@@ -1014,46 +1561,92 @@
       cx.fillRect(0, 0, 400, 40);
       cx.fillStyle = "white";
       cx.font = "bold 14px Arial";
-      cx.fillText("Cartao Ponto BJK - Registro Confirmado", 10, 26);
+      cx.fillText("Cartao Ponto BJK - " + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
       cx.fillRect(0, 40, 400, 120);
 
-      const img = document.getElementById("fotoCapturada");
+      const img = new Image();
+      img.src = foto;
       cx.drawImage(img, 10, 50, 80, 80);
 
       cx.fillStyle = "#2a6eb6";
       cx.font = "bold 15px Arial";
-      cx.fillText(document.getElementById("cartaoNome").textContent, 105, 68);
+      cx.fillText(nome, 105, 68);
       cx.fillStyle = "#777";
       cx.font = "12px Arial";
-      cx.fillText(document.getElementById("cartaoCargo").textContent, 105, 85);
+      cx.fillText(cargo, 105, 85);
       cx.fillStyle = "#333";
       cx.font = "13px Arial";
-      cx.fillText(document.getElementById("cartaoTipo").textContent, 105, 102);
-      cx.fillText(document.getElementById("cartaoData").textContent, 105, 118);
-      cx.fillText(document.getElementById("cartaoHora").textContent, 105, 134);
+      cx.fillText(tipoTexto, 105, 102);
+      cx.fillText(dataStr, 105, 118);
+      cx.fillText(horaStr, 105, 134);
 
-      c.toBlob(async (blob) => {
-        if (navigator.share) {
-          const file = new File([blob], "comprovante-ponto.png", { type: "image/png" });
-          try {
-            await navigator.share({ files: [file], title: "Comprovante de Ponto BJK" });
-          } catch {
-            baixarImagem(c);
+      return c;
+    }
+
+    // Compartilha ou baixa um canvas
+    async function compartilharOuBaixar(c, filename) {
+      return new Promise((resolve) => {
+        c.toBlob(async (blob) => {
+          if (navigator.share) {
+            const file = new File([blob], filename, { type: "image/png" });
+            try {
+              await navigator.share({ files: [file], title: "Comprovante de Ponto BJK" });
+            } catch {
+              baixarImagem(c, filename);
+            }
+          } else {
+            baixarImagem(c, filename);
           }
-        } else {
-          baixarImagem(c);
-        }
+          resolve();
+        });
       });
-    });
+    }
 
-    function baixarImagem(c) {
+    function baixarImagem(c, filename) {
+      filename = filename || "comprovante-ponto.png";
       const a = document.createElement("a");
       a.href = c.toDataURL("image/png");
-      a.download = "comprovante-ponto.png";
+      a.download = filename;
       a.click();
     }
+
+    // Compartilhar todos os cartões juntos
+    document.getElementById("btnCompartilharTodos").addEventListener("click", async () => {
+      const cards = document.querySelectorAll("#listaCartoes .cartao-registro");
+      if (cards.length === 0) return;
+
+      const cardHeight = 160;
+      const gap = 10;
+      const combined = document.createElement("canvas");
+      combined.width = 400;
+      combined.height = cardHeight * cards.length + gap * (cards.length - 1);
+      const cx = combined.getContext("2d");
+
+      // Coletar dados de cada cartão para redesenhar
+      const dadosCartoes = [];
+      cards.forEach(card => {
+        const img = card.querySelector("img");
+        const spans = card.querySelectorAll(".cartao-info span");
+        dadosCartoes.push({
+          foto: img ? img.src : "",
+          nome: card.querySelector(".cartao-info strong") ? card.querySelector(".cartao-info strong").textContent : "",
+          cargo: spans[0] ? spans[0].textContent : "",
+          tipo: spans[1] ? spans[1].textContent : "",
+          data: spans[2] ? spans[2].textContent : "",
+          hora: spans[3] ? spans[3].textContent : "",
+        });
+      });
+
+      dadosCartoes.forEach((d, i) => {
+        const offY = i * (cardHeight + gap);
+        const c = gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora);
+        cx.drawImage(c, 0, offY);
+      });
+
+      await compartilharOuBaixar(combined, "comprovantes-ponto.png");
+    });
 
     // ============================
     // BATIDAS DE PONTO (EXEMPLO DE LOG)
