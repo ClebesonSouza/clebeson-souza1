@@ -55,7 +55,8 @@
       overflow: hidden;
     }
 
-    .card .content {
+    /* FIX #9: era ".card .content" (filho) — corrigido para ".card.content" (mesmo elemento) */
+    .card.content {
       padding: 20px;
     }
 
@@ -134,7 +135,8 @@
       color: #555;
     }
 
-    .ass assinatura {
+    /* FIX #10: era ".ass assinatura" (tag invalida) — corrigido para ".ass.assinatura" */
+    .ass.assinatura {
       margin-top: 10px;
     }
 
@@ -196,51 +198,115 @@
       margin-top: 8px;
     }
 
-    /* ===== CÂMERA COM CÍRCULO FACIAL ===== */
+    /* ===== CÂMERA COM OVAL FACIAL ===== */
+    @keyframes bio-pulso {
+      0%, 100% { border-color: rgba(255,255,255,0.5); }
+      50%       { border-color: rgba(255,255,255,1); }
+    }
+    @keyframes bio-varredura {
+      0%   { top: 8%;  opacity: 0; }
+      5%   { opacity: 1; }
+      95%  { opacity: 1; }
+      100% { top: 88%; opacity: 0; }
+    }
+    @keyframes bio-ok-pulso {
+      0%, 100% { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 20px rgba(76,175,80,0.6); }
+      50%       { box-shadow: 0 0 0 9999px rgba(0,0,0,0.5), 0 0 40px rgba(76,175,80,1); }
+    }
     .bio-container {
       position: relative;
       width: 100%;
       background: #000;
-      border-radius: 8px;
+      border-radius: 10px;
       overflow: hidden;
     }
     .bio-container video {
       width: 100%;
       display: block;
-      border-radius: 8px;
+      border-radius: 10px;
     }
     .bio-circulo {
       position: absolute;
       top: 50%;
       left: 50%;
       transform: translate(-50%, -50%);
-      width: 68%;
-      aspect-ratio: 1 / 1;
-      border: 3px solid rgba(255,255,255,0.85);
+      width: 58%;
+      aspect-ratio: 3 / 4;
+      border: 2px solid rgba(255,255,255,0.7);
       border-radius: 50%;
       pointer-events: none;
       z-index: 2;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.45);
-      transition: border-color 0.25s, box-shadow 0.25s;
+      overflow: hidden;
+      box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+      animation: bio-pulso 2s ease-in-out infinite;
+      transition: border-color 0.3s, border-width 0.3s;
+    }
+    .bio-circulo::after {
+      content: '';
+      position: absolute;
+      left: 0; right: 0;
+      top: 10%;
+      height: 2px;
+      background: linear-gradient(90deg,
+        transparent 0%,
+        rgba(42,110,182,0.8) 20%,
+        rgba(100,181,246,1) 50%,
+        rgba(42,110,182,0.8) 80%,
+        transparent 100%);
+      border-radius: 2px;
+      animation: bio-varredura 2.5s ease-in-out infinite;
     }
     .bio-circulo.detectado {
       border-color: #4caf50;
-      border-width: 4px;
-      box-shadow: 0 0 0 9999px rgba(0,0,0,0.45), 0 0 18px rgba(76,175,80,0.8);
+      border-width: 3px;
+      animation: bio-ok-pulso 1s ease-in-out infinite;
+    }
+    .bio-circulo.detectado::after {
+      display: none;
+    }
+    /* Marcadores de canto ao redor do oval */
+    .bio-guias {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      width: calc(58% + 20px);
+      aspect-ratio: 3 / 4;
+      pointer-events: none;
+      z-index: 3;
+    }
+    .bio-guias::before, .bio-guias::after,
+    .bio-guias span::before, .bio-guias span::after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 18px;
+      border-color: #2a6eb6;
+      border-style: solid;
+      transition: border-color 0.3s;
+    }
+    .bio-guias::before  { top: 0;    left: 0;  border-width: 3px 0 0 3px; border-radius: 3px 0 0 0; }
+    .bio-guias::after   { top: 0;    right: 0; border-width: 3px 3px 0 0; border-radius: 0 3px 0 0; }
+    .bio-guias span::before { bottom: 0; left: 0;  border-width: 0 0 3px 3px; border-radius: 0 0 0 3px; }
+    .bio-guias span::after  { bottom: 0; right: 0; border-width: 0 3px 3px 0; border-radius: 0 0 3px 0; }
+    .bio-guias.detectado::before, .bio-guias.detectado::after,
+    .bio-guias.detectado span::before, .bio-guias.detectado span::after {
+      border-color: #4caf50;
     }
     .bio-label {
       position: absolute;
-      bottom: 10px;
+      bottom: 12px;
       left: 50%;
       transform: translateX(-50%);
-      background: rgba(0,0,0,0.6);
+      background: rgba(0,0,0,0.72);
       color: #fff;
-      font-size: 0.8em;
-      padding: 4px 14px;
-      border-radius: 12px;
+      font-size: 0.82em;
+      padding: 5px 18px;
+      border-radius: 20px;
       pointer-events: none;
-      z-index: 3;
+      z-index: 4;
       white-space: nowrap;
+      letter-spacing: 0.2px;
     }
 
     /* ===== CARTÃO DE REGISTRO ===== */
@@ -344,7 +410,78 @@
     .btn-editar { background: #2a6eb6; }
     .btn-excluir { background: #e53935; }
     .btn-excluir:hover { background: #b71c1c; }
+    .btn-relatorio { background: #00897b; }
+    .btn-relatorio:hover { background: #00695c; }
     #btnSairAdmin { background: #888; margin-top: 16px; }
+
+    /* ===== MODAL RELATÓRIO ===== */
+    #modalRelatorio .modal-box {
+      max-width: 680px;
+      width: 96vw;
+      text-align: left;
+    }
+    #tabelaRelatorio {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.88em;
+      margin-top: 10px;
+    }
+    #tabelaRelatorio thead th {
+      background: #2a6eb6;
+      color: #fff;
+      padding: 8px 10px;
+      text-align: left;
+      position: sticky;
+      top: 0;
+    }
+    #tabelaRelatorio tbody tr:nth-child(even) { background: #f0f5ff; }
+    #tabelaRelatorio tbody tr:nth-child(odd)  { background: #fff; }
+    #tabelaRelatorio td { padding: 7px 10px; border-bottom: 1px solid #e0e0e0; }
+    #tabelaRelatorio .tipo-entrada { color: #2e7d32; font-weight: bold; }
+    #tabelaRelatorio .tipo-saida   { color: #c62828; font-weight: bold; }
+    .relatorio-scroll { max-height: 60vh; overflow: auto; }
+    .relatorio-resumo { font-size: 0.85em; color: #555; margin-top: 6px; }
+    .rel-nav {
+      display: flex; align-items: center; justify-content: center;
+      gap: 14px; margin: 8px 0 4px;
+    }
+    .rel-nav button {
+      width: auto; padding: 5px 14px; margin: 0; font-size: 0.95em; background: #2a6eb6;
+    }
+    #relatorioMesAno {
+      font-weight: bold; font-size: 1em; color: #2a6eb6;
+      min-width: 140px; text-align: center;
+    }
+    #tabelaRelatorio {
+      width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px;
+      min-width: 480px;
+    }
+    #tabelaRelatorio thead th {
+      background: #2a6eb6; color: #fff; padding: 7px 8px;
+      text-align: center; white-space: nowrap;
+      position: sticky; top: 0;
+    }
+    #tabelaRelatorio td {
+      padding: 5px 8px; border-bottom: 1px solid #e0e0e0;
+      text-align: center; white-space: nowrap;
+    }
+    #tabelaRelatorio tbody tr:nth-child(even) { background: #f0f5ff; }
+    #tabelaRelatorio tbody tr:nth-child(odd)  { background: #fff; }
+    #tabelaRelatorio tbody tr.dia-hoje { background: #fff9c4 !important; font-weight: bold; }
+    #tabelaRelatorio tbody tr.dia-com-dados td:first-child { color: #2a6eb6; font-weight: bold; }
+    .cel-extras { color: #e65100; font-weight: bold; }
+    .cel-total  { color: #2e7d32; font-weight: bold; }
+    #totalExtrasResumo {
+      font-size: 0.85em; color: #e65100; font-weight: bold; margin-top: 8px;
+    }
+    #tabelaRelatorio tbody tr.dia-clicavel { cursor: pointer; }
+    #tabelaRelatorio tbody tr.dia-clicavel:hover { filter: brightness(0.93); }
+    .batida-dia-card {
+      border: 2px solid #2a6eb6; border-radius: 10px;
+      overflow: hidden; margin-bottom: 12px;
+    }
+    .batida-dia-card:last-child { margin-bottom: 0; }
+    .batida-dia-vazio { text-align:center; color:#888; padding:16px 0; font-size:0.9em; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
@@ -442,6 +579,9 @@
             <input type="password" name="confirmarSenha" required />
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
           </div>
+
+          <label>Data de nascimento</label>
+          <input type="date" name="nascimento" required />
 
           <label>Cargo</label>
           <input type="text" name="cargo" />
@@ -591,26 +731,82 @@
   <!-- MODAL EDITAR USUÁRIO -->
   <div class="modal-overlay" id="modalEditarUsuario">
     <div class="modal-box" style="text-align:left;max-height:90vh;overflow-y:auto;">
-      <h2 style="text-align:center;">Editar Funcionário</h2>
+      <h2 id="editModalTitulo" style="text-align:center;">Editar</h2>
       <label>Nome</label>
       <input type="text" id="editNome" />
-      <label>CPF ou matrícula</label>
-      <input type="text" id="editCpf" />
+      <div id="editCpfGroup">
+        <label>CPF ou matrícula</label>
+        <input type="text" id="editCpf" />
+      </div>
       <label>E-mail</label>
       <input type="email" id="editEmail" />
-      <label>Cargo</label>
-      <input type="text" id="editCargo" />
-      <label>Telefone</label>
-      <input type="tel" id="editTelefone" />
+      <div id="editCargoGroup">
+        <label>Cargo</label>
+        <input type="text" id="editCargo" />
+      </div>
+      <div id="editTelefoneGroup">
+        <label>Telefone</label>
+        <input type="tel" id="editTelefone" />
+      </div>
+      <div id="editNascimentoGroup">
+        <label>Data de nascimento</label>
+        <input type="date" id="editNascimento" />
+      </div>
       <label>Nova senha <span style="font-weight:normal;color:#888;font-size:0.85em">(em branco = manter atual)</span></label>
       <div class="senha-wrapper">
         <input type="password" id="editSenha" placeholder="••••••" />
         <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
       </div>
-      <button id="btnResetarBiometria" style="background:#f57c00;margin-top:12px;">Resetar biometria</button>
+      <div id="editBiometriaGroup">
+        <button id="btnResetarBiometria" style="background:#f57c00;margin-top:12px;">Resetar biometria</button>
+      </div>
       <div id="editStatus" style="font-size:0.85em;margin:8px 0;min-height:1.2em;"></div>
       <button id="btnSalvarEdicao">Salvar alterações</button>
       <button id="btnFecharEdicao" style="background:#888;margin-top:6px;">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL RELATÓRIO DE PONTO -->
+  <div class="modal-overlay" id="modalRelatorio">
+    <div class="modal-box" style="text-align:left;max-width:700px;width:97vw;">
+      <h2 id="relatorioTitulo" style="text-align:center;color:#2a6eb6;margin-bottom:4px;">Relatório de Ponto</h2>
+      <div class="rel-nav">
+        <button id="btnMesAnterior">&#9664;</button>
+        <span id="relatorioMesAno">—</span>
+        <button id="btnProximoMes">&#9654;</button>
+      </div>
+      <p id="relatorioResumo" class="relatorio-resumo" style="text-align:center;"></p>
+      <div class="relatorio-scroll">
+        <table id="tabelaRelatorio">
+          <thead>
+            <tr>
+              <th>Dia</th>
+              <th>Entrada</th>
+              <th>Saída</th>
+              <th>Entrada</th>
+              <th>Saída</th>
+              <th>Extras</th>
+              <th>Total</th>
+            </tr>
+          </thead>
+          <tbody id="tabelaRelatorioBody"></tbody>
+        </table>
+      </div>
+      <p id="totalExtrasResumo"></p>
+      <button id="btnFecharRelatorio" style="background:#888;margin-top:10px;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL BATIDAS DO DIA -->
+  <div class="modal-overlay" id="modalBatidasDia">
+    <div class="modal-box" style="text-align:left;max-width:440px;width:96vw;padding:0;display:flex;flex-direction:column;max-height:90vh;">
+      <!-- Cabeçalho fixo -->
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:14px 16px 10px;border-bottom:1px solid #e0e0e0;flex-shrink:0;">
+        <h2 id="batidasDiaTitulo" style="color:#2a6eb6;margin:0;font-size:1em;flex:1;text-align:center;">Batidas do Dia</h2>
+        <button id="btnFecharBatidasDia" style="width:32px;height:32px;padding:0;margin:0;margin-left:8px;background:#888;border-radius:50%;font-size:1.1em;line-height:32px;text-align:center;flex-shrink:0;">&#x2715;</button>
+      </div>
+      <!-- Conteúdo rolável -->
+      <div id="batidasDiaConteudo" style="overflow-y:auto;padding:14px 16px;"></div>
     </div>
   </div>
 
@@ -621,7 +817,8 @@
       <div class="bio-container">
         <video id="bioVideo" autoplay playsinline muted></video>
         <div class="bio-circulo" id="circuloPonto"></div>
-        <div class="bio-label" id="labelPonto">Posicione o rosto no círculo</div>
+        <div class="bio-guias" id="guiasPonto"><span></span></div>
+        <div class="bio-label" id="labelPonto">Posicione o rosto no oval</div>
       </div>
       <button id="btnCapturar" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
       <button id="btnCancelarBio">Cancelar</button>
@@ -636,7 +833,8 @@
       <div class="bio-container">
         <video id="bioCadastroVideo" autoplay playsinline muted></video>
         <div class="bio-circulo" id="circuloCadastro"></div>
-        <div class="bio-label" id="labelCadastro">Posicione o rosto no círculo</div>
+        <div class="bio-guias" id="guiasCadastro"><span></span></div>
+        <div class="bio-label" id="labelCadastro">Posicione o rosto no oval</div>
       </div>
       <div id="statusBioCadastro" style="margin-top:6px;"></div>
       <button id="btnCapturarCadastro" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
@@ -646,6 +844,33 @@
   <canvas id="bioCadastroCanvas" style="display:none"></canvas>
 
   <script>
+    // ============================
+    // UTILITARIOS
+    // ============================
+
+    // FIX #5 e #6: hash SHA-256 para senhas e codigo admin
+    async function hashSenha(texto) {
+      const encoded = new TextEncoder().encode(texto);
+      const hashBuffer = await crypto.subtle.digest("SHA-256", encoded);
+      return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+    }
+
+    // FIX #7: escape de HTML para evitar XSS
+    function escaparHTML(str) {
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#39;");
+    }
+
+    // FIX #6: hash do codigo de administrador gerado uma vez ao carregar
+    let _hashCodigoAdmin = "";
+    hashSenha("BJK@ADMIN2024").then(h => { _hashCodigoAdmin = h; });
+
     // ============================
     // RECONHECIMENTO FACIAL (@vladmandic/face-api)
     // ============================
@@ -696,6 +921,16 @@
       let frames = 0;
       const FRAMES_PARA_CAPTURAR = 10; // ~1 segundo
 
+      // Encontra o elemento de guias correspondente ao circulo
+      const guiasEl = circuloEl.id === "circuloPonto"
+        ? document.getElementById("guiasPonto")
+        : document.getElementById("guiasCadastro");
+
+      function setDetectado(sim) {
+        circuloEl.classList.toggle("detectado", sim);
+        if (guiasEl) guiasEl.classList.toggle("detectado", sim);
+      }
+
       async function loop() {
         if (!ativo || !videoEl.srcObject) return;
         try {
@@ -705,7 +940,7 @@
           );
           if (det) {
             frames++;
-            circuloEl.classList.add("detectado");
+            setDetectado(true);
             const seg = Math.ceil((FRAMES_PARA_CAPTURAR - frames) / 10);
             labelEl.textContent = frames >= FRAMES_PARA_CAPTURAR
               ? "Capturando..."
@@ -717,8 +952,8 @@
             }
           } else {
             frames = 0;
-            circuloEl.classList.remove("detectado");
-            labelEl.textContent = "Posicione o rosto no círculo";
+            setDetectado(false);
+            labelEl.textContent = "Posicione o rosto no oval";
           }
         } catch (_) {}
         if (ativo) setTimeout(loop, 100);
@@ -853,13 +1088,14 @@
       mudarTela("loginScreen");
     });
 
-    document.getElementById("loginAdminForm").addEventListener("submit", (e) => {
+    // FIX #5: compara hash da senha
+    document.getElementById("loginAdminForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const email = fd.get("emailAdmin");
-      const senha = fd.get("senhaAdmin");
+      const senhaHash = await hashSenha(fd.get("senhaAdmin"));
 
-      const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senha);
+      const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senhaHash);
       if (!admin) {
         alert("E-mail ou senha inválidos.");
         return;
@@ -905,7 +1141,9 @@
         return;
       }
 
-      dadosCadastroPendente = { nome, cpf, email, senha, cargo, telefone };
+      const nascimento = fd.get("nascimento");
+      const senhaHash = await hashSenha(senha);
+      dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, cargo, telefone, nascimento };
 
       const statusEl = document.getElementById("statusBioCadastro");
       const btnCadastrar = e.target.querySelector("button[type=submit]");
@@ -932,7 +1170,8 @@
       statusEl.textContent = "Posicione seu rosto e clique em Cadastrar rosto.";
 
       document.getElementById("circuloCadastro").classList.remove("detectado");
-      document.getElementById("labelCadastro").textContent = "Posicione o rosto no círculo";
+      document.getElementById("guiasCadastro").classList.remove("detectado");
+      document.getElementById("labelCadastro").textContent = "Posicione o rosto no oval";
 
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then((stream) => {
@@ -1018,13 +1257,14 @@
     // ============================
     // LOGIN
     // ============================
-    document.getElementById("loginForm").addEventListener("submit", (e) => {
+    // FIX #5: compara hash da senha
+    document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const email = fd.get("email");
-      const senha = fd.get("senha");
+      const senhaHash = await hashSenha(fd.get("senha"));
 
-      const user = usuarios.find((u) => u.email === email && u.senha === senha);
+      const user = usuarios.find((u) => u.email === email && u.senha === senhaHash);
 
       if (!user) {
         alert("E-mail ou senha inválidos.");
@@ -1042,10 +1282,11 @@
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
       document.getElementById("userNome").dataset.cargo = user.cargo || "";
-      // Limpa cartões de sessões anteriores
+      // Limpa cartões de sessões anteriores e restaura os de hoje
       document.getElementById("listaCartoes").innerHTML = "";
       document.getElementById("btnCompartilharTodos").style.display = "none";
       mudarTela("appScreen");
+      restaurarCartoesDeHoje(user.nome, user.cargo || "");
 
       // Habilita botões imediatamente
       document.getElementById("batidaEntrada").disabled = false;
@@ -1059,52 +1300,293 @@
     // ÁREA ADMINISTRATIVA
     // ============================
     let usuarioEditando = null;
+    let _relatorioUserId = null;
+    let _relatorioAno = 0;
+    let _relatorioMes = 0; // 0-11
 
     function renderAdminUsers() {
       const lista = document.getElementById("listaUsuariosAdmin");
-      const funcionarios = usuarios.filter(u => !u.admin);
-      if (funcionarios.length === 0) {
-        lista.innerHTML = '<p style="color:#888;font-size:0.9em;text-align:center;padding:12px 0;">Nenhum funcionário cadastrado.</p>';
+      if (usuarios.length === 0) {
+        lista.innerHTML = '<p style="color:#888;font-size:0.9em;text-align:center;padding:12px 0;">Nenhum cadastro encontrado.</p>';
         return;
       }
-      lista.innerHTML = funcionarios.map(u => `
-        <div class="admin-user-card">
-          <div class="user-name">${u.nome}</div>
-          <div class="user-info">CPF/Mat.: ${u.cpf} &nbsp;|&nbsp; Cargo: ${u.cargo || '—'}</div>
-          <div class="user-info">E-mail: ${u.email}</div>
-          <div class="user-info">Biometria: ${u.faceDescriptor ? '✔ Cadastrada' : '✘ Não cadastrada'}</div>
-          <div class="admin-user-actions">
-            <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
-            <button class="btn-excluir" onclick="excluirUsuario(${u.id})">Excluir</button>
-          </div>
-        </div>
-      `).join('');
+      lista.innerHTML = usuarios.map(u => {
+        const ehAdmin = !!u.admin;
+        const badge = ehAdmin
+          ? '<span style="background:#1565c0;color:#fff;font-size:0.75em;padding:2px 7px;border-radius:10px;margin-left:6px;">Admin</span>'
+          : '';
+        let idadeStr = "";
+        if (!ehAdmin && u.nascimento) {
+          const nasc = new Date(u.nascimento + "T00:00:00");
+          const hoje = new Date();
+          let idade = hoje.getFullYear() - nasc.getFullYear();
+          const aindaNaoFez = hoje.getMonth() < nasc.getMonth() ||
+            (hoje.getMonth() === nasc.getMonth() && hoje.getDate() < nasc.getDate());
+          if (aindaNaoFez) idade--;
+          idadeStr = ` &nbsp;|&nbsp; ${idade} anos`;
+        }
+        const infoExtra = ehAdmin
+          ? `<div class="user-info">E-mail: ${escaparHTML(u.email)}</div>`
+          : `<div class="user-info">CPF/Mat.: ${escaparHTML(u.cpf)} &nbsp;|&nbsp; Cargo: ${escaparHTML(u.cargo || '—')}${idadeStr}</div>
+             <div class="user-info">E-mail: ${escaparHTML(u.email)}</div>
+             <div class="user-info">Biometria: ${u.faceDescriptor ? '✔ Cadastrada' : '✘ Não cadastrada'}</div>`;
+        const podeDeletar = !(ehAdmin && u.id === usuarioLogado.id);
+        const btnExcluir = podeDeletar
+          ? `<button class="btn-excluir" onclick="excluirUsuario(${u.id})">Excluir</button>`
+          : `<button class="btn-excluir" disabled style="opacity:0.4;cursor:not-allowed;">Você</button>`;
+        return `
+          <div class="admin-user-card">
+            <div class="user-name">${escaparHTML(u.nome)}${badge}</div>
+            ${infoExtra}
+            <div class="admin-user-actions">
+              <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
+              ${!ehAdmin ? `<button class="btn-relatorio" onclick="abrirRelatorio(${u.id})">Relatório</button>` : ''}
+              ${btnExcluir}
+            </div>
+          </div>`;
+      }).join('');
     }
 
     function abrirEdicao(id) {
       const u = usuarios.find(u => u.id === id);
       if (!u) return;
       usuarioEditando = u;
+      const ehAdmin = !!u.admin;
+
+      document.getElementById("editModalTitulo").textContent = ehAdmin ? "Editar Administrador" : "Editar Funcionário";
       document.getElementById("editNome").value = u.nome;
-      document.getElementById("editCpf").value = u.cpf;
       document.getElementById("editEmail").value = u.email;
-      document.getElementById("editCargo").value = u.cargo || "";
-      document.getElementById("editTelefone").value = u.telefone || "";
       document.getElementById("editSenha").value = "";
       document.getElementById("editSenha").type = "password";
       document.querySelector("#modalEditarUsuario .btn-toggle-senha").textContent = "👁";
       document.getElementById("editStatus").textContent = "";
+
+      // Campos exclusivos de funcionário
+      const mostrar = v => v ? "block" : "none";
+      document.getElementById("editCpfGroup").style.display = mostrar(!ehAdmin);
+      document.getElementById("editCargoGroup").style.display = mostrar(!ehAdmin);
+      document.getElementById("editTelefoneGroup").style.display = mostrar(!ehAdmin);
+      document.getElementById("editNascimentoGroup").style.display = mostrar(!ehAdmin);
+      document.getElementById("editBiometriaGroup").style.display = mostrar(!ehAdmin);
+
+      if (!ehAdmin) {
+        document.getElementById("editCpf").value = u.cpf || "";
+        document.getElementById("editCargo").value = u.cargo || "";
+        document.getElementById("editTelefone").value = u.telefone || "";
+        document.getElementById("editNascimento").value = u.nascimento || "";
+      }
+
       document.getElementById("modalEditarUsuario").classList.add("ativo");
     }
 
     function excluirUsuario(id) {
       const u = usuarios.find(u => u.id === id);
       if (!u) return;
-      if (!confirm(`Excluir o funcionário "${u.nome}"?\nEsta ação não pode ser desfeita.`)) return;
+      if (u.admin && u.id === usuarioLogado.id) {
+        alert("Você não pode excluir a sua própria conta de administrador.");
+        return;
+      }
+      const tipo = u.admin ? "administrador" : "funcionário";
+      if (!confirm(`Excluir o ${tipo} "${u.nome}"?\nEsta ação não pode ser desfeita.`)) return;
       usuarios.splice(usuarios.indexOf(u), 1);
       salvarUsuarios();
       renderAdminUsers();
     }
+
+    const NOMES_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
+                         "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+
+    function formatarMin(min) {
+      const h = Math.floor(min / 60);
+      const m = Math.round(min % 60);
+      return `${h}h ${String(m).padStart(2,"0")}min`;
+    }
+
+    function abrirRelatorio(id) {
+      _relatorioUserId = id;
+      const agora = new Date();
+      _relatorioAno = agora.getFullYear();
+      _relatorioMes = agora.getMonth();
+      renderRelatorio();
+      document.getElementById("modalRelatorio").classList.add("ativo");
+    }
+
+    function renderRelatorio() {
+      const u = usuarios.find(u => u.id === _relatorioUserId);
+      if (!u) return;
+
+      const ano = _relatorioAno;
+      const mes = _relatorioMes; // 0-11
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate(); // correto p/ bissexto
+      const hoje = new Date();
+
+      document.getElementById("relatorioTitulo").textContent = `Relatório de Ponto — ${u.nome}`;
+      document.getElementById("relatorioMesAno").textContent = `${NOMES_MESES[mes]} ${ano}`;
+
+      // Batidas do funcionário neste mês
+      const batidasMes = batidas.filter(b => {
+        if (b.usuario !== u.nome) return false;
+        const dt = new Date(b.data_hora);
+        return dt.getFullYear() === ano && dt.getMonth() === mes;
+      });
+
+      let totalExtrasGeral = 0;
+      let totalRegistros = 0;
+      const tbody = document.getElementById("tabelaRelatorioBody");
+
+      tbody.innerHTML = Array.from({ length: diasNoMes }, (_, i) => {
+        const numDia = i + 1;
+
+        // Batidas deste dia ordenadas por horário
+        const bDia = batidasMes
+          .filter(b => new Date(b.data_hora).getDate() === numDia)
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+        totalRegistros += bDia.length;
+
+        // Extrai até 4 batidas (E1, S1, E2, S2)
+        const fmtHora = b => {
+          const dt = new Date(b.data_hora);
+          return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
+        };
+        const e1 = bDia[0] ? fmtHora(bDia[0]) : "";
+        const s1 = bDia[1] ? fmtHora(bDia[1]) : "";
+        const e2 = bDia[2] ? fmtHora(bDia[2]) : "";
+        const s2 = bDia[3] ? fmtHora(bDia[3]) : "";
+
+        // Calcula total trabalhado emparelhando entrada→saída
+        let totalMin = 0;
+        for (let j = 0; j + 1 < bDia.length; j += 2) {
+          if (bDia[j].tipo === "entrada" && bDia[j+1].tipo === "saida") {
+            const diff = (new Date(bDia[j+1].data_hora) - new Date(bDia[j].data_hora)) / 60000;
+            if (diff > 0) totalMin += diff;
+          }
+        }
+
+        const JORNADA = 480; // 8h em minutos
+        const extrasMin = Math.max(0, totalMin - JORNADA);
+        totalExtrasGeral += extrasMin;
+
+        const celExtras = extrasMin > 0
+          ? `<td class="cel-extras">${formatarMin(extrasMin)}</td>`
+          : `<td style="color:#bbb;">—</td>`;
+        const celTotal = totalMin > 0
+          ? `<td class="cel-total">${formatarMin(totalMin)}</td>`
+          : `<td style="color:#bbb;">—</td>`;
+
+        const ehHoje = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === numDia;
+        const temDados = bDia.length > 0;
+        const classTr = [
+          ehHoje ? "dia-hoje" : (temDados ? "dia-com-dados" : ""),
+          temDados ? "dia-clicavel" : ""
+        ].join(" ").trim();
+        const onclickAttr = temDados ? `onclick="abrirBatidasDia(${numDia})"` : "";
+
+        const diaFmt = String(numDia).padStart(2,"0");
+        return `<tr class="${classTr}" ${onclickAttr}>
+          <td>${diaFmt}</td>
+          <td>${e1}</td>
+          <td>${s1}</td>
+          <td>${e2}</td>
+          <td>${s2}</td>
+          ${celExtras}
+          ${celTotal}
+        </tr>`;
+      }).join("");
+
+      // Resumo do mês
+      document.getElementById("relatorioResumo").textContent =
+        `${totalRegistros} registro${totalRegistros !== 1 ? "s" : ""} no mês`;
+
+      document.getElementById("totalExtrasResumo").textContent =
+        totalExtrasGeral > 0
+          ? `Total de horas extras em ${NOMES_MESES[mes]}: ${formatarMin(totalExtrasGeral)}`
+          : `Nenhuma hora extra em ${NOMES_MESES[mes]}.`;
+    }
+
+    function abrirBatidasDia(numDia) {
+      const u = usuarios.find(u => u.id === _relatorioUserId);
+      if (!u) return;
+
+      const ano = _relatorioAno;
+      const mes = _relatorioMes;
+      const diaFmt = String(numDia).padStart(2,"0");
+      const mesFmt = String(mes + 1).padStart(2,"0");
+
+      document.getElementById("batidasDiaTitulo").textContent =
+        `${diaFmt}/${mesFmt}/${ano} — ${u.nome}`;
+
+      const bDia = batidas
+        .filter(b => {
+          if (b.usuario !== u.nome) return false;
+          const dt = new Date(b.data_hora);
+          return dt.getFullYear() === ano && dt.getMonth() === mes && dt.getDate() === numDia;
+        })
+        .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+      const SVG_SILHUETA = `
+        <div style="width:70px;height:70px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;
+             display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+          <svg width="36" height="36" viewBox="0 0 24 24" fill="#2a6eb6">
+            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
+          </svg>
+        </div>`;
+
+      const conteudo = document.getElementById("batidasDiaConteudo");
+
+      if (bDia.length === 0) {
+        conteudo.innerHTML = `<p class="batida-dia-vazio">Nenhuma batida registrada neste dia.</p>`;
+      } else {
+        conteudo.innerHTML = bDia.map(b => {
+          const dt = new Date(b.data_hora);
+          const hh = String(dt.getHours()).padStart(2,"0");
+          const mm = String(dt.getMinutes()).padStart(2,"0");
+          const ss = String(dt.getSeconds()).padStart(2,"0");
+          const tipoTexto = b.tipo === "entrada" ? "Entrada" : "Saída";
+          const corHeader = b.tipo === "entrada" ? "#2a6eb6" : "#c62828";
+          const coord = escaparHTML(b.coordenadas || "");
+          return `
+            <div class="batida-dia-card">
+              <div class="cartao-header" style="background:${corHeader};">
+                Cartão Ponto BJK — ${tipoTexto}
+              </div>
+              <div class="cartao-body">
+                ${SVG_SILHUETA}
+                <div class="cartao-info">
+                  <strong>${escaparHTML(u.nome)}</strong>
+                  <span style="color:#555;font-size:0.85em">${escaparHTML(u.cargo || "")}</span><br/>
+                  <span>${tipoTexto}</span><br/>
+                  <span>${diaFmt}/${mesFmt}/${ano}</span><br/>
+                  <span>${hh}:${mm}:${ss}</span>
+                  ${coord ? `<br/><span style="font-size:0.8em;color:#777;">${coord}</span>` : ""}
+                </div>
+              </div>
+            </div>`;
+        }).join("");
+      }
+
+      document.getElementById("modalBatidasDia").classList.add("ativo");
+    }
+
+    document.getElementById("btnFecharBatidasDia").addEventListener("click", () => {
+      document.getElementById("modalBatidasDia").classList.remove("ativo");
+    });
+
+    document.getElementById("btnMesAnterior").addEventListener("click", () => {
+      if (_relatorioMes === 0) { _relatorioMes = 11; _relatorioAno--; }
+      else { _relatorioMes--; }
+      renderRelatorio();
+    });
+
+    document.getElementById("btnProximoMes").addEventListener("click", () => {
+      if (_relatorioMes === 11) { _relatorioMes = 0; _relatorioAno++; }
+      else { _relatorioMes++; }
+      renderRelatorio();
+    });
+
+    document.getElementById("btnFecharRelatorio").addEventListener("click", () => {
+      document.getElementById("modalRelatorio").classList.remove("ativo");
+    });
 
     document.getElementById("btnResetarBiometria").addEventListener("click", () => {
       if (!usuarioEditando) return;
@@ -1115,7 +1597,7 @@
       s.style.color = "orange";
     });
 
-    document.getElementById("btnSalvarEdicao").addEventListener("click", () => {
+    document.getElementById("btnSalvarEdicao").addEventListener("click", async () => {
       if (!usuarioEditando) return;
       const statusEl = document.getElementById("editStatus");
       const novoNome = document.getElementById("editNome").value.trim();
@@ -1123,14 +1605,18 @@
       const novoEmail = document.getElementById("editEmail").value.trim();
       const novoCargo = document.getElementById("editCargo").value.trim();
       const novoTelefone = document.getElementById("editTelefone").value.trim();
+      const novoNascimento = document.getElementById("editNascimento").value;
       const novaSenha = document.getElementById("editSenha").value;
 
-      if (!novoNome || !novoCpf || !novoEmail) {
-        statusEl.textContent = "Nome, CPF e e-mail são obrigatórios.";
+      const ehAdmin = !!usuarioEditando.admin;
+      if (!novoNome || !novoEmail || (!ehAdmin && !novoCpf)) {
+        statusEl.textContent = ehAdmin ? "Nome e e-mail são obrigatórios." : "Nome, CPF e e-mail são obrigatórios.";
         statusEl.style.color = "red";
         return;
       }
-      const conflito = usuarios.some(u => u.id !== usuarioEditando.id && (u.cpf === novoCpf || u.email === novoEmail));
+      const conflito = usuarios.some(u => u.id !== usuarioEditando.id && (
+        u.email === novoEmail || (!ehAdmin && u.cpf === novoCpf)
+      ));
       if (conflito) {
         statusEl.textContent = "CPF ou e-mail já usado por outro funcionário.";
         statusEl.style.color = "red";
@@ -1138,11 +1624,14 @@
       }
 
       usuarioEditando.nome = novoNome;
-      usuarioEditando.cpf = novoCpf;
       usuarioEditando.email = novoEmail;
-      usuarioEditando.cargo = novoCargo;
-      usuarioEditando.telefone = novoTelefone;
-      if (novaSenha) usuarioEditando.senha = novaSenha;
+      if (!ehAdmin) {
+        usuarioEditando.cpf = novoCpf;
+        usuarioEditando.cargo = novoCargo;
+        usuarioEditando.telefone = novoTelefone;
+        usuarioEditando.nascimento = novoNascimento;
+      }
+      if (novaSenha) usuarioEditando.senha = await hashSenha(novaSenha);
 
       salvarUsuarios();
       statusEl.textContent = "Alterações salvas com sucesso!";
@@ -1202,7 +1691,8 @@
     // Ao voltar da tela de cadastro de admin, se vier da config volta pra config
     // (simplificado: sempre volta pra adminScreen ou loginScreen dependendo se há admin logado)
 
-    document.getElementById("cadastroAdminForm").addEventListener("submit", (e) => {
+    // FIX #5 e #6: senha e codigo admin hasheados
+    document.getElementById("cadastroAdminForm").addEventListener("submit", async (e) => {
       e.preventDefault();
       const fd = new FormData(e.target);
       const nome = fd.get("nomeAdmin").trim();
@@ -1211,7 +1701,8 @@
       const codigo = fd.get("codigoAdmin");
       const statusEl = document.getElementById("statusCadastroAdmin");
 
-      if (codigo !== "BJK@ADMIN2024") {
+      const codigoHash = await hashSenha(codigo);
+      if (codigoHash !== _hashCodigoAdmin) {
         statusEl.textContent = "Código de acesso inválido.";
         statusEl.style.color = "red";
         return;
@@ -1224,7 +1715,8 @@
         return;
       }
 
-      usuarios.push({ id: Date.now(), nome, email, senha, admin: true });
+      const senhaHash = await hashSenha(senha);
+      usuarios.push({ id: Date.now(), nome, email, senha: senhaHash, admin: true });
       salvarUsuarios();
       statusEl.textContent = "Administrador cadastrado com sucesso!";
       statusEl.style.color = "green";
@@ -1302,12 +1794,13 @@
     const canvas = document.getElementById("assinaturaCanvas");
     const ctx = canvas.getContext("2d");
     let desenhando = false;
+    // FIX #1: limpa apenas no primeiro traco, nao em cada mousedown
+    let primeiroTraco = true;
 
     ctx.lineWidth = 2;
     ctx.lineCap = "round";
     ctx.strokeStyle = "#000";
 
-    // Texto de placeholder no canvas
     ctx.font = "16px Arial";
     ctx.fillStyle = "#aaa";
     ctx.textAlign = "center";
@@ -1319,10 +1812,15 @@
       ctx.fillStyle = "#aaa";
       ctx.textAlign = "center";
       ctx.fillText("Assine Aqui", canvas.width / 2, canvas.height / 2);
+      primeiroTraco = true; // FIX #1: reseta flag ao limpar
     }
 
+    // FIX #1: apaga placeholder apenas no primeiro traco
     function iniciarDesenho(e) {
-      if (!desenhando) ctx.clearRect(0, 0, canvas.width, canvas.height);
+      if (primeiroTraco) {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        primeiroTraco = false;
+      }
       desenhando = true;
       const rect = canvas.getBoundingClientRect();
       const x = e.clientX - rect.left;
@@ -1349,23 +1847,17 @@
     canvas.addEventListener("mouseup", pararDesenho);
     canvas.addEventListener("mouseout", pararDesenho);
 
-    // Toques em mobile
+    // FIX #2: passa coordenadas originais do touch (sem subtrair rect aqui)
     canvas.addEventListener("touchstart", (e) => {
       e.preventDefault();
       const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      iniciarDesenho({ clientX: x, clientY: y });
+      iniciarDesenho({ clientX: touch.clientX, clientY: touch.clientY });
     });
 
     canvas.addEventListener("touchmove", (e) => {
       e.preventDefault();
       const touch = e.touches[0];
-      const rect = canvas.getBoundingClientRect();
-      const x = touch.clientX - rect.left;
-      const y = touch.clientY - rect.top;
-      desenhar({ clientX: x, clientY: y });
+      desenhar({ clientX: touch.clientX, clientY: touch.clientY });
     });
 
     canvas.addEventListener("touchend", pararDesenho);
@@ -1374,11 +1866,15 @@
       desenharPlaceholder();
     });
 
+    // FIX #4: captura assinatura antes de abrir biometria
+    let assinaturaAtual = null;
+
     document.getElementById("salvarAssinatura").addEventListener("click", () => {
       if (!tipoBatidaPendente) {
         alert("Clique primeiro em 'Bater ponto de entrada' ou 'Bater ponto de saída'.");
         return;
       }
+      assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
       abrirBiometria(tipoBatidaPendente);
     });
 
@@ -1389,12 +1885,15 @@
     let tipoBatidaPendente = null;
 
     let _stopAutoPonto = null;
+    // FIX #4: mapa de assinaturas por cartao para "compartilhar todos"
+    const assinaturasPorCartao = new Map();
 
     function abrirBiometria(tipo) {
       tipoBatidaPendente = tipo;
       document.getElementById("modalBiometria").classList.add("ativo");
       document.getElementById("circuloPonto").classList.remove("detectado");
-      document.getElementById("labelPonto").textContent = "Posicione o rosto no círculo";
+      document.getElementById("guiasPonto").classList.remove("detectado");
+      document.getElementById("labelPonto").textContent = "Posicione o rosto no oval";
 
       navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
         .then((stream) => {
@@ -1516,23 +2015,30 @@
         document.getElementById("btnCompartilharTodos").style.display = "block";
       }
 
-      // Listener do botão de compartilhar deste cartão
+      // FIX #4: guarda assinatura associada a este cartao
+      assinaturasPorCartao.set(cardId, assinaturaAtual);
+
+      // FIX #3 e #4: await no canvas (foto carregada async) + passa assinatura
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-        const c = gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr);
+        const c = await gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaAtual);
         await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
       });
 
+      // FIX #8: nao armazena foto base64 no localStorage (evita estouro de quota)
       batidas.push({
         tipo: tipoBatidaPendente,
         usuario: nome,
         data_hora: agora.toISOString(),
         coordenadas: document.getElementById("coordenadas").textContent,
-        foto,
       });
       salvarBatidas();
 
+      // FIX #4: reseta assinatura e canvas para proxima batida
+      assinaturaAtual = null;
+      desenharPlaceholder();
+
       btn.disabled = false;
-      btn.textContent = "Tirar foto";
+      btn.textContent = "Capturar manualmente";
       fecharBiometria();
     });
 
@@ -1550,25 +2056,95 @@
       alert("Tipo selecionado: Saída. Agora clique em 'Assinar ponto' para registrar com biometria.");
     });
 
-    // Gera canvas de um cartão
-    function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr) {
+    // Reconstrói os cartões de hoje do usuário a partir do localStorage ao fazer login
+    function restaurarCartoesDeHoje(nomeUsuario, cargo) {
+      const agora = new Date();
+      const diaHoje = String(agora.getDate()).padStart(2, "0");
+      const mesHoje = String(agora.getMonth() + 1).padStart(2, "0");
+      const anoHoje = agora.getFullYear();
+      const dataHojeStr = `${diaHoje}/${mesHoje}/${anoHoje}`;
+
+      // Limite do dia: 23:59:59 do dia atual — filtra só batidas de hoje
+      const inicioDia = new Date(anoHoje, agora.getMonth(), agora.getDate(), 0, 0, 0).getTime();
+      const fimDia    = new Date(anoHoje, agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
+
+      const batidasDeHoje = batidas.filter(b => {
+        if (b.usuario !== nomeUsuario) return false;
+        const ts = new Date(b.data_hora).getTime();
+        return ts >= inicioDia && ts <= fimDia;
+      });
+
+      if (batidasDeHoje.length === 0) return;
+
+      const lista = document.getElementById("listaCartoes");
+
+      batidasDeHoje.forEach(b => {
+        const dt = new Date(b.data_hora);
+        const hh = String(dt.getHours()).padStart(2, "0");
+        const mm = String(dt.getMinutes()).padStart(2, "0");
+        const ss = String(dt.getSeconds()).padStart(2, "0");
+        const horaStr = `${hh}:${mm}:${ss}`;
+        const tipoTexto = b.tipo === "entrada" ? "Entrada" : "Saída";
+        const cardId = "cartao_restaurado_" + dt.getTime();
+
+        const novoCartao = document.createElement("div");
+        novoCartao.className = "cartao-registro ativo";
+        novoCartao.id = cardId;
+        // Foto não é salva no localStorage (Fix #8), usa ícone placeholder
+        novoCartao.innerHTML = `
+          <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
+          <div class="cartao-body">
+            <div style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+              <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+            </div>
+            <div class="cartao-info">
+              <strong style="display:block;font-size:1em;color:#2a6eb6;">${escaparHTML(nomeUsuario)}</strong>
+              <span style="color:#555;font-size:0.85em">${escaparHTML(cargo)}</span><br/>
+              <span>${tipoTexto}</span><br/>
+              <span>${dataHojeStr}</span><br/>
+              <span>${horaStr}</span>
+            </div>
+          </div>
+          <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
+        `;
+        lista.appendChild(novoCartao);
+
+        novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
+          const c = await gerarCanvasCartao("", nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null);
+          await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
+        });
+      });
+
+      if (lista.children.length > 1) {
+        document.getElementById("btnCompartilharTodos").style.display = "block";
+      }
+    }
+
+    // FIX #3 e #4: async, aguarda img.onload, inclui assinatura opcional
+    async function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinatura) {
+      const temAssinatura = !!assinatura;
       const c = document.createElement("canvas");
       c.width = 400;
-      c.height = 160;
+      c.height = temAssinatura ? 230 : 160;
       const cx = c.getContext("2d");
 
       cx.fillStyle = "#2a6eb6";
       cx.fillRect(0, 0, 400, 40);
       cx.fillStyle = "white";
       cx.font = "bold 14px Arial";
+      cx.textAlign = "left";
       cx.fillText("Cartao Ponto BJK - " + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
-      cx.fillRect(0, 40, 400, 120);
+      cx.fillRect(0, 40, 400, temAssinatura ? 190 : 120);
 
-      const img = new Image();
-      img.src = foto;
-      cx.drawImage(img, 10, 50, 80, 80);
+      // FIX #3: aguarda carregamento da foto antes de desenhar
+      await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => { cx.drawImage(img, 10, 50, 80, 80); resolve(); };
+        img.onerror = resolve;
+        img.src = foto;
+      });
 
       cx.fillStyle = "#2a6eb6";
       cx.font = "bold 15px Arial";
@@ -1581,6 +2157,25 @@
       cx.fillText(tipoTexto, 105, 102);
       cx.fillText(dataStr, 105, 118);
       cx.fillText(horaStr, 105, 134);
+
+      // FIX #4: desenha assinatura se existir
+      if (temAssinatura) {
+        cx.strokeStyle = "#ddd";
+        cx.lineWidth = 1;
+        cx.beginPath();
+        cx.moveTo(10, 164);
+        cx.lineTo(390, 164);
+        cx.stroke();
+        cx.fillStyle = "#888";
+        cx.font = "11px Arial";
+        cx.fillText("Assinatura:", 10, 178);
+        await new Promise((resolve) => {
+          const sig = new Image();
+          sig.onload = () => { cx.drawImage(sig, 10, 182, 380, 38); resolve(); };
+          sig.onerror = resolve;
+          sig.src = assinatura;
+        });
+      }
 
       return c;
     }
@@ -1612,19 +2207,12 @@
       a.click();
     }
 
-    // Compartilhar todos os cartões juntos
+    // FIX #3 e #4: await em cada canvas, altura dinamica, inclui assinatura
     document.getElementById("btnCompartilharTodos").addEventListener("click", async () => {
       const cards = document.querySelectorAll("#listaCartoes .cartao-registro");
       if (cards.length === 0) return;
 
-      const cardHeight = 160;
       const gap = 10;
-      const combined = document.createElement("canvas");
-      combined.width = 400;
-      combined.height = cardHeight * cards.length + gap * (cards.length - 1);
-      const cx = combined.getContext("2d");
-
-      // Coletar dados de cada cartão para redesenhar
       const dadosCartoes = [];
       cards.forEach(card => {
         const img = card.querySelector("img");
@@ -1636,13 +2224,24 @@
           tipo: spans[1] ? spans[1].textContent : "",
           data: spans[2] ? spans[2].textContent : "",
           hora: spans[3] ? spans[3].textContent : "",
+          assinatura: assinaturasPorCartao.get(card.id) || null,
         });
       });
 
-      dadosCartoes.forEach((d, i) => {
-        const offY = i * (cardHeight + gap);
-        const c = gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora);
+      const canvases = await Promise.all(dadosCartoes.map(d =>
+        gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora, d.assinatura)
+      ));
+
+      const totalHeight = canvases.reduce((sum, c, i) => sum + c.height + (i > 0 ? gap : 0), 0);
+      const combined = document.createElement("canvas");
+      combined.width = 400;
+      combined.height = totalHeight;
+      const cx = combined.getContext("2d");
+
+      let offY = 0;
+      canvases.forEach((c) => {
         cx.drawImage(c, 0, offY);
+        offY += c.height + gap;
       });
 
       await compartilharOuBaixar(combined, "comprovantes-ponto.png");
