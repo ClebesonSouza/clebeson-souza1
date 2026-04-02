@@ -482,6 +482,20 @@
     }
     .batida-dia-card:last-child { margin-bottom: 0; }
     .batida-dia-vazio { text-align:center; color:#888; padding:16px 0; font-size:0.9em; }
+    /* ===== FORÇA DE SENHA ===== */
+    .forca-senha {
+      height: 4px;
+      border-radius: 2px;
+      margin: 4px 0 2px;
+      background: #ddd;
+      transition: background 0.3s, width 0.3s;
+    }
+    .forca-senha.fraca  { background: #e53935; }
+    .forca-senha.media  { background: #fb8c00; }
+    .forca-senha.forte  { background: #43a047; }
+    .forca-label { font-size: 0.78em; color: #888; margin-bottom: 4px; display: block; }
+    /* ===== MENSAGEM DE SUCESSO ===== */
+    .sucesso { color: #2e7d32; margin: 5px 0; font-size: 0.9em; }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
@@ -507,6 +521,7 @@
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
           </div>
 
+          <p id="erroLogin" class="error" style="min-height:1.2em;"></p>
           <button type="submit">Entrar</button>
         </form>
 
@@ -539,6 +554,7 @@
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
           </div>
 
+          <p id="erroLoginAdmin" class="error" style="min-height:1.2em;"></p>
           <button type="submit">Entrar como administrador</button>
         </form>
         <div class="switch">
@@ -563,16 +579,18 @@
           <input type="text" name="nome" required />
 
           <label>CPF ou matrícula</label>
-          <input type="text" name="cpf" required />
+          <input type="text" name="cpf" id="campoCPF" placeholder="000.000.000-00 ou matrícula" required />
 
           <label>E-mail</label>
           <input type="email" name="email" required />
 
-          <label>Senha</label>
+          <label>Senha <span style="font-weight:normal;color:#888;font-size:0.82em">(mín. 8 caracteres e 1 número)</span></label>
           <div class="senha-wrapper">
-            <input type="password" name="senha" required />
+            <input type="password" name="senha" id="cadastroSenha" required />
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar senha">👁</button>
           </div>
+          <div class="forca-senha" id="forcaSenha"></div>
+          <span class="forca-label" id="forcaSenhaLabel"></span>
 
           <label>Confirmar senha</label>
           <div class="senha-wrapper">
@@ -589,6 +607,7 @@
           <label>Telefone</label>
           <input type="tel" name="telefone" />
 
+          <p id="erroCadastro" class="error" style="min-height:1.2em;"></p>
           <button type="submit">Cadastrar</button>
         </form>
 
@@ -632,6 +651,7 @@
         <!-- CARTÕES DE REGISTRO APÓS BIOMETRIA -->
         <div id="listaCartoes"></div>
         <button id="btnCompartilharTodos">Compartilhar todos os comprovantes</button>
+        <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
   </div>
@@ -793,7 +813,8 @@
         </table>
       </div>
       <p id="totalExtrasResumo"></p>
-      <button id="btnFecharRelatorio" style="background:#888;margin-top:10px;">Fechar</button>
+      <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
+      <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
     </div>
   </div>
 
@@ -838,6 +859,7 @@
       </div>
       <div id="statusBioCadastro" style="margin-top:6px;"></div>
       <button id="btnCapturarCadastro" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
+      <button id="btnPularBiometria" style="background:#888;margin-top:4px;font-size:0.85em;">Pular (cadastrar sem biometria)</button>
       <button id="btnCancelarBioCadastro">Cancelar</button>
     </div>
   </div>
@@ -867,9 +889,146 @@
         .replace(/'/g, "&#39;");
     }
 
+    // ============================
+    // VALIDAÇÕES E UTILITÁRIOS DE FORMULÁRIO
+    // ============================
+
+    // Máscara de CPF (aplica apenas quando parece CPF — 11 dígitos)
+    function aplicarMascaraCPF(input) {
+      let v = input.value.replace(/\D/g, "").slice(0, 11);
+      if (v.length === 11) {
+        v = v.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, "$1.$2.$3-$4");
+      } else if (v.length > 6) {
+        v = v.replace(/(\d{3})(\d{3})(\d{1,3})/, "$1.$2.$3");
+      } else if (v.length > 3) {
+        v = v.replace(/(\d{3})(\d{1,3})/, "$1.$2");
+      }
+      input.value = v;
+    }
+
+    function validarCPF(cpf) {
+      cpf = cpf.replace(/\D/g, "");
+      if (cpf.length !== 11 || /^(\d)\1+$/.test(cpf)) return false;
+      let soma = 0;
+      for (let i = 0; i < 9; i++) soma += parseInt(cpf[i]) * (10 - i);
+      let r = (soma * 10) % 11;
+      if (r === 10 || r === 11) r = 0;
+      if (r !== parseInt(cpf[9])) return false;
+      soma = 0;
+      for (let i = 0; i < 10; i++) soma += parseInt(cpf[i]) * (11 - i);
+      r = (soma * 10) % 11;
+      if (r === 10 || r === 11) r = 0;
+      return r === parseInt(cpf[10]);
+    }
+
+    function verificarForcaSenha(senha) {
+      let forca = 0;
+      if (senha.length >= 8) forca++;
+      if (/[A-Z]/.test(senha)) forca++;
+      if (/[0-9]/.test(senha)) forca++;
+      if (/[^A-Za-z0-9]/.test(senha)) forca++;
+      return forca; // 0-4
+    }
+
+    function atualizarIndicadorForca(senha) {
+      const barra = document.getElementById("forcaSenha");
+      const label = document.getElementById("forcaSenhaLabel");
+      if (!barra || !label) return;
+      if (!senha) { barra.className = "forca-senha"; label.textContent = ""; return; }
+      const f = verificarForcaSenha(senha);
+      if (f <= 1) { barra.className = "forca-senha fraca"; label.textContent = "Senha fraca"; }
+      else if (f <= 2) { barra.className = "forca-senha media"; label.textContent = "Senha razoável"; }
+      else { barra.className = "forca-senha forte"; label.textContent = "Senha forte"; }
+    }
+
+    // Bloqueio de tentativas de login
+    function verificarBloqueio(email) {
+      const dados = JSON.parse(localStorage.getItem("bjk_tent_" + btoa(email)) || "{}");
+      if (!dados.bloqueioAte) return null;
+      const restante = dados.bloqueioAte - Date.now();
+      return restante > 0 ? Math.ceil(restante / 60000) : null;
+    }
+
+    function registrarTentativaFalha(email) {
+      const chave = "bjk_tent_" + btoa(email);
+      const dados = JSON.parse(localStorage.getItem(chave) || "{}");
+      dados.tentativas = (dados.tentativas || 0) + 1;
+      if (dados.tentativas >= 5) {
+        dados.bloqueioAte = Date.now() + 5 * 60 * 1000;
+        dados.tentativas = 0;
+      }
+      localStorage.setItem(chave, JSON.stringify(dados));
+    }
+
+    function limparBloqueio(email) {
+      localStorage.removeItem("bjk_tent_" + btoa(email));
+    }
+
+    // Lembra último e-mail usado
+    function salvarUltimoEmail(email) {
+      localStorage.setItem("bjk_ultimo_email", email);
+    }
+
+    function carregarUltimoEmail() {
+      return localStorage.getItem("bjk_ultimo_email") || "";
+    }
+
     // FIX #6: hash do codigo de administrador gerado uma vez ao carregar
     let _hashCodigoAdmin = "";
     hashSenha("BJK@ADMIN2024").then(h => { _hashCodigoAdmin = h; });
+
+    // ============================
+    // INDEXEDDB — FOTOS DE PONTO
+    // ============================
+    const IDB_NAME = "bjk_ponto";
+    const IDB_STORE = "fotos";
+    let _idb = null;
+
+    function abrirIDB() {
+      if (_idb) return Promise.resolve(_idb);
+      return new Promise((resolve, reject) => {
+        const req = indexedDB.open(IDB_NAME, 1);
+        req.onupgradeneeded = e => {
+          e.target.result.createObjectStore(IDB_STORE);
+        };
+        req.onsuccess = e => { _idb = e.target.result; resolve(_idb); };
+        req.onerror = () => reject(req.error);
+      });
+    }
+
+    async function salvarFotoIDB(chave, blob) {
+      const db = await abrirIDB();
+      return new Promise((resolve, reject) => {
+        const tx = db.transaction(IDB_STORE, "readwrite");
+        tx.objectStore(IDB_STORE).put(blob, chave);
+        tx.oncomplete = resolve;
+        tx.onerror = () => reject(tx.error);
+      });
+    }
+
+    async function buscarFotoIDB(chave) {
+      const db = await abrirIDB();
+      return new Promise((resolve) => {
+        const tx = db.transaction(IDB_STORE, "readonly");
+        const req = tx.objectStore(IDB_STORE).get(chave);
+        req.onsuccess = () => resolve(req.result || null);
+        req.onerror = () => resolve(null);
+      });
+    }
+
+    // Remove fotos com mais de 30 dias ao abrir a página
+    abrirIDB().then(db => {
+      const limite = new Date();
+      limite.setDate(limite.getDate() - 30);
+      const tx = db.transaction(IDB_STORE, "readwrite");
+      const store = tx.objectStore(IDB_STORE);
+      const req = store.getAllKeys();
+      req.onsuccess = () => {
+        req.result.forEach(chave => {
+          if (new Date(chave) < limite) store.delete(chave);
+        });
+      };
+    }).catch(() => {});
 
     // ============================
     // RECONHECIMENTO FACIAL (@vladmandic/face-api)
@@ -1076,6 +1235,21 @@
       mudarTela("cadastroScreen");
     });
 
+    // Máscara de CPF e indicador de força de senha no cadastro
+    document.getElementById("campoCPF").addEventListener("input", function() {
+      aplicarMascaraCPF(this);
+    });
+    document.getElementById("cadastroSenha").addEventListener("input", function() {
+      atualizarIndicadorForca(this.value);
+    });
+
+    // Pré-preenche e-mail do último login
+    const ultimoEmail = carregarUltimoEmail();
+    if (ultimoEmail) {
+      const inputEmail = document.querySelector("#loginForm input[name=email]");
+      if (inputEmail) inputEmail.value = ultimoEmail;
+    }
+
     document.getElementById("gotoLoginAdmin").addEventListener("click", () => {
       mudarTela("loginAdminScreen");
     });
@@ -1091,16 +1265,26 @@
     // FIX #5: compara hash da senha
     document.getElementById("loginAdminForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const erroEl = document.getElementById("erroLoginAdmin");
+      erroEl.textContent = "";
       const fd = new FormData(e.target);
       const email = fd.get("emailAdmin");
-      const senhaHash = await hashSenha(fd.get("senhaAdmin"));
 
-      const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senhaHash);
-      if (!admin) {
-        alert("E-mail ou senha inválidos.");
+      const minutos = verificarBloqueio(email);
+      if (minutos) {
+        erroEl.textContent = `Muitas tentativas. Aguarde ${minutos} min.`;
         return;
       }
 
+      const senhaHash = await hashSenha(fd.get("senhaAdmin"));
+      const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senhaHash);
+      if (!admin) {
+        registrarTentativaFalha(email);
+        erroEl.textContent = "E-mail ou senha inválidos.";
+        return;
+      }
+
+      limparBloqueio(email);
       usuarioLogado = admin;
       renderAdminUsers();
       mudarTela("adminScreen");
@@ -1119,29 +1303,45 @@
 
     document.getElementById("cadastroForm").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const fd = new FormData(e.target);
+      const erroEl = document.getElementById("erroCadastro");
+      erroEl.textContent = "";
+      erroEl.className = "error";
 
-      const nome = fd.get("nome");
-      const cpf = fd.get("cpf");
-      const email = fd.get("email");
+      const fd = new FormData(e.target);
+      const nome = fd.get("nome").trim();
+      const cpf = fd.get("cpf").trim();
+      const email = fd.get("email").trim();
       const senha = fd.get("senha");
       const confirmarSenha = fd.get("confirmarSenha");
       const cargo = fd.get("cargo");
       const telefone = fd.get("telefone");
+      const nascimento = fd.get("nascimento");
+
+      // Validação de senha
+      if (senha.length < 8 || !/[0-9]/.test(senha)) {
+        erroEl.textContent = "A senha deve ter pelo menos 8 caracteres e 1 número.";
+        return;
+      }
 
       if (senha !== confirmarSenha) {
-        alert("As senhas não coincidem.");
+        erroEl.textContent = "As senhas não coincidem.";
+        return;
+      }
+
+      // Validação de CPF (só valida se parecer CPF — 11 dígitos)
+      const cpfNumeros = cpf.replace(/\D/g, "");
+      if (cpfNumeros.length === 11 && !validarCPF(cpf)) {
+        erroEl.textContent = "CPF inválido. Verifique os dígitos.";
         return;
       }
 
       // Verifica duplicidade por e-mail ou CPF entre funcionários
       const existe = usuarios.some((u) => !u.admin && (u.email === email || u.cpf === cpf));
       if (existe) {
-        alert("Já existe um cadastro com esse e-mail ou CPF.");
+        erroEl.textContent = "Já existe um cadastro com esse e-mail ou CPF.";
         return;
       }
 
-      const nascimento = fd.get("nascimento");
       const senhaHash = await hashSenha(senha);
       dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, cargo, telefone, nascimento };
 
@@ -1157,17 +1357,13 @@
       } catch (err) {
         if (btnCadastrar) btnCadastrar.disabled = false;
         dadosCadastroPendente = null;
-        alert(
-          "Não foi possível carregar o reconhecimento facial.\n\n" +
-          "Verifique sua conexão com a internet e tente novamente.\n" +
-          "Os modelos precisam ser baixados uma única vez (~5MB)."
-        );
+        erroEl.textContent = "Não foi possível carregar o reconhecimento facial. Verifique sua conexão e tente novamente, ou clique em 'Pular' após abrir a câmera.";
         return;
       }
 
       if (btnCadastrar) btnCadastrar.disabled = false;
       document.getElementById("modalBiometriaCadastro").classList.add("ativo");
-      statusEl.textContent = "Posicione seu rosto e clique em Cadastrar rosto.";
+      statusEl.textContent = "Posicione seu rosto ou clique em Pular para cadastrar sem biometria.";
 
       document.getElementById("circuloCadastro").classList.remove("detectado");
       document.getElementById("guiasCadastro").classList.remove("detectado");
@@ -1188,8 +1384,10 @@
           };
         })
         .catch(() => {
-          alert("Não foi possível acessar a câmera.");
-          fecharBiometriaCadastro();
+          // Câmera indisponível — usuário ainda pode pular a biometria
+          const s = document.getElementById("statusBioCadastro");
+          s.textContent = "Câmera indisponível. Clique em 'Pular' para cadastrar sem biometria.";
+          s.style.color = "orange";
         });
     });
 
@@ -1207,6 +1405,20 @@
     }
 
     document.getElementById("btnCancelarBioCadastro").addEventListener("click", fecharBiometriaCadastro);
+
+    document.getElementById("btnPularBiometria").addEventListener("click", () => {
+      if (!dadosCadastroPendente) return;
+      const dados = { ...dadosCadastroPendente };
+      fecharBiometriaCadastro();
+      usuarios.push({ id: Date.now(), ...dados });
+      salvarUsuarios();
+      const erroEl = document.getElementById("erroCadastro");
+      erroEl.className = "sucesso";
+      erroEl.textContent = "Cadastro realizado! Biometria poderá ser adicionada pelo administrador.";
+      mudarTela("loginScreen");
+      const inputEmail = document.querySelector("#loginForm input[name=email]");
+      if (inputEmail) inputEmail.value = dados.email;
+    });
 
     document.getElementById("btnCapturarCadastro").addEventListener("click", async () => {
       const video = document.getElementById("bioCadastroVideo");
@@ -1242,9 +1454,16 @@
         statusEl.style.color = "green";
 
         setTimeout(() => {
+          const dados = dadosCadastroPendente ? { ...dadosCadastroPendente } : null;
           fecharBiometriaCadastro();
-          alert("Cadastro realizado com sucesso!");
           mudarTela("loginScreen");
+          const erroEl = document.getElementById("erroCadastro");
+          erroEl.className = "sucesso";
+          erroEl.textContent = "Cadastro realizado com sucesso!";
+          if (dados) {
+            const inputEmail = document.querySelector("#loginForm input[name=email]");
+            if (inputEmail) inputEmail.value = dados.email;
+          }
         }, 1200);
 
       } catch (err) {
@@ -1260,17 +1479,29 @@
     // FIX #5: compara hash da senha
     document.getElementById("loginForm").addEventListener("submit", async (e) => {
       e.preventDefault();
+      const erroEl = document.getElementById("erroLogin");
+      erroEl.textContent = "";
+
       const fd = new FormData(e.target);
       const email = fd.get("email");
-      const senhaHash = await hashSenha(fd.get("senha"));
 
-      const user = usuarios.find((u) => u.email === email && u.senha === senhaHash);
-
-      if (!user) {
-        alert("E-mail ou senha inválidos.");
+      const minutos = verificarBloqueio(email);
+      if (minutos) {
+        erroEl.textContent = `Muitas tentativas. Aguarde ${minutos} min.`;
         return;
       }
 
+      const senhaHash = await hashSenha(fd.get("senha"));
+      const user = usuarios.find((u) => u.email === email && u.senha === senhaHash);
+
+      if (!user) {
+        registrarTentativaFalha(email);
+        erroEl.textContent = "E-mail ou senha inválidos.";
+        return;
+      }
+
+      limparBloqueio(email);
+      salvarUltimoEmail(email);
       usuarioLogado = user;
 
       if (user.admin) {
@@ -1425,7 +1656,7 @@
 
       // Batidas do funcionário neste mês
       const batidasMes = batidas.filter(b => {
-        if (b.usuario !== u.nome) return false;
+        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
         const dt = new Date(b.data_hora);
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
@@ -1518,7 +1749,7 @@
 
       const bDia = batidas
         .filter(b => {
-          if (b.usuario !== u.nome) return false;
+          if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
           const dt = new Date(b.data_hora);
           return dt.getFullYear() === ano && dt.getMonth() === mes && dt.getDate() === numDia;
         })
@@ -1588,6 +1819,150 @@
       document.getElementById("modalRelatorio").classList.remove("ativo");
     });
 
+    document.getElementById("btnCompartilharRelatorio").addEventListener("click", async () => {
+      const u = usuarios.find(u => u.id === _relatorioUserId);
+      if (!u) return;
+
+      const btn = document.getElementById("btnCompartilharRelatorio");
+      btn.disabled = true;
+      btn.textContent = "Gerando imagem...";
+
+      const ano = _relatorioAno;
+      const mes = _relatorioMes;
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+      const JORNADA = 480;
+
+      const batidasMes = batidas.filter(b => {
+        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        const dt = new Date(b.data_hora);
+        return dt.getFullYear() === ano && dt.getMonth() === mes;
+      });
+
+      // Monta linhas de dados
+      const linhas = [];
+      let totalExtrasGeral = 0;
+      for (let i = 1; i <= diasNoMes; i++) {
+        const bDia = batidasMes
+          .filter(b => new Date(b.data_hora).getDate() === i)
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+        const fmtH = b => {
+          const dt = new Date(b.data_hora);
+          return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
+        };
+        const e1 = bDia[0] ? fmtH(bDia[0]) : "—";
+        const s1 = bDia[1] ? fmtH(bDia[1]) : "—";
+        const e2 = bDia[2] ? fmtH(bDia[2]) : "—";
+        const s2 = bDia[3] ? fmtH(bDia[3]) : "—";
+
+        let totalMin = 0;
+        for (let j = 0; j + 1 < bDia.length; j += 2) {
+          if (bDia[j].tipo === "entrada" && bDia[j+1].tipo === "saida") {
+            const diff = (new Date(bDia[j+1].data_hora) - new Date(bDia[j].data_hora)) / 60000;
+            if (diff > 0) totalMin += diff;
+          }
+        }
+        const extrasMin = Math.max(0, totalMin - JORNADA);
+        totalExtrasGeral += extrasMin;
+
+        linhas.push({
+          dia: String(i).padStart(2,"0"),
+          e1, s1, e2, s2,
+          extras: extrasMin > 0 ? formatarMin(extrasMin) : "—",
+          total: totalMin > 0 ? formatarMin(totalMin) : "—",
+          temDados: bDia.length > 0,
+        });
+      }
+
+      // Gera canvas
+      const LARGURA = 560;
+      const LINHA_H = 22;
+      const HEADER_H = 60;
+      const COL_H = 26;
+      const RODAPE_H = 40;
+      const alturaTotal = HEADER_H + COL_H + (linhas.length * LINHA_H) + RODAPE_H;
+
+      const c = document.createElement("canvas");
+      c.width = LARGURA;
+      c.height = alturaTotal;
+      const cx = c.getContext("2d");
+
+      // Fundo
+      cx.fillStyle = "#f5f7fa";
+      cx.fillRect(0, 0, LARGURA, alturaTotal);
+
+      // Cabeçalho
+      cx.fillStyle = "#2a6eb6";
+      cx.fillRect(0, 0, LARGURA, HEADER_H);
+      cx.fillStyle = "#ffffff";
+      cx.font = "bold 15px Arial";
+      cx.textAlign = "left";
+      cx.fillText("Cartão Ponto BJK — Relatório de Ponto", 14, 22);
+      cx.font = "13px Arial";
+      cx.fillText(`${u.nome}  |  ${NOMES_MESES[mes]} ${ano}`, 14, 42);
+      cx.font = "11px Arial";
+      cx.fillStyle = "rgba(255,255,255,0.8)";
+      cx.fillText(`${u.cargo || ""}`, 14, 56);
+
+      // Colunas header
+      const cols = ["Dia","E1","S1","E2","S2","Extras","Total"];
+      const colX = [10, 60, 120, 180, 240, 300, 400];
+      cx.fillStyle = "#1a5296";
+      cx.fillRect(0, HEADER_H, LARGURA, COL_H);
+      cx.fillStyle = "#ffffff";
+      cx.font = "bold 11px Arial";
+      cols.forEach((col, i) => {
+        cx.textAlign = "center";
+        cx.fillText(col, colX[i] + (i < cols.length - 1 ? 25 : 70), HEADER_H + 17);
+      });
+
+      // Linhas
+      linhas.forEach((l, idx) => {
+        const y = HEADER_H + COL_H + (idx * LINHA_H);
+        cx.fillStyle = l.temDados ? (idx % 2 === 0 ? "#e8f0fb" : "#d4e4f7") : (idx % 2 === 0 ? "#ffffff" : "#f5f5f5");
+        cx.fillRect(0, y, LARGURA, LINHA_H);
+
+        cx.font = l.temDados ? "bold 11px Arial" : "11px Arial";
+        cx.fillStyle = l.temDados ? "#2a6eb6" : "#999";
+        cx.textAlign = "center";
+        const vals = [l.dia, l.e1, l.s1, l.e2, l.s2, l.extras, l.total];
+        vals.forEach((val, i) => {
+          if (i === 5 && val !== "—") cx.fillStyle = "#e65100";
+          else if (i === 6 && val !== "—") cx.fillStyle = "#2e7d32";
+          else cx.fillStyle = l.temDados ? (i === 0 ? "#2a6eb6" : "#333") : "#aaa";
+          cx.fillText(val, colX[i] + (i < vals.length - 1 ? 25 : 70), y + 15);
+        });
+
+        // Linha separadora
+        cx.strokeStyle = "#dde5f0";
+        cx.lineWidth = 0.5;
+        cx.beginPath();
+        cx.moveTo(0, y + LINHA_H);
+        cx.lineTo(LARGURA, y + LINHA_H);
+        cx.stroke();
+      });
+
+      // Rodapé
+      const rodapeY = HEADER_H + COL_H + (linhas.length * LINHA_H);
+      cx.fillStyle = "#2a6eb6";
+      cx.fillRect(0, rodapeY, LARGURA, RODAPE_H);
+      cx.fillStyle = "#ffffff";
+      cx.font = "bold 12px Arial";
+      cx.textAlign = "left";
+      cx.fillText(
+        totalExtrasGeral > 0
+          ? `Total de horas extras: ${formatarMin(totalExtrasGeral)}`
+          : "Nenhuma hora extra no mês",
+        14,
+        rodapeY + 24
+      );
+
+      btn.disabled = false;
+      btn.textContent = "Compartilhar relatório";
+
+      await compartilharOuBaixar(c, `relatorio-${u.nome.replace(/\s+/g,"-")}-${NOMES_MESES[mes]}-${ano}.png`);
+    });
+
     document.getElementById("btnResetarBiometria").addEventListener("click", () => {
       if (!usuarioEditando) return;
       if (!confirm("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.")) return;
@@ -1650,6 +2025,15 @@
 
     document.getElementById("btnSairAdmin").addEventListener("click", () => {
       usuarioLogado = null;
+      mudarTela("loginScreen");
+    });
+
+    document.getElementById("btnSairApp").addEventListener("click", () => {
+      usuarioLogado = null;
+      tipoBatidaPendente = null;
+      document.getElementById("listaCartoes").innerHTML = "";
+      document.getElementById("btnCompartilharTodos").style.display = "none";
+      desenharPlaceholder();
       mudarTela("loginScreen");
     });
 
@@ -1887,6 +2271,8 @@
     let _stopAutoPonto = null;
     // FIX #4: mapa de assinaturas por cartao para "compartilhar todos"
     const assinaturasPorCartao = new Map();
+    // Mapa de fotos (blob URL) por cartao — inclui cartões restaurados do IDB
+    const fotosPorCartao = new Map();
 
     function abrirBiometria(tipo) {
       tipoBatidaPendente = tipo;
@@ -2017,6 +2403,7 @@
 
       // FIX #4: guarda assinatura associada a este cartao
       assinaturasPorCartao.set(cardId, assinaturaAtual);
+      fotosPorCartao.set(cardId, foto);
 
       // FIX #3 e #4: await no canvas (foto carregada async) + passa assinatura
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
@@ -2028,10 +2415,16 @@
       batidas.push({
         tipo: tipoBatidaPendente,
         usuario: nome,
+        usuarioId: usuarioLogado.id,
         data_hora: agora.toISOString(),
         coordenadas: document.getElementById("coordenadas").textContent,
       });
       salvarBatidas();
+
+      // Salva foto como JPEG no IndexedDB (chave = data_hora ISO)
+      bioCanvas.toBlob(blob => {
+        salvarFotoIDB(agora.toISOString(), blob).catch(() => {});
+      }, "image/jpeg", 0.75);
 
       // FIX #4: reseta assinatura e canvas para proxima batida
       assinaturaAtual = null;
@@ -2069,7 +2462,7 @@
       const fimDia    = new Date(anoHoje, agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
 
       const batidasDeHoje = batidas.filter(b => {
-        if (b.usuario !== nomeUsuario) return false;
+        if (b.usuarioId ? b.usuarioId !== usuarioLogado.id : b.usuario !== nomeUsuario) return false;
         const ts = new Date(b.data_hora).getTime();
         return ts >= inicioDia && ts <= fimDia;
       });
@@ -2090,11 +2483,11 @@
         const novoCartao = document.createElement("div");
         novoCartao.className = "cartao-registro ativo";
         novoCartao.id = cardId;
-        // Foto não é salva no localStorage (Fix #8), usa ícone placeholder
+        // Foto não é salva no localStorage (Fix #8) — carregada do IndexedDB
         novoCartao.innerHTML = `
           <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
           <div class="cartao-body">
-            <div style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
             </div>
             <div class="cartao-info">
@@ -2109,8 +2502,20 @@
         `;
         lista.appendChild(novoCartao);
 
+        // Carrega foto do IndexedDB e substitui o placeholder quando disponível
+        buscarFotoIDB(b.data_hora).then(blob => {
+          if (!blob) return;
+          const url = URL.createObjectURL(blob);
+          fotosPorCartao.set(cardId, url);
+          const wrapper = document.getElementById("foto-" + cardId);
+          if (wrapper) {
+            wrapper.outerHTML = `<img src="${url}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
+          }
+        }).catch(() => {});
+
         novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-          const c = await gerarCanvasCartao("", nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null);
+          const fotoUrl = fotosPorCartao.get(cardId) || "";
+          const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null);
           await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
         });
       });
@@ -2218,7 +2623,7 @@
         const img = card.querySelector("img");
         const spans = card.querySelectorAll(".cartao-info span");
         dadosCartoes.push({
-          foto: img ? img.src : "",
+          foto: img ? img.src : (fotosPorCartao.get(card.id) || ""),
           nome: card.querySelector(".cartao-info strong") ? card.querySelector(".cartao-info strong").textContent : "",
           cargo: spans[0] ? spans[0].textContent : "",
           tipo: spans[1] ? spans[1].textContent : "",
