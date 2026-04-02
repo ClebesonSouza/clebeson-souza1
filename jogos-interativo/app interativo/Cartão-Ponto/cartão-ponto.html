@@ -841,6 +841,7 @@
         <div class="bio-guias" id="guiasPonto"><span></span></div>
         <div class="bio-label" id="labelPonto">Posicione o rosto no oval</div>
       </div>
+      <div id="statusBioPonto" style="margin-top:6px;font-size:0.9em;min-height:1.4em;"></div>
       <button id="btnCapturar" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
       <button id="btnCancelarBio">Cancelar</button>
     </div>
@@ -1067,9 +1068,10 @@
       return resultado.descriptor;
     }
 
-    function rostoCompativel(descCadastro, descAtual, limiar = 0.5) {
-      const a = Float32Array.from(descCadastro);
-      return faceapi.euclideanDistance(a, descAtual) <= limiar;
+    function rostoCompativel(descCadastro, descAtual, limiar = 0.6) {
+      // Aceita array de descritores (novo) ou descritor único (legado)
+      const lista = Array.isArray(descCadastro[0]) ? descCadastro : [descCadastro];
+      return lista.some(d => faceapi.euclideanDistance(Float32Array.from(d), descAtual) <= limiar);
     }
 
     // ============================
@@ -1426,16 +1428,25 @@
       const btn = document.getElementById("btnCapturarCadastro");
 
       btn.disabled = true;
-      statusEl.textContent = "Detectando rosto...";
       statusEl.style.color = "#555";
 
+      const descritores = [];
+      const TOTAL = 3;
+
       try {
-        const descriptor = await obterDescriptor(video);
-        if (!descriptor) {
-          statusEl.textContent = "Nenhum rosto detectado. Ajuste a posição e tente novamente.";
-          statusEl.style.color = "red";
-          btn.disabled = false;
-          return;
+        for (let i = 0; i < TOTAL; i++) {
+          statusEl.textContent = `Capturando amostra ${i + 1} de ${TOTAL}…`;
+          // Pequena pausa entre capturas para variação de pose
+          if (i > 0) await new Promise(r => setTimeout(r, 800));
+
+          const descriptor = await obterDescriptor(video);
+          if (!descriptor) {
+            statusEl.textContent = `Rosto não detectado na amostra ${i + 1}. Ajuste a posição e tente novamente.`;
+            statusEl.style.color = "red";
+            btn.disabled = false;
+            return;
+          }
+          descritores.push(Array.from(descriptor));
         }
 
         const c = document.getElementById("bioCadastroCanvas");
@@ -1446,11 +1457,11 @@
         usuarios.push({
           id: Date.now(),
           ...dadosCadastroPendente,
-          faceDescriptor: Array.from(descriptor),
+          faceDescriptors: descritores,
         });
         salvarUsuarios();
 
-        statusEl.textContent = "Rosto cadastrado com sucesso!";
+        statusEl.textContent = "Rosto cadastrado com sucesso! (3 amostras)";
         statusEl.style.color = "green";
 
         setTimeout(() => {
@@ -1560,7 +1571,7 @@
           ? `<div class="user-info">E-mail: ${escaparHTML(u.email)}</div>`
           : `<div class="user-info">CPF/Mat.: ${escaparHTML(u.cpf)} &nbsp;|&nbsp; Cargo: ${escaparHTML(u.cargo || '—')}${idadeStr}</div>
              <div class="user-info">E-mail: ${escaparHTML(u.email)}</div>
-             <div class="user-info">Biometria: ${u.faceDescriptor ? '✔ Cadastrada' : '✘ Não cadastrada'}</div>`;
+             <div class="user-info">Biometria: ${(u.faceDescriptors || u.faceDescriptor) ? '✔ Cadastrada' : '✘ Não cadastrada'}</div>`;
         const podeDeletar = !(ehAdmin && u.id === usuarioLogado.id);
         const btnExcluir = podeDeletar
           ? `<button class="btn-excluir" onclick="excluirUsuario(${u.id})">Excluir</button>`
@@ -1967,6 +1978,7 @@
       if (!usuarioEditando) return;
       if (!confirm("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.")) return;
       usuarioEditando.faceDescriptor = null;
+      usuarioEditando.faceDescriptors = null;
       const s = document.getElementById("editStatus");
       s.textContent = "Biometria resetada. Clique em Salvar para confirmar.";
       s.style.color = "orange";
@@ -2301,6 +2313,13 @@
         });
     }
 
+    function mostrarMensagemPonto(msg, tipo) {
+      const el = document.getElementById("statusBioPonto");
+      if (!el) return;
+      el.textContent = msg;
+      el.style.color = tipo === "erro" ? "red" : "green";
+    }
+
     function fecharBiometria() {
       if (_stopAutoPonto) { _stopAutoPonto(); _stopAutoPonto = null; }
       if (streamAtivo) {
@@ -2331,22 +2350,25 @@
 
       const descriptorAtual = await obterDescriptor(video);
       if (!descriptorAtual) {
-        alert("Nenhum rosto detectado. Ajuste a posição e tente novamente.");
+        mostrarMensagemPonto("Nenhum rosto detectado. Ajuste a posição e tente novamente.", "erro");
         btn.disabled = false;
         btn.textContent = "Tirar foto";
         return;
       }
 
-      if (!usuarioLogado || !usuarioLogado.faceDescriptor) {
-        alert("Este usuário não possui biometria cadastrada. Refaça o cadastro.");
+      const descsCadastrados = usuarioLogado.faceDescriptors
+        || (usuarioLogado.faceDescriptor ? [usuarioLogado.faceDescriptor] : null);
+
+      if (!usuarioLogado || !descsCadastrados) {
+        mostrarMensagemPonto("Este usuário não possui biometria cadastrada. Refaça o cadastro.", "erro");
         btn.disabled = false;
         btn.textContent = "Tirar foto";
         fecharBiometria();
         return;
       }
 
-      if (!rostoCompativel(usuarioLogado.faceDescriptor, descriptorAtual)) {
-        alert("Rosto não reconhecido. O ponto não foi registrado.");
+      if (!rostoCompativel(descsCadastrados, descriptorAtual)) {
+        mostrarMensagemPonto("Rosto não reconhecido. Tente novamente com melhor iluminação.", "erro");
         btn.disabled = false;
         btn.textContent = "Tirar foto";
         return;
