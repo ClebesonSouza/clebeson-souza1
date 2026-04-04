@@ -476,12 +476,21 @@
     }
     #tabelaRelatorio tbody tr.dia-clicavel { cursor: pointer; }
     #tabelaRelatorio tbody tr.dia-clicavel:hover { filter: brightness(0.93); }
+    #tabelaRelatorio tbody tr.dia-admin-vazio td:first-child { color: #aaa; font-style: italic; }
     .batida-dia-card {
       border: 2px solid #2a6eb6; border-radius: 10px;
       overflow: hidden; margin-bottom: 12px;
     }
     .batida-dia-card:last-child { margin-bottom: 0; }
     .batida-dia-vazio { text-align:center; color:#888; padding:16px 0; font-size:0.9em; }
+    /* ===== AÇÕES ADMIN NAS BATIDAS ===== */
+    .batida-admin-acoes { display:flex; gap:8px; padding:8px 12px; border-top:1px solid #e8e8e8; }
+    .batida-admin-acoes button { flex:1; margin-top:0; padding:7px; font-size:0.82em; }
+    .btn-editar-batida { background:#2a6eb6; }
+    .btn-excluir-batida { background:#e53935; }
+    .btn-excluir-batida:hover { background:#b71c1c; }
+    .btn-adicionar-batida { background:#2e7d32; margin-top:12px; font-size:0.9em; }
+    .btn-adicionar-batida:hover { background:#1b5e20; }
     /* ===== FORÇA DE SENHA ===== */
     .forca-senha {
       height: 4px;
@@ -828,6 +837,26 @@
       </div>
       <!-- Conteúdo rolável -->
       <div id="batidasDiaConteudo" style="overflow-y:auto;padding:14px 16px;"></div>
+    </div>
+  </div>
+
+  <!-- MODAL EDITAR / ADICIONAR BATIDA (ADMIN) -->
+  <div class="modal-overlay" id="modalEditarBatida" style="z-index:1100;">
+    <div class="modal-box" style="text-align:left;max-width:340px;width:95vw;">
+      <h2 id="editBatidaTitulo" style="text-align:center;color:#2a6eb6;margin-bottom:14px;">Editar Batida</h2>
+
+      <label>Tipo</label>
+      <select id="editBatidaTipo" style="width:100%;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:1em;margin-top:4px;background:#fff;">
+        <option value="entrada">Entrada</option>
+        <option value="saida">Saída</option>
+      </select>
+
+      <label>Data e hora</label>
+      <input type="datetime-local" id="editBatidaDataHora" />
+
+      <div id="editBatidaStatus" style="font-size:0.85em;min-height:1.2em;margin:8px 0;color:#555;"></div>
+      <button id="btnSalvarEdicaoBatida" style="background:#2a6eb6;">Salvar</button>
+      <button id="btnCancelarEdicaoBatida" style="background:#888;margin-top:6px;">Cancelar</button>
     </div>
   </div>
 
@@ -1530,9 +1559,8 @@
       mudarTela("appScreen");
       restaurarCartoesDeHoje(user.nome, user.cargo || "");
 
-      // Habilita botões imediatamente
-      document.getElementById("batidaEntrada").disabled = false;
-      document.getElementById("batidaSaida").disabled = false;
+      // Habilita o botão correto conforme a última batida do dia
+      atualizarBotoesBatida();
 
       // Inicia geolocalização
       iniciarGeolocalizacao();
@@ -1718,11 +1746,13 @@
 
         const ehHoje = hoje.getFullYear() === ano && hoje.getMonth() === mes && hoje.getDate() === numDia;
         const temDados = bDia.length > 0;
+        const ehAdminLogado = !!(usuarioLogado && usuarioLogado.admin);
+        const clicavel = temDados || ehAdminLogado;
         const classTr = [
-          ehHoje ? "dia-hoje" : (temDados ? "dia-com-dados" : ""),
-          temDados ? "dia-clicavel" : ""
+          ehHoje ? "dia-hoje" : (temDados ? "dia-com-dados" : (ehAdminLogado ? "dia-admin-vazio" : "")),
+          clicavel ? "dia-clicavel" : ""
         ].join(" ").trim();
-        const onclickAttr = temDados ? `onclick="abrirBatidasDia(${numDia})"` : "";
+        const onclickAttr = clicavel ? `onclick="abrirBatidasDia(${numDia})"` : "";
 
         const diaFmt = String(numDia).padStart(2,"0");
         return `<tr class="${classTr}" ${onclickAttr}>
@@ -1749,6 +1779,8 @@
     function abrirBatidasDia(numDia) {
       const u = usuarios.find(u => u.id === _relatorioUserId);
       if (!u) return;
+
+      _batidasDiaNumDia = numDia;
 
       const ano = _relatorioAno;
       const mes = _relatorioMes;
@@ -1787,6 +1819,7 @@
           const tipoTexto = b.tipo === "entrada" ? "Entrada" : "Saída";
           const corHeader = b.tipo === "entrada" ? "#2a6eb6" : "#c62828";
           const coord = escaparHTML(b.coordenadas || "");
+          const isoEscapado = escaparHTML(b.data_hora);
           return `
             <div class="batida-dia-card">
               <div class="cartao-header" style="background:${corHeader};">
@@ -1803,8 +1836,20 @@
                   ${coord ? `<br/><span style="font-size:0.8em;color:#777;">${coord}</span>` : ""}
                 </div>
               </div>
+              ${usuarioLogado && usuarioLogado.admin ? `
+              <div class="batida-admin-acoes">
+                <button class="btn-editar-batida" onclick="abrirEditarBatidaAdmin('${isoEscapado}')">Editar</button>
+                <button class="btn-excluir-batida" onclick="excluirBatidaAdmin('${isoEscapado}')">Excluir</button>
+              </div>` : ""}
             </div>`;
         }).join("");
+      }
+
+      if (usuarioLogado && usuarioLogado.admin) {
+        conteudo.innerHTML += `
+          <button class="btn-adicionar-batida" onclick="abrirAdicionarBatidaAdmin()">
+            + Adicionar batida neste dia
+          </button>`;
       }
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
@@ -2172,14 +2217,12 @@
               "Atenção: você está fora do local habitual. O registro será feito mesmo assim.";
             localStatus.style.color = "orange";
           }
-          document.getElementById("batidaEntrada").disabled = false;
-          document.getElementById("batidaSaida").disabled = false;
+          atualizarBotoesBatida();
         },
         (erro) => {
           localStatus.textContent = `Localização indisponível. Prossiga normalmente.`;
           localStatus.style.color = "gray";
-          document.getElementById("batidaEntrada").disabled = false;
-          document.getElementById("batidaSaida").disabled = false;
+          atualizarBotoesBatida();
         }
       );
     }
@@ -2455,6 +2498,7 @@
       btn.disabled = false;
       btn.textContent = "Capturar manualmente";
       fecharBiometria();
+      atualizarBotoesBatida();
     });
 
     // Botões de batida apenas definem o tipo e mostram feedback visual
@@ -2675,16 +2719,134 @@
     });
 
     // ============================
-    // BATIDAS DE PONTO (EXEMPLO DE LOG)
+    // BATIDAS DE PONTO
     // ============================
-    // Em um app real, você guardaria em localStorage ou banco
     const batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || [];
 
     function salvarBatidas() {
       localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
     }
 
-    // Batidas agora tratadas pela biometria facial acima
+    // Garante alternância obrigatória entrada → saída → entrada
+    function atualizarBotoesBatida() {
+      if (!usuarioLogado || usuarioLogado.admin) return;
+      const agora = new Date();
+      const inicioDia = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 0, 0, 0).getTime();
+      const fimDia   = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
+      const batidasHoje = batidas
+        .filter(b => {
+          if (b.usuarioId ? b.usuarioId !== usuarioLogado.id : b.usuario !== usuarioLogado.nome) return false;
+          const ts = new Date(b.data_hora).getTime();
+          return ts >= inicioDia && ts <= fimDia;
+        })
+        .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+      const ultima = batidasHoje.length > 0 ? batidasHoje[batidasHoje.length - 1] : null;
+      const proximaDeveSerEntrada = !ultima || ultima.tipo === "saida";
+
+      const btnEntrada = document.getElementById("batidaEntrada");
+      const btnSaida   = document.getElementById("batidaSaida");
+      btnEntrada.disabled = !proximaDeveSerEntrada;
+      btnSaida.disabled   = proximaDeveSerEntrada;
+      btnEntrada.style.outline = "";
+      btnSaida.style.outline   = "";
+      tipoBatidaPendente = null;
+    }
+
+    // ============================
+    // EDIÇÃO DE BATIDAS (ADMIN)
+    // ============================
+    let _batidasDiaNumDia = 0;
+    let _batidaEditandoISO = null; // null = nova batida
+
+    function toDatetimeLocal(dt) {
+      const pad = n => String(n).padStart(2, "0");
+      return `${dt.getFullYear()}-${pad(dt.getMonth()+1)}-${pad(dt.getDate())}T${pad(dt.getHours())}:${pad(dt.getMinutes())}`;
+    }
+
+    function abrirAdicionarBatidaAdmin() {
+      _batidaEditandoISO = null;
+      document.getElementById("editBatidaTitulo").textContent = "Adicionar Batida";
+      document.getElementById("editBatidaTipo").value = "entrada";
+      // Pré-preenche com o dia sendo visualizado às 08:00
+      const dt = new Date(_relatorioAno, _relatorioMes, _batidasDiaNumDia, 8, 0);
+      document.getElementById("editBatidaDataHora").value = toDatetimeLocal(dt);
+      document.getElementById("editBatidaStatus").textContent = "";
+      document.getElementById("editBatidaStatus").style.color = "#555";
+      document.getElementById("modalEditarBatida").classList.add("ativo");
+    }
+
+    function abrirEditarBatidaAdmin(dataHoraISO) {
+      const b = batidas.find(b => b.data_hora === dataHoraISO);
+      if (!b) return;
+      _batidaEditandoISO = dataHoraISO;
+      document.getElementById("editBatidaTitulo").textContent = "Editar Batida";
+      document.getElementById("editBatidaTipo").value = b.tipo;
+      document.getElementById("editBatidaDataHora").value = toDatetimeLocal(new Date(b.data_hora));
+      document.getElementById("editBatidaStatus").textContent = "";
+      document.getElementById("editBatidaStatus").style.color = "#555";
+      document.getElementById("modalEditarBatida").classList.add("ativo");
+    }
+
+    function excluirBatidaAdmin(dataHoraISO) {
+      if (!confirm("Excluir esta batida?\nEsta ação não pode ser desfeita.")) return;
+      const idx = batidas.findIndex(b => b.data_hora === dataHoraISO);
+      if (idx === -1) return;
+      batidas.splice(idx, 1);
+      salvarBatidas();
+      renderRelatorio();
+      abrirBatidasDia(_batidasDiaNumDia);
+    }
+
+    document.getElementById("btnSalvarEdicaoBatida").addEventListener("click", () => {
+      const tipo = document.getElementById("editBatidaTipo").value;
+      const dataHoraVal = document.getElementById("editBatidaDataHora").value;
+      const statusEl = document.getElementById("editBatidaStatus");
+
+      if (!dataHoraVal) {
+        statusEl.textContent = "Preencha a data e hora.";
+        statusEl.style.color = "red";
+        return;
+      }
+
+      const novaDataHora = new Date(dataHoraVal).toISOString();
+
+      if (_batidaEditandoISO) {
+        // Edição de batida existente
+        const b = batidas.find(b => b.data_hora === _batidaEditandoISO);
+        if (b) {
+          b.tipo = tipo;
+          b.data_hora = novaDataHora;
+          b.coordenadas = (b.coordenadas || "") + " (editado pelo adm)";
+        }
+      } else {
+        // Nova batida
+        const u = usuarios.find(u => u.id === _relatorioUserId);
+        if (!u) return;
+        batidas.push({
+          tipo,
+          usuario: u.nome,
+          usuarioId: u.id,
+          data_hora: novaDataHora,
+          coordenadas: "(adicionado pelo administrador)",
+        });
+      }
+
+      salvarBatidas();
+      statusEl.textContent = "Salvo com sucesso!";
+      statusEl.style.color = "green";
+
+      setTimeout(() => {
+        document.getElementById("modalEditarBatida").classList.remove("ativo");
+        const diaAtualizado = new Date(novaDataHora).getDate();
+        renderRelatorio();
+        abrirBatidasDia(diaAtualizado);
+      }, 700);
+    });
+
+    document.getElementById("btnCancelarEdicaoBatida").addEventListener("click", () => {
+      document.getElementById("modalEditarBatida").classList.remove("ativo");
+    });
   </script>
 </body>
 </html>
