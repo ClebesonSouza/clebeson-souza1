@@ -660,6 +660,7 @@
         <!-- CARTÕES DE REGISTRO APÓS BIOMETRIA -->
         <div id="listaCartoes"></div>
         <button id="btnCompartilharTodos">Compartilhar todos os comprovantes</button>
+        <button id="btnMeuRelatorio" style="background:#00897b;margin-top:10px;">Ver meu relatório de ponto</button>
         <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
@@ -2092,6 +2093,11 @@
       document.getElementById("btnCompartilharTodos").style.display = "none";
       desenharPlaceholder();
       mudarTela("loginScreen");
+    });
+
+    document.getElementById("btnMeuRelatorio").addEventListener("click", () => {
+      if (!usuarioLogado) return;
+      abrirRelatorio(usuarioLogado.id);
     });
 
     document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
