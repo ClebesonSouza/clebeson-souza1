@@ -420,26 +420,7 @@
       width: 96vw;
       text-align: left;
     }
-    #tabelaRelatorio {
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.88em;
-      margin-top: 10px;
-    }
-    #tabelaRelatorio thead th {
-      background: #2a6eb6;
-      color: #fff;
-      padding: 8px 10px;
-      text-align: left;
-      position: sticky;
-      top: 0;
-    }
-    #tabelaRelatorio tbody tr:nth-child(even) { background: #f0f5ff; }
-    #tabelaRelatorio tbody tr:nth-child(odd)  { background: #fff; }
-    #tabelaRelatorio td { padding: 7px 10px; border-bottom: 1px solid #e0e0e0; }
-    #tabelaRelatorio .tipo-entrada { color: #2e7d32; font-weight: bold; }
-    #tabelaRelatorio .tipo-saida   { color: #c62828; font-weight: bold; }
-    .relatorio-scroll { max-height: 60vh; overflow: auto; }
+    .relatorio-scroll { max-height: 60vh; overflow-y: auto; overflow-x: hidden; }
     .relatorio-resumo { font-size: 0.85em; color: #555; margin-top: 6px; }
     .rel-nav {
       display: flex; align-items: center; justify-content: center;
@@ -454,16 +435,35 @@
     }
     #tabelaRelatorio {
       width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px;
-      min-width: 480px;
+      table-layout: fixed;
     }
     #tabelaRelatorio thead th {
-      background: #2a6eb6; color: #fff; padding: 7px 8px;
-      text-align: center; white-space: nowrap;
+      background: #2a6eb6; color: #fff; padding: 5px 3px;
+      text-align: center; word-break: break-word;
       position: sticky; top: 0;
     }
     #tabelaRelatorio td {
-      padding: 5px 8px; border-bottom: 1px solid #e0e0e0;
-      text-align: center; white-space: nowrap;
+      padding: 5px 3px; border-bottom: 1px solid #e0e0e0;
+      text-align: center; word-break: break-word;
+    }
+    #tabelaRelatorio th:nth-child(1),
+    #tabelaRelatorio td:nth-child(1) { width: 9%; }
+    #tabelaRelatorio th:nth-child(2),
+    #tabelaRelatorio td:nth-child(2),
+    #tabelaRelatorio th:nth-child(3),
+    #tabelaRelatorio td:nth-child(3),
+    #tabelaRelatorio th:nth-child(4),
+    #tabelaRelatorio td:nth-child(4),
+    #tabelaRelatorio th:nth-child(5),
+    #tabelaRelatorio td:nth-child(5) { width: 13%; }
+    #tabelaRelatorio th:nth-child(6),
+    #tabelaRelatorio td:nth-child(6) { width: 16%; }
+    #tabelaRelatorio th:nth-child(7),
+    #tabelaRelatorio td:nth-child(7) { width: 16%; }
+    @media (max-width: 480px) {
+      #tabelaRelatorio { font-size: 0.72em; }
+      #tabelaRelatorio thead th,
+      #tabelaRelatorio td { padding: 4px 2px; }
     }
     #tabelaRelatorio tbody tr:nth-child(even) { background: #f0f5ff; }
     #tabelaRelatorio tbody tr:nth-child(odd)  { background: #fff; }
