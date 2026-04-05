@@ -608,7 +608,30 @@
           </div>
 
           <label>Data de nascimento</label>
-          <input type="date" name="nascimento" required />
+          <div style="display:flex;gap:6px;">
+            <select id="nascDia" style="flex:1;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:1em;background:#fff;" required>
+              <option value="">Dia</option>
+            </select>
+            <select id="nascMes" style="flex:1.8;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:1em;background:#fff;" required>
+              <option value="">Mês</option>
+              <option value="01">Janeiro</option>
+              <option value="02">Fevereiro</option>
+              <option value="03">Março</option>
+              <option value="04">Abril</option>
+              <option value="05">Maio</option>
+              <option value="06">Junho</option>
+              <option value="07">Julho</option>
+              <option value="08">Agosto</option>
+              <option value="09">Setembro</option>
+              <option value="10">Outubro</option>
+              <option value="11">Novembro</option>
+              <option value="12">Dezembro</option>
+            </select>
+            <select id="nascAno" style="flex:1.3;padding:8px;border:1px solid #ccc;border-radius:4px;font-size:1em;background:#fff;" required>
+              <option value="">Ano</option>
+            </select>
+          </div>
+          <input type="hidden" name="nascimento" id="campoNascimento" />
 
           <label>Cargo</label>
           <input type="text" name="cargo" />
@@ -1271,6 +1294,38 @@
     document.getElementById("campoCPF").addEventListener("input", function() {
       aplicarMascaraCPF(this);
     });
+
+    // Seletores de data de nascimento (dia / mês / ano)
+    (function() {
+      const selDia  = document.getElementById("nascDia");
+      const selMes  = document.getElementById("nascMes");
+      const selAno  = document.getElementById("nascAno");
+      const campo   = document.getElementById("campoNascimento");
+
+      for (let d = 1; d <= 31; d++) {
+        const o = document.createElement("option");
+        o.value = String(d).padStart(2, "0");
+        o.textContent = String(d).padStart(2, "0");
+        selDia.appendChild(o);
+      }
+
+      const anoAtual = new Date().getFullYear();
+      for (let a = anoAtual - 14; a >= 1930; a--) {
+        const o = document.createElement("option");
+        o.value = a;
+        o.textContent = a;
+        selAno.appendChild(o);
+      }
+
+      function sync() {
+        campo.value = (selDia.value && selMes.value && selAno.value)
+          ? `${selAno.value}-${selMes.value}-${selDia.value}`
+          : "";
+      }
+      selDia.addEventListener("change", sync);
+      selMes.addEventListener("change", sync);
+      selAno.addEventListener("change", sync);
+    })();
     document.getElementById("cadastroSenha").addEventListener("input", function() {
       atualizarIndicadorForca(this.value);
     });
@@ -2754,6 +2809,8 @@
       const btnSaida   = document.getElementById("batidaSaida");
       btnEntrada.disabled = !proximaDeveSerEntrada;
       btnSaida.disabled   = proximaDeveSerEntrada;
+      btnEntrada.style.background = proximaDeveSerEntrada ? "#4caf50" : "#e53935";
+      btnSaida.style.background   = proximaDeveSerEntrada ? "#e53935" : "#4caf50";
       btnEntrada.style.outline = "";
       btnSaida.style.outline   = "";
       tipoBatidaPendente = null;
