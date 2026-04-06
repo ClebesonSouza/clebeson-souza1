@@ -143,7 +143,7 @@
     .ass canvas {
       border: 1px solid #ddd;
       display: block;
-      margin: 5px auto;
+      width: 100%;
       background: #f8f8f8;
     }
 
@@ -419,6 +419,7 @@
       max-width: 680px;
       width: 96vw;
       text-align: left;
+      padding: 16px 14px; /* menos que os 20px padrão — mais espaço para a tabela */
     }
     .relatorio-scroll { max-height: 60vh; overflow-y: auto; overflow-x: hidden; }
     .relatorio-resumo { font-size: 0.85em; color: #555; margin-top: 6px; }
@@ -429,17 +430,21 @@
     .rel-nav button {
       width: auto; padding: 5px 14px; margin: 0; font-size: 0.95em; background: #2a6eb6;
     }
+    #relatorioTitulo {
+      word-break: break-word; /* nome longo não escapa do box */
+    }
     #relatorioMesAno {
-      font-weight: bold; font-size: 1em; color: #2a6eb6;
-      min-width: 140px; text-align: center;
+      font-weight: bold; font-size: clamp(0.85em, 3vw, 1em); color: #2a6eb6;
+      min-width: 110px; text-align: center;
     }
     #tabelaRelatorio {
-      width: 100%; border-collapse: collapse; font-size: 0.82em; margin-top: 6px;
-      table-layout: fixed;
+      width: 100%; border-collapse: collapse;
+      font-size: clamp(0.62em, 2.3vw, 0.82em); /* escala com a largura da tela */
+      margin-top: 6px; table-layout: fixed;
     }
     #tabelaRelatorio thead th {
       background: #2a6eb6; color: #fff; padding: 5px 3px;
-      text-align: center; word-break: break-word;
+      text-align: center; white-space: nowrap; overflow: hidden;
       position: sticky; top: 0;
     }
     #tabelaRelatorio td {
@@ -447,7 +452,7 @@
       text-align: center; word-break: break-word;
     }
     #tabelaRelatorio th:nth-child(1),
-    #tabelaRelatorio td:nth-child(1) { width: 9%; }
+    #tabelaRelatorio td:nth-child(1) { width: 8%; }
     #tabelaRelatorio th:nth-child(2),
     #tabelaRelatorio td:nth-child(2),
     #tabelaRelatorio th:nth-child(3),
@@ -455,15 +460,32 @@
     #tabelaRelatorio th:nth-child(4),
     #tabelaRelatorio td:nth-child(4),
     #tabelaRelatorio th:nth-child(5),
-    #tabelaRelatorio td:nth-child(5) { width: 13%; }
+    #tabelaRelatorio td:nth-child(5) { width: 12%; }
     #tabelaRelatorio th:nth-child(6),
-    #tabelaRelatorio td:nth-child(6) { width: 16%; }
+    #tabelaRelatorio td:nth-child(6) { width: 18%; } /* Extras: mais espaço para "1h 30min" */
     #tabelaRelatorio th:nth-child(7),
-    #tabelaRelatorio td:nth-child(7) { width: 16%; }
+    #tabelaRelatorio td:nth-child(7) { width: 18%; } /* Total: mais espaço */
+    /* Telas médias (tablets menores) */
+    @media (max-width: 600px) {
+      #modalRelatorio .modal-box { padding: 12px 8px; }
+      .rel-nav button { padding: 5px 10px; }
+    }
+    /* Telas pequenas (celulares) */
     @media (max-width: 480px) {
-      #tabelaRelatorio { font-size: 0.72em; }
+      #tabelaRelatorio { font-size: 0.68em; }
       #tabelaRelatorio thead th,
-      #tabelaRelatorio td { padding: 4px 2px; }
+      #tabelaRelatorio td { padding: 3px 2px; }
+      #modalRelatorio .modal-box { padding: 10px 6px; }
+      #relatorioTitulo { font-size: 0.92em; }
+      .rel-nav { gap: 8px; }
+      .rel-nav button { padding: 5px 8px; font-size: 0.88em; }
+      #relatorioMesAno { min-width: 90px; }
+    }
+    /* Celulares muito pequenos */
+    @media (max-width: 360px) {
+      #tabelaRelatorio { font-size: 0.60em; }
+      #relatorioTitulo { font-size: 0.85em; }
+      #modalRelatorio .modal-box { padding: 8px 4px; }
     }
     #tabelaRelatorio tbody tr:nth-child(even) { background: #f0f5ff; }
     #tabelaRelatorio tbody tr:nth-child(odd)  { background: #fff; }
@@ -471,8 +493,13 @@
     #tabelaRelatorio tbody tr.dia-com-dados td:first-child { color: #2a6eb6; font-weight: bold; }
     .cel-extras { color: #e65100; font-weight: bold; }
     .cel-total  { color: #2e7d32; font-weight: bold; }
+    #totalHorasResumo {
+      font-size: 1em; color: #2e7d32; font-weight: bold; margin-top: 10px;
+      text-align: center; background: #e8f5e9; border-radius: 6px; padding: 7px 10px;
+    }
     #totalExtrasResumo {
       font-size: 0.85em; color: #e65100; font-weight: bold; margin-top: 8px;
+      text-align: center;
     }
     #tabelaRelatorio tbody tr.dia-clicavel { cursor: pointer; }
     #tabelaRelatorio tbody tr.dia-clicavel:hover { filter: brightness(0.93); }
@@ -673,9 +700,10 @@
           <button id="batidaEntrada" disabled>Bater ponto de entrada</button>
           <button id="batidaSaida" disabled>Bater ponto de saída</button>
         </div>
+        <p id="batidaStatus" style="text-align:center;font-size:0.9em;min-height:1.2em;margin:6px 0;color:#2a6eb6;font-weight:bold;"></p>
 
         <div class="ass assinatura">
-          <canvas id="assinaturaCanvas" width="300" height="100"></canvas>
+          <canvas id="assinaturaCanvas" height="100"></canvas>
           <button id="limparAssinatura">Limpar assinatura</button>
           <button id="salvarAssinatura">Assinar ponto</button>
         </div>
@@ -739,6 +767,7 @@
       <div class="card content">
         <p style="font-size:0.9em;color:#555;margin-bottom:12px;">Gerencie os funcionários cadastrados.</p>
         <div id="listaUsuariosAdmin"></div>
+        <p id="adminStatus" style="min-height:1.2em;font-size:0.9em;margin:8px 0;text-align:center;"></p>
         <button id="btnCadastrarNovoAdmin" style="background:#2a6eb6;margin-top:12px;">Cadastrar novo administrador</button>
         <button id="btnResetarCadastros" style="background:#e53935;margin-top:6px;">Resetar todos os cadastros</button>
         <button id="btnSairAdmin">Sair</button>
@@ -813,6 +842,17 @@
       <div id="editBiometriaGroup">
         <button id="btnResetarBiometria" style="background:#f57c00;margin-top:12px;">Resetar biometria</button>
       </div>
+      <div id="editGeoGroup">
+        <hr style="margin:14px 0;border:none;border-top:1px solid #ddd;" />
+        <p style="font-size:0.82em;color:#555;margin-bottom:6px;">Localização autorizada para este funcionário (opcional). Se não preenchida, usa a configuração global do app.</p>
+        <label>Latitude</label>
+        <input type="number" id="editGeoLat" step="0.000001" placeholder="Ex: -27.123456" />
+        <label>Longitude</label>
+        <input type="number" id="editGeoLng" step="0.000001" placeholder="Ex: -52.654321" />
+        <label>Raio permitido (metros)</label>
+        <input type="number" id="editGeoRaio" min="10" max="5000" placeholder="Ex: 100" />
+        <button type="button" id="btnLimparGeoFuncionario" style="background:#888;margin-top:6px;font-size:0.85em;">Remover localização individual</button>
+      </div>
       <div id="editStatus" style="font-size:0.85em;margin:8px 0;min-height:1.2em;"></div>
       <button id="btnSalvarEdicao">Salvar alterações</button>
       <button id="btnFecharEdicao" style="background:#888;margin-top:6px;">Cancelar</button>
@@ -845,6 +885,7 @@
           <tbody id="tabelaRelatorioBody"></tbody>
         </table>
       </div>
+      <p id="totalHorasResumo"></p>
       <p id="totalExtrasResumo"></p>
       <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
       <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
@@ -997,7 +1038,8 @@
 
     // Bloqueio de tentativas de login
     function verificarBloqueio(email) {
-      const dados = JSON.parse(localStorage.getItem("bjk_tent_" + btoa(email)) || "{}");
+      let dados = {};
+      try { dados = JSON.parse(localStorage.getItem("bjk_tent_" + btoa(email)) || "{}"); } catch {}
       if (!dados.bloqueioAte) return null;
       const restante = dados.bloqueioAte - Date.now();
       return restante > 0 ? Math.ceil(restante / 60000) : null;
@@ -1005,7 +1047,8 @@
 
     function registrarTentativaFalha(email) {
       const chave = "bjk_tent_" + btoa(email);
-      const dados = JSON.parse(localStorage.getItem(chave) || "{}");
+      let dados = {};
+      try { dados = JSON.parse(localStorage.getItem(chave) || "{}"); } catch {}
       dados.tentativas = (dados.tentativas || 0) + 1;
       if (dados.tentativas >= 5) {
         dados.bloqueioAte = Date.now() + 5 * 60 * 1000;
@@ -1027,9 +1070,17 @@
       return localStorage.getItem("bjk_ultimo_email") || "";
     }
 
-    // FIX #6: hash do codigo de administrador gerado uma vez ao carregar
-    let _hashCodigoAdmin = "";
-    hashSenha("BJK@ADMIN2024").then(h => { _hashCodigoAdmin = h; });
+    // FIX #6: Promise do hash — aguardada no momento do uso, sem race condition
+    const _hashCodigoAdminPromise = hashSenha("BJK@ADMIN2024");
+
+    // ============================
+    // CONSTANTES GLOBAIS
+    // ============================
+    const JORNADA_MIN        = 480;  // 8 horas em minutos
+    const LIMIAR_BIOMETRIA   = 0.6;  // distância euclidiana máxima para reconhecimento
+    const INPUT_SIZE_DETECTOR = 160; // resolução do detector (múltiplo de 32)
+    const FRAMES_CAPTURA     = 10;   // frames com rosto detectado antes de capturar (~1s)
+    const IDB_RETENCAO_DIAS  = 30;   // dias de retenção das fotos no IndexedDB
 
     // ============================
     // INDEXEDDB — FOTOS DE PONTO
@@ -1073,7 +1124,7 @@
     // Remove fotos com mais de 30 dias ao abrir a página
     abrirIDB().then(db => {
       const limite = new Date();
-      limite.setDate(limite.getDate() - 30);
+      limite.setDate(limite.getDate() - IDB_RETENCAO_DIAS);
       const tx = db.transaction(IDB_STORE, "readwrite");
       const store = tx.objectStore(IDB_STORE);
       const req = store.getAllKeys();
@@ -1091,6 +1142,7 @@
     let modelosCarregados = false;
     let usuarioLogado = null;
     let _promessaModelos = null;
+    let _dentroDoLocal = null; // null=desconhecido, true=autorizado, false=fora da área
 
     function carregarModelos() {
       if (modelosCarregados) return Promise.resolve();
@@ -1112,7 +1164,7 @@
     carregarModelos().catch(() => {});
 
     async function obterDescriptor(videoElement) {
-      const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: 224, scoreThreshold: 0.5 });
+      const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: 0.5 });
       const resultado = await faceapi
         .detectSingleFace(videoElement, opcoes)
         .withFaceLandmarks(true)
@@ -1121,7 +1173,7 @@
       return resultado.descriptor;
     }
 
-    function rostoCompativel(descCadastro, descAtual, limiar = 0.6) {
+    function rostoCompativel(descCadastro, descAtual, limiar = LIMIAR_BIOMETRIA) {
       // Aceita array de descritores (novo) ou descritor único (legado)
       const lista = Array.isArray(descCadastro[0]) ? descCadastro : [descCadastro];
       return lista.some(d => faceapi.euclideanDistance(Float32Array.from(d), descAtual) <= limiar);
@@ -1133,7 +1185,7 @@
     function iniciarAutoCaptura(videoEl, circuloEl, labelEl, onCapturado) {
       let ativo = true;
       let frames = 0;
-      const FRAMES_PARA_CAPTURAR = 10; // ~1 segundo
+      const FRAMES_PARA_CAPTURAR = FRAMES_CAPTURA;
 
       // Encontra o elemento de guias correspondente ao circulo
       const guiasEl = circuloEl.id === "circuloPonto"
@@ -1150,7 +1202,7 @@
         try {
           const det = await faceapi.detectSingleFace(
             videoEl,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: 160, scoreThreshold: 0.5 })
+            new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: 0.5 })
           );
           if (det) {
             frames++;
@@ -1184,7 +1236,8 @@
     // CONFIGURAÇÃO DO LOCAL (carregada do localStorage)
     // ============================
     function carregarConfig() {
-      const salvo = JSON.parse(localStorage.getItem("config_area_bjk"));
+      let salvo = null;
+      try { salvo = JSON.parse(localStorage.getItem("config_area_bjk")); } catch {}
       return salvo || { lat: -27.1000, lng: -52.6000, raio: 5 };
     }
 
@@ -1237,33 +1290,25 @@
     });
 
     // ============================
-    // RELÓGIO DIGITAL
+    // RELÓGIO DIGITAL (único intervalo para todas as telas)
     // ============================
-    function iniciarRelogio(elemData, elemHora) {
-      function atualizar() {
-        const d = new Date();
-        const dia = String(d.getDate()).padStart(2, "0");
-        const mes = String(d.getMonth() + 1).padStart(2, "0");
-        const ano = d.getFullYear();
-        const hh = String(d.getHours()).padStart(2, "0");
-        const mm = String(d.getMinutes()).padStart(2, "0");
-        const ss = String(d.getSeconds()).padStart(2, "0");
-
-        elemData.textContent = `${dia}/${mes}/${ano}`;
-        elemHora.textContent = `${hh}:${mm}:${ss}`;
-      }
-      atualizar();
-      setInterval(atualizar, 1000);
+    function atualizarRelogios() {
+      const d = new Date();
+      const dia = String(d.getDate()).padStart(2, "0");
+      const mes = String(d.getMonth() + 1).padStart(2, "0");
+      const ano = d.getFullYear();
+      const hh = String(d.getHours()).padStart(2, "0");
+      const mm = String(d.getMinutes()).padStart(2, "0");
+      const ss = String(d.getSeconds()).padStart(2, "0");
+      const dataStr = `${dia}/${mes}/${ano}`;
+      const horaStr = `${hh}:${mm}:${ss}`;
+      document.getElementById("data").textContent = dataStr;
+      document.getElementById("hora").textContent = horaStr;
+      document.getElementById("appData").textContent = dataStr;
+      document.getElementById("appHora").textContent = horaStr;
     }
-
-    // Inicia relógio na tela inicial
-    iniciarRelogio(document.getElementById("data"), document.getElementById("hora"));
-
-    // Inicia relógio na tela do app
-    iniciarRelogio(
-      document.getElementById("appData"),
-      document.getElementById("appHora")
-    );
+    atualizarRelogios();
+    setInterval(atualizarRelogios, 1000);
 
     // ============================
     // TELAS: LOGIN, CADASTRO, APP
@@ -1380,7 +1425,8 @@
     // ============================
     // CADASTRO DE USUÁRIO (com biometria)
     // ============================
-    const usuarios = JSON.parse(localStorage.getItem("usuarios_bjk")) || [];
+    let usuarios = [];
+    try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk")) || []; } catch {}
     let dadosCadastroPendente = null;
     let streamCadastro = null;
 
@@ -1613,6 +1659,7 @@
       document.getElementById("listaCartoes").innerHTML = "";
       document.getElementById("btnCompartilharTodos").style.display = "none";
       mudarTela("appScreen");
+      redimensionarCanvas();
       restaurarCartoesDeHoje(user.nome, user.cargo || "");
 
       // Habilita o botão correto conforme a última batida do dia
@@ -1694,12 +1741,16 @@
       document.getElementById("editTelefoneGroup").style.display = mostrar(!ehAdmin);
       document.getElementById("editNascimentoGroup").style.display = mostrar(!ehAdmin);
       document.getElementById("editBiometriaGroup").style.display = mostrar(!ehAdmin);
+      document.getElementById("editGeoGroup").style.display = mostrar(!ehAdmin);
 
       if (!ehAdmin) {
         document.getElementById("editCpf").value = u.cpf || "";
         document.getElementById("editCargo").value = u.cargo || "";
         document.getElementById("editTelefone").value = u.telefone || "";
         document.getElementById("editNascimento").value = u.nascimento || "";
+        document.getElementById("editGeoLat").value = u.geoLat != null ? u.geoLat : "";
+        document.getElementById("editGeoLng").value = u.geoLng != null ? u.geoLng : "";
+        document.getElementById("editGeoRaio").value = u.geoRaio != null ? u.geoRaio : "";
       }
 
       document.getElementById("modalEditarUsuario").classList.add("ativo");
@@ -1709,7 +1760,9 @@
       const u = usuarios.find(u => u.id === id);
       if (!u) return;
       if (u.admin && u.id === usuarioLogado.id) {
-        alert("Você não pode excluir a sua própria conta de administrador.");
+        const st = document.getElementById("adminStatus");
+        st.textContent = "Você não pode excluir a sua própria conta de administrador.";
+        st.style.color = "#c00";
         return;
       }
       const tipo = u.admin ? "administrador" : "funcionário";
@@ -1722,9 +1775,46 @@
     const NOMES_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
                          "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
 
+    // Distribui batidas do dia em E1/S1 (manhã, < 13h) e E2/S2 (tarde, >= 13h)
+    // Regra: a hora da ENTRADA define o turno; a saída segue a entrada correspondente.
+    function distribuirBatidas(bDia) {
+      const fmtHora = b => {
+        const dt = new Date(b.data_hora);
+        return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
+      };
+      const entradas = bDia.filter(b => b.tipo === "entrada");
+      const saidas   = bDia.filter(b => b.tipo === "saida");
+
+      // Primeira entrada antes das 13h → turno da manhã
+      const ent1 = entradas.find(b => new Date(b.data_hora).getHours() < 13) || null;
+      // Primeira entrada às 13h ou depois → turno da tarde
+      const ent2 = entradas.find(b => new Date(b.data_hora).getHours() >= 13) || null;
+      // Saída antes das 18h → S1 (manhã); saída a partir das 18h → S2 (tarde)
+      const sai1 = saidas.find(b => new Date(b.data_hora).getHours() < 18) || null;
+      const sai2 = saidas.find(b => new Date(b.data_hora).getHours() >= 18) || null;
+
+      let totalMin = 0;
+      if (ent1 && sai1) {
+        const d = (new Date(sai1.data_hora) - new Date(ent1.data_hora)) / 60000;
+        if (d > 0) totalMin += d;
+      }
+      if (ent2 && sai2) {
+        const d = (new Date(sai2.data_hora) - new Date(ent2.data_hora)) / 60000;
+        if (d > 0) totalMin += d;
+      }
+
+      return {
+        e1: ent1 ? fmtHora(ent1) : "",
+        s1: sai1 ? fmtHora(sai1) : "",
+        e2: ent2 ? fmtHora(ent2) : "",
+        s2: sai2 ? fmtHora(sai2) : "",
+        totalMin,
+      };
+    }
+
     function formatarMin(min) {
       const h = Math.floor(min / 60);
-      const m = Math.round(min % 60);
+      const m = Math.floor(min % 60);
       return `${h}h ${String(m).padStart(2,"0")}min`;
     }
 
@@ -1757,6 +1847,7 @@
       });
 
       let totalExtrasGeral = 0;
+      let totalMinGeral = 0;
       let totalRegistros = 0;
       const tbody = document.getElementById("tabelaRelatorioBody");
 
@@ -1770,28 +1861,12 @@
 
         totalRegistros += bDia.length;
 
-        // Extrai até 4 batidas (E1, S1, E2, S2)
-        const fmtHora = b => {
-          const dt = new Date(b.data_hora);
-          return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
-        };
-        const e1 = bDia[0] ? fmtHora(bDia[0]) : "";
-        const s1 = bDia[1] ? fmtHora(bDia[1]) : "";
-        const e2 = bDia[2] ? fmtHora(bDia[2]) : "";
-        const s2 = bDia[3] ? fmtHora(bDia[3]) : "";
+        // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
+        const { e1, s1, e2, s2, totalMin } = distribuirBatidas(bDia);
 
-        // Calcula total trabalhado emparelhando entrada→saída
-        let totalMin = 0;
-        for (let j = 0; j + 1 < bDia.length; j += 2) {
-          if (bDia[j].tipo === "entrada" && bDia[j+1].tipo === "saida") {
-            const diff = (new Date(bDia[j+1].data_hora) - new Date(bDia[j].data_hora)) / 60000;
-            if (diff > 0) totalMin += diff;
-          }
-        }
-
-        const JORNADA = 480; // 8h em minutos
-        const extrasMin = Math.max(0, totalMin - JORNADA);
+        const extrasMin = Math.max(0, totalMin - JORNADA_MIN);
         totalExtrasGeral += extrasMin;
+        totalMinGeral += totalMin;
 
         const celExtras = extrasMin > 0
           ? `<td class="cel-extras">${formatarMin(extrasMin)}</td>`
@@ -1825,6 +1900,11 @@
       // Resumo do mês
       document.getElementById("relatorioResumo").textContent =
         `${totalRegistros} registro${totalRegistros !== 1 ? "s" : ""} no mês`;
+
+      document.getElementById("totalHorasResumo").textContent =
+        totalMinGeral > 0
+          ? `Total trabalhado em ${NOMES_MESES[mes]}: ${formatarMin(totalMinGeral)}`
+          : `Nenhuma hora registrada em ${NOMES_MESES[mes]}.`;
 
       document.getElementById("totalExtrasResumo").textContent =
         totalExtrasGeral > 0
@@ -1895,7 +1975,7 @@
               ${usuarioLogado && usuarioLogado.admin ? `
               <div class="batida-admin-acoes">
                 <button class="btn-editar-batida" onclick="abrirEditarBatidaAdmin('${isoEscapado}')">Editar</button>
-                <button class="btn-excluir-batida" onclick="excluirBatidaAdmin('${isoEscapado}')">Excluir</button>
+                <button class="btn-excluir-batida" onclick="excluirBatidaAdmin('${isoEscapado}', this)">Excluir</button>
               </div>` : ""}
             </div>`;
         }).join("");
@@ -1942,8 +2022,6 @@
       const ano = _relatorioAno;
       const mes = _relatorioMes;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
-      const JORNADA = 480;
-
       const batidasMes = batidas.filter(b => {
         if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
         const dt = new Date(b.data_hora);
@@ -1958,28 +2036,14 @@
           .filter(b => new Date(b.data_hora).getDate() === i)
           .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
 
-        const fmtH = b => {
-          const dt = new Date(b.data_hora);
-          return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
-        };
-        const e1 = bDia[0] ? fmtH(bDia[0]) : "—";
-        const s1 = bDia[1] ? fmtH(bDia[1]) : "—";
-        const e2 = bDia[2] ? fmtH(bDia[2]) : "—";
-        const s2 = bDia[3] ? fmtH(bDia[3]) : "—";
-
-        let totalMin = 0;
-        for (let j = 0; j + 1 < bDia.length; j += 2) {
-          if (bDia[j].tipo === "entrada" && bDia[j+1].tipo === "saida") {
-            const diff = (new Date(bDia[j+1].data_hora) - new Date(bDia[j].data_hora)) / 60000;
-            if (diff > 0) totalMin += diff;
-          }
-        }
-        const extrasMin = Math.max(0, totalMin - JORNADA);
+        // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
+        const { e1, s1, e2, s2, totalMin } = distribuirBatidas(bDia);
+        const extrasMin = Math.max(0, totalMin - JORNADA_MIN);
         totalExtrasGeral += extrasMin;
 
         linhas.push({
           dia: String(i).padStart(2,"0"),
-          e1, s1, e2, s2,
+          e1: e1 || "—", s1: s1 || "—", e2: e2 || "—", s2: s2 || "—",
           extras: extrasMin > 0 ? formatarMin(extrasMin) : "—",
           total: totalMin > 0 ? formatarMin(totalMin) : "—",
           temDados: bDia.length > 0,
@@ -2118,6 +2182,18 @@
         usuarioEditando.cargo = novoCargo;
         usuarioEditando.telefone = novoTelefone;
         usuarioEditando.nascimento = novoNascimento;
+        const latVal  = document.getElementById("editGeoLat").value.trim();
+        const lngVal  = document.getElementById("editGeoLng").value.trim();
+        const raioVal = document.getElementById("editGeoRaio").value.trim();
+        if (latVal !== "" && lngVal !== "") {
+          usuarioEditando.geoLat  = parseFloat(latVal);
+          usuarioEditando.geoLng  = parseFloat(lngVal);
+          usuarioEditando.geoRaio = raioVal !== "" ? parseInt(raioVal) : 100;
+        } else {
+          delete usuarioEditando.geoLat;
+          delete usuarioEditando.geoLng;
+          delete usuarioEditando.geoRaio;
+        }
       }
       if (novaSenha) usuarioEditando.senha = await hashSenha(novaSenha);
 
@@ -2136,16 +2212,30 @@
       usuarioEditando = null;
     });
 
+    document.getElementById("btnLimparGeoFuncionario").addEventListener("click", () => {
+      document.getElementById("editGeoLat").value = "";
+      document.getElementById("editGeoLng").value = "";
+      document.getElementById("editGeoRaio").value = "";
+    });
+
     document.getElementById("btnSairAdmin").addEventListener("click", () => {
       usuarioLogado = null;
+      _dentroDoLocal = null;
+      document.getElementById("adminStatus").textContent = "";
       mudarTela("loginScreen");
     });
 
     document.getElementById("btnSairApp").addEventListener("click", () => {
       usuarioLogado = null;
       tipoBatidaPendente = null;
+      _dentroDoLocal = null;
+      // FIX #4: limpa dados de sessão do usuário ao sair
+      assinaturasPorCartao.clear();
+      fotosPorCartao.forEach(url => { if (url) URL.revokeObjectURL(url); });
+      fotosPorCartao.clear();
       document.getElementById("listaCartoes").innerHTML = "";
       document.getElementById("btnCompartilharTodos").style.display = "none";
+      document.getElementById("batidaStatus").textContent = "";
       desenharPlaceholder();
       mudarTela("loginScreen");
     });
@@ -2162,9 +2252,12 @@
     });
 
     document.getElementById("btnResetarCadastros").addEventListener("click", () => {
+      const st = document.getElementById("adminStatus");
+      st.textContent = "";
       const funcionarios = usuarios.filter(u => !u.admin);
       if (funcionarios.length === 0) {
-        alert("Não há funcionários cadastrados para resetar.");
+        st.textContent = "Não há funcionários cadastrados para resetar.";
+        st.style.color = "#c00";
         return;
       }
       if (!confirm(`Isso vai apagar ${funcionarios.length} funcionário(s).\nEsta ação não pode ser desfeita. Continuar?`)) return;
@@ -2203,8 +2296,9 @@
       const codigo = fd.get("codigoAdmin");
       const statusEl = document.getElementById("statusCadastroAdmin");
 
-      const codigoHash = await hashSenha(codigo);
-      if (codigoHash !== _hashCodigoAdmin) {
+      // FIX #5: ambos os hashes são calculados em paralelo, sem depender de variável pré-computada
+      const [codigoHash, hashEsperado] = await Promise.all([hashSenha(codigo), _hashCodigoAdminPromise]);
+      if (codigoHash !== hashEsperado) {
         statusEl.textContent = "Código de acesso inválido.";
         statusEl.style.color = "red";
         return;
@@ -2266,21 +2360,28 @@
 
           coordenadasEl.textContent = `(${lat.toFixed(6)}, ${lng.toFixed(6)})`;
 
-          const cfg = carregarConfig();
+          // Usa geo individual do funcionário se cadastrada, senão usa config global
+          const cfgGlobal = carregarConfig();
+          const cfg = (usuarioLogado && usuarioLogado.geoLat != null && usuarioLogado.geoLng != null)
+            ? { lat: usuarioLogado.geoLat, lng: usuarioLogado.geoLng, raio: usuarioLogado.geoRaio || cfgGlobal.raio }
+            : cfgGlobal;
           const dist = calcularDistancia(lat, lng, cfg.lat, cfg.lng);
 
           if (dist <= cfg.raio) {
+            _dentroDoLocal = true;
             localStatus.textContent =
               "Você está no local permitido para bater ponto.";
             localStatus.style.color = "green";
           } else {
+            _dentroDoLocal = false;
             localStatus.textContent =
-              "Atenção: você está fora do local habitual. O registro será feito mesmo assim.";
-            localStatus.style.color = "orange";
+              "Local não autorizado. Aproxime-se do local de trabalho para bater o ponto.";
+            localStatus.style.color = "red";
           }
           atualizarBotoesBatida();
         },
         (erro) => {
+          _dentroDoLocal = null;
           localStatus.textContent = `Localização indisponível. Prossiga normalmente.`;
           localStatus.style.color = "gray";
           atualizarBotoesBatida();
@@ -2297,43 +2398,50 @@
     // FIX #1: limpa apenas no primeiro traco, nao em cada mousedown
     let primeiroTraco = true;
 
-    ctx.lineWidth = 2;
-    ctx.lineCap = "round";
-    ctx.strokeStyle = "#000";
-
-    ctx.font = "16px Arial";
-    ctx.fillStyle = "#aaa";
-    ctx.textAlign = "center";
-    ctx.fillText("Assine Aqui", canvas.width / 2, canvas.height / 2);
+    // Canvas responsivo: ajusta resolução interna à largura renderizada
+    function redimensionarCanvas() {
+      const w = canvas.offsetWidth || 300;
+      if (canvas.width !== w) {
+        canvas.width = w;
+        desenharPlaceholder();
+      }
+    }
 
     function desenharPlaceholder() {
+      // Re-aplica configurações do contexto (resetadas quando canvas.width muda)
+      ctx.lineWidth = 2;
+      ctx.lineCap = "round";
+      ctx.strokeStyle = "#000";
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       ctx.font = "16px Arial";
       ctx.fillStyle = "#aaa";
       ctx.textAlign = "center";
       ctx.fillText("Assine Aqui", canvas.width / 2, canvas.height / 2);
-      primeiroTraco = true; // FIX #1: reseta flag ao limpar
+      primeiroTraco = true;
     }
 
-    // FIX #1: apaga placeholder apenas no primeiro traco
+    // Converte coordenadas CSS para coordenadas internas do canvas (resolução real)
+    function coordCanvas(clientX, clientY) {
+      const rect = canvas.getBoundingClientRect();
+      const scaleX = canvas.width  / rect.width;
+      const scaleY = canvas.height / rect.height;
+      return { x: (clientX - rect.left) * scaleX, y: (clientY - rect.top) * scaleY };
+    }
+
     function iniciarDesenho(e) {
       if (primeiroTraco) {
         ctx.clearRect(0, 0, canvas.width, canvas.height);
         primeiroTraco = false;
       }
       desenhando = true;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const { x, y } = coordCanvas(e.clientX, e.clientY);
       ctx.beginPath();
       ctx.moveTo(x, y);
     }
 
     function desenhar(e) {
       if (!desenhando) return;
-      const rect = canvas.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      const { x, y } = coordCanvas(e.clientX, e.clientY);
       ctx.lineTo(x, y);
       ctx.stroke();
     }
@@ -2362,6 +2470,11 @@
 
     canvas.addEventListener("touchend", pararDesenho);
 
+    // Ajusta resolução do canvas quando o container é redimensionado
+    redimensionarCanvas();
+    desenharPlaceholder();
+    new ResizeObserver(redimensionarCanvas).observe(canvas.parentElement);
+
     document.getElementById("limparAssinatura").addEventListener("click", () => {
       desenharPlaceholder();
     });
@@ -2370,8 +2483,14 @@
     let assinaturaAtual = null;
 
     document.getElementById("salvarAssinatura").addEventListener("click", () => {
+      if (_dentroDoLocal === false) {
+        document.getElementById("batidaStatus").textContent = "Local não autorizado. Você precisa estar no local de trabalho para bater o ponto.";
+        document.getElementById("batidaStatus").style.color = "#c00";
+        return;
+      }
       if (!tipoBatidaPendente) {
-        alert("Clique primeiro em 'Bater ponto de entrada' ou 'Bater ponto de saída'.");
+        document.getElementById("batidaStatus").textContent = "⚠ Selecione primeiro 'Bater ponto de entrada' ou 'Bater ponto de saída'.";
+        document.getElementById("batidaStatus").style.color = "#c00";
         return;
       }
       assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
@@ -2412,8 +2531,7 @@
           };
         })
         .catch(() => {
-          alert("Não foi possível acessar a câmera.");
-          fecharBiometria();
+          mostrarMensagemPonto("Não foi possível acessar a câmera. Clique em Cancelar e tente novamente.", "erro");
         });
     }
 
@@ -2446,9 +2564,9 @@
       try {
         await carregarModelos();
       } catch (err) {
-        alert(err.message);
+        mostrarMensagemPonto(err.message || "Erro ao carregar reconhecimento facial.", "erro");
         btn.disabled = false;
-        btn.textContent = "Tirar foto";
+        btn.textContent = "Capturar manualmente";
         return;
       }
 
@@ -2456,17 +2574,25 @@
       if (!descriptorAtual) {
         mostrarMensagemPonto("Nenhum rosto detectado. Ajuste a posição e tente novamente.", "erro");
         btn.disabled = false;
-        btn.textContent = "Tirar foto";
+        btn.textContent = "Capturar manualmente";
+        return;
+      }
+
+      if (!usuarioLogado) {
+        mostrarMensagemPonto("Sessão expirada. Faça login novamente.", "erro");
+        btn.disabled = false;
+        btn.textContent = "Capturar manualmente";
+        fecharBiometria();
         return;
       }
 
       const descsCadastrados = usuarioLogado.faceDescriptors
         || (usuarioLogado.faceDescriptor ? [usuarioLogado.faceDescriptor] : null);
 
-      if (!usuarioLogado || !descsCadastrados) {
+      if (!descsCadastrados) {
         mostrarMensagemPonto("Este usuário não possui biometria cadastrada. Refaça o cadastro.", "erro");
         btn.disabled = false;
-        btn.textContent = "Tirar foto";
+        btn.textContent = "Capturar manualmente";
         fecharBiometria();
         return;
       }
@@ -2474,7 +2600,7 @@
       if (!rostoCompativel(descsCadastrados, descriptorAtual)) {
         mostrarMensagemPonto("Rosto não reconhecido. Tente novamente com melhor iluminação.", "erro");
         btn.disabled = false;
-        btn.textContent = "Tirar foto";
+        btn.textContent = "Capturar manualmente";
         return;
       }
 
@@ -2484,7 +2610,6 @@
       bioCanvas.height = video.videoHeight;
       bioCanvas.getContext("2d").drawImage(video, 0, 0);
 
-      const foto = bioCanvas.toDataURL("image/png");
       const agora = new Date();
 
       const dia = String(agora.getDate()).padStart(2, "0");
@@ -2499,8 +2624,10 @@
       const nome = document.getElementById("userNome").textContent;
       const cargo = document.getElementById("userNome").dataset.cargo || "";
       const tipoTexto = tipoBatidaPendente === "entrada" ? "Entrada" : "Saída";
+      const nomeEsc  = escaparHTML(nome);
+      const cargoEsc = escaparHTML(cargo);
 
-      // Cria e adiciona novo cartão para esta batida
+      // Cria e adiciona novo cartão com silhueta temporária enquanto blob carrega
       const cardId = "cartao_" + Date.now();
       const novoCartao = document.createElement("div");
       novoCartao.className = "cartao-registro ativo";
@@ -2508,10 +2635,12 @@
       novoCartao.innerHTML = `
         <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
         <div class="cartao-body">
-          <img src="${foto}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />
+          <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
+            <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
+          </div>
           <div class="cartao-info">
-            <strong style="display:block;font-size:1em;color:#2a6eb6;">${nome}</strong>
-            <span style="color:#555;font-size:0.85em">${cargo}</span><br/>
+            <strong style="display:block;font-size:1em;color:#2a6eb6;">${nomeEsc}</strong>
+            <span style="color:#555;font-size:0.85em">${cargoEsc}</span><br/>
             <span>${tipoTexto}</span><br/>
             <span>${dataStr}</span><br/>
             <span>${horaStr}</span>
@@ -2527,13 +2656,24 @@
         document.getElementById("btnCompartilharTodos").style.display = "block";
       }
 
-      // FIX #4: guarda assinatura associada a este cartao
+      // Guarda assinatura associada a este cartao
       assinaturasPorCartao.set(cardId, assinaturaAtual);
-      fotosPorCartao.set(cardId, foto);
 
-      // FIX #3 e #4: await no canvas (foto carregada async) + passa assinatura
+      // Gera blob JPEG: salva no IDB, cria blob URL leve para exibição e compartilhamento
+      const assinaturaParaCompartilhar = assinaturaAtual;
+      bioCanvas.toBlob(blob => {
+        salvarFotoIDB(agora.toISOString(), blob).catch(() => {});
+        const blobUrl = URL.createObjectURL(blob);
+        fotosPorCartao.set(cardId, blobUrl);
+        const wrapper = document.getElementById("foto-" + cardId);
+        if (wrapper) {
+          wrapper.outerHTML = `<img src="${blobUrl}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
+        }
+      }, "image/jpeg", 0.75);
+
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-        const c = await gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaAtual);
+        const fotoUrl = fotosPorCartao.get(cardId) || "";
+        const c = await gerarCanvasCartao(fotoUrl, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar);
         await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
       });
 
@@ -2547,14 +2687,10 @@
       });
       salvarBatidas();
 
-      // Salva foto como JPEG no IndexedDB (chave = data_hora ISO)
-      bioCanvas.toBlob(blob => {
-        salvarFotoIDB(agora.toISOString(), blob).catch(() => {});
-      }, "image/jpeg", 0.75);
-
       // FIX #4: reseta assinatura e canvas para proxima batida
       assinaturaAtual = null;
       desenharPlaceholder();
+      document.getElementById("batidaStatus").textContent = "";
 
       btn.disabled = false;
       btn.textContent = "Capturar manualmente";
@@ -2562,18 +2698,22 @@
       atualizarBotoesBatida();
     });
 
-    // Botões de batida apenas definem o tipo e mostram feedback visual
+    // Botões de batida definem o tipo e mostram feedback inline (sem alert)
     document.getElementById("batidaEntrada").addEventListener("click", () => {
       tipoBatidaPendente = "entrada";
       document.getElementById("batidaEntrada").style.outline = "3px solid #fff";
       document.getElementById("batidaSaida").style.outline = "";
-      alert("Tipo selecionado: Entrada. Agora clique em 'Assinar ponto' para registrar com biometria.");
+      const st = document.getElementById("batidaStatus");
+      st.style.color = "#2a6eb6";
+      st.textContent = "✔ Entrada selecionada — assine e clique em 'Assinar ponto'.";
     });
     document.getElementById("batidaSaida").addEventListener("click", () => {
       tipoBatidaPendente = "saida";
       document.getElementById("batidaSaida").style.outline = "3px solid #fff";
       document.getElementById("batidaEntrada").style.outline = "";
-      alert("Tipo selecionado: Saída. Agora clique em 'Assinar ponto' para registrar com biometria.");
+      const st = document.getElementById("batidaStatus");
+      st.style.color = "#2a6eb6";
+      st.textContent = "✔ Saída selecionada — assine e clique em 'Assinar ponto'.";
     });
 
     // Reconstrói os cartões de hoje do usuário a partir do localStorage ao fazer login
@@ -2630,18 +2770,21 @@
         lista.appendChild(novoCartao);
 
         // Carrega foto do IndexedDB e substitui o placeholder quando disponível
-        buscarFotoIDB(b.data_hora).then(blob => {
-          if (!blob) return;
+        // FIX #2: guarda a Promise para que o botão de compartilhar possa aguardá-la
+        const fotoIDBPromise = buscarFotoIDB(b.data_hora).then(blob => {
+          if (!blob) return "";
           const url = URL.createObjectURL(blob);
           fotosPorCartao.set(cardId, url);
           const wrapper = document.getElementById("foto-" + cardId);
           if (wrapper) {
             wrapper.outerHTML = `<img src="${url}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
           }
-        }).catch(() => {});
+          return url;
+        }).catch(() => "");
 
         novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-          const fotoUrl = fotosPorCartao.get(cardId) || "";
+          // FIX #2: aguarda foto do IDB se ainda não carregou
+          const fotoUrl = fotosPorCartao.get(cardId) || await fotoIDBPromise || "";
           const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null);
           await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
         });
@@ -2736,7 +2879,10 @@
       const a = document.createElement("a");
       a.href = c.toDataURL("image/png");
       a.download = filename;
+      a.style.display = "none";
+      document.body.appendChild(a);
       a.click();
+      document.body.removeChild(a);
     }
 
     // FIX #3 e #4: await em cada canvas, altura dinamica, inclui assinatura
@@ -2782,7 +2928,8 @@
     // ============================
     // BATIDAS DE PONTO
     // ============================
-    const batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || [];
+    let batidas = [];
+    try { batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || []; } catch {}
 
     function salvarBatidas() {
       localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
@@ -2814,6 +2961,13 @@
       btnEntrada.style.outline = "";
       btnSaida.style.outline   = "";
       tipoBatidaPendente = null;
+      document.getElementById("batidaStatus").textContent = "";
+
+      // Bloqueia ambos os botões se fora da área autorizada
+      if (_dentroDoLocal === false) {
+        btnEntrada.disabled = true;
+        btnSaida.disabled   = true;
+      }
     }
 
     // ============================
@@ -2851,8 +3005,23 @@
       document.getElementById("modalEditarBatida").classList.add("ativo");
     }
 
-    function excluirBatidaAdmin(dataHoraISO) {
-      if (!confirm("Excluir esta batida?\nEsta ação não pode ser desfeita.")) return;
+    function excluirBatidaAdmin(dataHoraISO, btnEl) {
+      if (btnEl && !btnEl.dataset.confirmando) {
+        btnEl.dataset.confirmando = "1";
+        btnEl.textContent = "Confirmar exclusão";
+        btnEl.style.background = "#b71c1c";
+        const btnCancelar = document.createElement("button");
+        btnCancelar.className = "btn-editar-batida";
+        btnCancelar.textContent = "Cancelar";
+        btnCancelar.onclick = () => {
+          btnEl.textContent = "Excluir";
+          btnEl.style.background = "";
+          delete btnEl.dataset.confirmando;
+          btnCancelar.remove();
+        };
+        btnEl.insertAdjacentElement("afterend", btnCancelar);
+        return;
+      }
       const idx = batidas.findIndex(b => b.data_hora === dataHoraISO);
       if (idx === -1) return;
       batidas.splice(idx, 1);
@@ -2901,9 +3070,12 @@
 
       setTimeout(() => {
         document.getElementById("modalEditarBatida").classList.remove("ativo");
-        const diaAtualizado = new Date(novaDataHora).getDate();
+        // FIX #3: atualiza mês/ano do relatório caso a batida tenha sido movida
+        const dtAtualizada = new Date(novaDataHora);
+        _relatorioAno = dtAtualizada.getFullYear();
+        _relatorioMes = dtAtualizada.getMonth();
         renderRelatorio();
-        abrirBatidasDia(diaAtualizado);
+        abrirBatidasDia(dtAtualizada.getDate());
       }, 700);
     });
 
