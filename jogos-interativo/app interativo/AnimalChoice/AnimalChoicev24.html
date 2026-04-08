@@ -2560,7 +2560,7 @@ var p8HexFilled=0;
 var p8HiveState='outside'; // 'outside'|'inside'|'exiting'|'transforming'|'eggs'|'hatching'|'done'
 var p8HiveTimer=0,p8HiveAlpha=0,p8BabyBees=[],p8WebStuck=0;
 var p8HiveX=3350,p8HiveY=GY-195,p8HiveW=150,p8HiveH=195;
-var p8HiveEntrX=3385,p8HiveEntrY=GY-68,p8HiveEntrW=80,p8HiveEntrH=55;
+var p8HiveEntrX=3390,p8HiveEntrY=GY-145,p8HiveEntrW=70,p8HiveEntrH=60;
 
 // ── Gerador de flores da Fase 7 ──────────────────────────────────────────────
 // 5 buques × 3 flores (1 aberta=source, 2 fechadas=target)
@@ -2680,7 +2680,7 @@ function loadProgress(){
 
 function startGame(){// inicia o jogo, reseta todas as variaveis para o estado inicial da fase 1
 
-  state='playing'; phase=1; tutorialTimer=420;// reseta tudo para o inicio da fase 1
+  state='playing'; phase=8; tutorialTimer=420;// reseta tudo para o inicio da fase 1
   pl.x=100; pl.y=GY-40; pl.vx=0; pl.vy=0; pl.char='cat';// escolhe o personagem inicial
   camX=0; score=0; lives=3; isDigging=false; nextBonusLife=20; extraLifeTimer=0;// AQUI EU COLOCO AS VIDAS DOS PERSONAGENS
   p1Stars.forEach(function(s){s.got=false;});// reseta as estrelas da fase 1 para nao coletadas
@@ -6483,28 +6483,261 @@ function drawP8Flowers(){
     ctx.beginPath();ctx.ellipse(bbsx+2,bb.y-7,7,4,0.3,0,Math.PI*2);ctx.fill();
     ctx.globalAlpha=1;ctx.restore();
   }
-  // Colmeia exterior
+  // Colmeia exterior — oval pendurada em árvore (como colmeia natural)
   var hvsx=p8HiveX-camX;
   if(hvsx>-200&&hvsx<CW+200){
-    ctx.fillStyle='#6D4C41';ctx.fillRect(hvsx+p8HiveW/2-5,GY-55,10,55);
-    ctx.save();ctx.translate(hvsx,p8HiveY);
-    ctx.fillStyle='#FF8F00';
-    ctx.beginPath();ctx.moveTo(20,0);ctx.lineTo(p8HiveW-20,0);ctx.lineTo(p8HiveW,p8HiveH-20);ctx.lineTo(0,p8HiveH-20);ctx.closePath();ctx.fill();
-    ctx.strokeStyle='#E65100';ctx.lineWidth=2;ctx.stroke();
-    ctx.strokeStyle='rgba(180,60,0,0.3)';ctx.lineWidth=1;
-    for(var hl=0;hl<5;hl++){ctx.beginPath();ctx.moveTo(8,hl*36+20);ctx.lineTo(p8HiveW-8,hl*36+20);ctx.stroke();}
-    for(var hlv=0;hlv<3;hlv++){ctx.beginPath();ctx.moveTo(hlv*48+24,8);ctx.lineTo(hlv*48+24,p8HiveH-22);ctx.stroke();}
-    ctx.fillStyle='#4A2C0A';ctx.beginPath();ctx.ellipse(p8HiveW/2,p8HiveH-12,24,14,0,0,Math.PI*2);ctx.fill();
-    if(p8NectarCarried&&Math.abs(pl.x+pl.w/2-p8HiveX-p8HiveW/2)<200){
-      ctx.save();ctx.globalAlpha=0.3+Math.sin(Date.now()/200)*0.2;ctx.fillStyle='#FFD700';ctx.beginPath();ctx.ellipse(p8HiveW/2,p8HiveH-12,32,18,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
-      ctx.fillStyle='#FFD700';ctx.font='bold 11px Arial';ctx.textAlign='center';ctx.fillText('Entre na colmeia!',p8HiveW/2,p8HiveH-38);
+    var hcx=hvsx+75;      // centro x da colmeia no canvas
+    var hcy=GY-155;       // centro y da colmeia (elevada, pendurada)
+    var ha=44;            // semi-eixo horizontal
+    var hb=65;            // semi-eixo vertical
+    var trkX=hcx+105;     // centro x do tronco da árvore
+    var branchY=GY-245;   // y do galho
+
+    // ── Árvore ──
+    var fkY=GY-110; // altura do fork
+
+    // --- Copa: ATRÁS dos galhos (camada base escura — irregular) ---
+    var canCX=trkX, canCY=GY-210, canCR=78;
+    ctx.fillStyle='#1A5C20';
+    // Círculos irregulares: posições e raios todos diferentes
+    var c0=[
+      {x:canCX-5,  y:canCY-5,  r:72}, // blob central
+      {x:canCX-30, y:canCY-18, r:54}, // sub-blob sup-esq
+      {x:canCX+28, y:canCY-10, r:50}, // sub-blob sup-dir
+      {x:canCX-8,  y:canCY+28, r:46}, // blob inferior
+      // protuberâncias irregulares na borda
+      {x:canCX-78, y:canCY+8,  r:38}, // esquerda grande
+      {x:canCX-65, y:canCY-42, r:32}, // sup-esq grande
+      {x:canCX-32, y:canCY-72, r:30}, // topo-esq
+      {x:canCX+14, y:canCY-78, r:26}, // topo
+      {x:canCX+52, y:canCY-55, r:34}, // sup-dir
+      {x:canCX+80, y:canCY-10, r:28}, // direita
+      {x:canCX+68, y:canCY+36, r:22}, // inf-dir pequena
+      {x:canCX+22, y:canCY+65, r:24}, // inferior
+      {x:canCX-44, y:canCY+60, r:30}, // inf-esq
+      {x:canCX-82, y:canCY-18, r:20}, // esq-baixo pequena
+      {x:canCX-50, y:canCY-62, r:18}  // sup-esq pequena extra
+    ];
+    for(var bi=0;bi<c0.length;bi++){ctx.beginPath();ctx.arc(c0[bi].x,c0[bi].y,c0[bi].r,0,Math.PI*2);ctx.fill();}
+
+    // --- Tronco com gradiente ---
+    var tg=ctx.createLinearGradient(trkX-24,0,trkX+24,0);
+    tg.addColorStop(0,'#2E1505');tg.addColorStop(0.18,'#6B3A10');tg.addColorStop(0.5,'#C07828');tg.addColorStop(0.72,'#A06020');tg.addColorStop(1,'#2E1505');
+    ctx.fillStyle=tg;
+    ctx.beginPath();
+    ctx.moveTo(trkX-24,GY);ctx.bezierCurveTo(trkX-26,GY-80,trkX-20,GY-160,trkX-11,fkY);
+    ctx.lineTo(trkX+11,fkY);ctx.bezierCurveTo(trkX+20,GY-160,trkX+26,GY-80,trkX+24,GY);
+    ctx.closePath();ctx.fill();
+    // Base alargada do tronco
+    ctx.fillStyle='#2E1505';
+    ctx.beginPath();ctx.moveTo(trkX-22,GY-8);ctx.bezierCurveTo(trkX-40,GY-18,trkX-58,GY-6,trkX-72,GY);ctx.lineTo(trkX-22,GY);ctx.closePath();ctx.fill();
+    ctx.beginPath();ctx.moveTo(trkX+22,GY-8);ctx.bezierCurveTo(trkX+40,GY-18,trkX+58,GY-6,trkX+72,GY);ctx.lineTo(trkX+22,GY);ctx.closePath();ctx.fill();
+
+    // --- Galhos (strokes em 2 tons: escuro + claro) ---
+    ctx.lineCap='round';
+    // Galho esq principal — segura colmeia
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=17;
+    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-10,trkX-82,fkY-18,hcx+6,branchY+3);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=11;
+    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-10,trkX-82,fkY-18,hcx+6,branchY+3);ctx.stroke();
+    ctx.strokeStyle='#C8882A';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-12,trkX-82,fkY-20,hcx+6,branchY+2);ctx.stroke();
+    // Galho sup-esq
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=14;
+    ctx.beginPath();ctx.moveTo(trkX-3,fkY);ctx.bezierCurveTo(trkX-20,fkY-40,trkX-45,fkY-72,trkX-62,fkY-105);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=9;
+    ctx.beginPath();ctx.moveTo(trkX-3,fkY);ctx.bezierCurveTo(trkX-20,fkY-40,trkX-45,fkY-72,trkX-62,fkY-105);ctx.stroke();
+    // Fork do galho sup-esq
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=9;
+    ctx.beginPath();ctx.moveTo(trkX-38,fkY-68);ctx.quadraticCurveTo(trkX-52,fkY-88,trkX-68,fkY-108);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(trkX-38,fkY-68);ctx.quadraticCurveTo(trkX-52,fkY-88,trkX-68,fkY-108);ctx.stroke();
+    // Galho central
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=13;
+    ctx.beginPath();ctx.moveTo(trkX+2,fkY);ctx.bezierCurveTo(trkX-5,fkY-38,trkX-2,fkY-78,trkX+2,fkY-112);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=8;
+    ctx.beginPath();ctx.moveTo(trkX+2,fkY);ctx.bezierCurveTo(trkX-5,fkY-38,trkX-2,fkY-78,trkX+2,fkY-112);ctx.stroke();
+    // Galho dir
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=14;
+    ctx.beginPath();ctx.moveTo(trkX+5,fkY);ctx.bezierCurveTo(trkX+35,fkY-28,trkX+68,fkY-52,trkX+92,fkY-72);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=9;
+    ctx.beginPath();ctx.moveTo(trkX+5,fkY);ctx.bezierCurveTo(trkX+35,fkY-28,trkX+68,fkY-52,trkX+92,fkY-72);ctx.stroke();
+    // Fork galho dir
+    ctx.strokeStyle='#2E1505';ctx.lineWidth=9;
+    ctx.beginPath();ctx.moveTo(trkX+75,fkY-58);ctx.quadraticCurveTo(trkX+88,fkY-80,trkX+100,fkY-100);ctx.stroke();
+    ctx.strokeStyle='#A06020';ctx.lineWidth=5;
+    ctx.beginPath();ctx.moveTo(trkX+75,fkY-58);ctx.quadraticCurveTo(trkX+88,fkY-80,trkX+100,fkY-100);ctx.stroke();
+
+    // --- Copa FRENTE: verde médio irregular ---
+    ctx.fillStyle='#2E9438';
+    var c1=[
+      {x:canCX-5,  y:canCY-5,  r:63},
+      {x:canCX-28, y:canCY-16, r:46},
+      {x:canCX+24, y:canCY-8,  r:42},
+      {x:canCX-10, y:canCY+25, r:38},
+      {x:canCX-72, y:canCY+6,  r:30},
+      {x:canCX-60, y:canCY-40, r:26},
+      {x:canCX-28, y:canCY-68, r:24},
+      {x:canCX+12, y:canCY-72, r:20},
+      {x:canCX+50, y:canCY-50, r:28},
+      {x:canCX+74, y:canCY-8,  r:22},
+      {x:canCX+62, y:canCY+32, r:18},
+      {x:canCX+18, y:canCY+60, r:20},
+      {x:canCX-40, y:canCY+55, r:24},
+      {x:canCX-76, y:canCY-16, r:16}
+    ];
+    for(var bi2=0;bi2<c1.length;bi2++){ctx.beginPath();ctx.arc(c1[bi2].x,c1[bi2].y,c1[bi2].r,0,Math.PI*2);ctx.fill();}
+
+    // Camada verde claro (luz solar — tendência ao canto sup-esq)
+    ctx.fillStyle='#48B850';
+    var c2=[
+      {x:canCX-15, y:canCY-15, r:52},
+      {x:canCX-38, y:canCY-30, r:36},
+      {x:canCX+8,  y:canCY-22, r:32},
+      {x:canCX-65, y:canCY-15, r:22},
+      {x:canCX-52, y:canCY-52, r:20},
+      {x:canCX-20, y:canCY-60, r:18},
+      {x:canCX+38, y:canCY-48, r:22},
+      {x:canCX-8,  y:canCY+18, r:26},
+      {x:canCX+52, y:canCY-12, r:16}
+    ];
+    for(var bi3=0;bi3<c2.length;bi3++){ctx.beginPath();ctx.arc(c2[bi3].x,c2[bi3].y,c2[bi3].r,0,Math.PI*2);ctx.fill();}
+
+    // Highlights brilhantes
+    ctx.fillStyle='#68CC6A';
+    ctx.beginPath();ctx.arc(canCX-22,canCY-28,28,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(canCX+8, canCY-18,18,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(canCX-42,canCY-40,14,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#88E080';
+    ctx.beginPath();ctx.arc(canCX-26,canCY-36,14,0,Math.PI*2);ctx.fill();
+    ctx.beginPath();ctx.arc(canCX+5, canCY-30,9, 0,Math.PI*2);ctx.fill();
+
+    // Folhinhas pontudas em posições irregulares nas bordas
+    ctx.fillStyle='#2E9438';
+    var lpts=[
+      {x:canCX-88,y:canCY+14, a:0.5},{x:canCX-70,y:canCY-48,a:1.1},
+      {x:canCX-36,y:canCY-80,a:0.2},{x:canCX+16,y:canCY-84,a:-0.1},
+      {x:canCX+58,y:canCY-62,a:-0.7},{x:canCX+86,y:canCY-14,a:-1.2},
+      {x:canCX+72,y:canCY+40,a:-0.4},{x:canCX+25,y:canCY+70, a:0.15},
+      {x:canCX-48,y:canCY+65,a:0.35},{x:canCX-88,y:canCY-24,a:0.9}
+    ];
+    for(var lp=0;lp<lpts.length;lp++){
+      ctx.save();ctx.translate(lpts[lp].x,lpts[lp].y);ctx.rotate(lpts[lp].a);
+      ctx.beginPath();ctx.ellipse(0,0,5,11,0,0,Math.PI*2);ctx.fill();ctx.restore();
     }
+
+    // ── Fio/corda de sustentação ──
+    ctx.strokeStyle='#6D4C41';ctx.lineWidth=2;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(hcx,branchY+2);ctx.lineTo(hcx,hcy-hb);ctx.stroke();
+    // Nó no topo da colmeia
+    ctx.fillStyle='#5D4037';ctx.beginPath();ctx.arc(hcx,hcy-hb,3.5,0,Math.PI*2);ctx.fill();
+
+    // ── Sombra projetada da colmeia ──
+    ctx.save();ctx.globalAlpha=0.18;
+    ctx.fillStyle='#000';ctx.beginPath();ctx.ellipse(hcx+8,hcy+hb+10,ha*0.85,10,0,0,Math.PI*2);ctx.fill();
     ctx.restore();
-    // Abelhazinhas decorativas ao redor da colmeia
-    var bt=Date.now()/500;
-    for(var bi2=0;bi2<3;bi2++){
-      var ba=bt+bi2*Math.PI*2/3,bsx2=hvsx+p8HiveW/2+Math.cos(ba)*38,bsy2=p8HiveY+p8HiveH-35+Math.sin(ba)*14;
-      ctx.save();ctx.globalAlpha=0.6;ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(bsx2,bsy2,6,4,0,0,Math.PI*2);ctx.fill();ctx.globalAlpha=1;ctx.restore();
+
+    // ── Corpo oval da colmeia ──
+    ctx.save();
+    ctx.beginPath();ctx.ellipse(hcx,hcy,ha,hb,0,0,Math.PI*2);ctx.closePath();
+
+    // Gradiente radial 3D (luz vindo da esquerda-cima)
+    var hGrad=ctx.createRadialGradient(hcx-ha*0.32,hcy-hb*0.28,ha*0.05,hcx+ha*0.1,hcy,ha*1.55);
+    hGrad.addColorStop(0,'#F8E060');
+    hGrad.addColorStop(0.3,'#E8B820');
+    hGrad.addColorStop(0.65,'#C8880A');
+    hGrad.addColorStop(1,'#8A5A05');
+    ctx.fillStyle=hGrad;ctx.fill();
+    ctx.strokeStyle='#7A500A';ctx.lineWidth=2;ctx.stroke();
+
+    // Clip para os anéis ficarem dentro do oval
+    ctx.clip();
+
+    // Anéis horizontais — 18 faixas (textura característica da colmeia oval)
+    ctx.lineWidth=2.8;
+    for(var bd=0;bd<18;bd++){
+      var dy8=-hb+hb*2/18*bd+hb/18;
+      var bw8=ha*Math.sqrt(Math.max(0,1-Math.pow(dy8/hb,2)));
+      var bandProg=bd/18;
+      // Cor da faixa varia do dourado claro ao âmbar escuro
+      var rr=Math.floor(200-bandProg*60), gg=Math.floor(140-bandProg*60), bb8=Math.floor(5);
+      ctx.strokeStyle='rgba('+rr+','+gg+','+bb8+',0.55)';
+      ctx.beginPath();ctx.moveTo(hcx-bw8*1.02,hcy+dy8);ctx.lineTo(hcx+bw8*1.02,hcy+dy8);ctx.stroke();
+    }
+
+    // Highlight esquerdo-superior (brilho 3D da superfície)
+    var hl8=ctx.createRadialGradient(hcx-ha*0.38,hcy-hb*0.32,2,hcx-ha*0.1,hcy-hb*0.05,ha*0.9);
+    hl8.addColorStop(0,'rgba(255,255,210,0.42)');hl8.addColorStop(0.6,'rgba(255,255,180,0.08)');hl8.addColorStop(1,'rgba(255,255,180,0)');
+    ctx.fillStyle=hl8;ctx.fillRect(hcx-ha,hcy-hb,ha*2,hb*2);
+
+    ctx.restore();
+
+    // ── Buraco de entrada (redondo, posição característica) ──
+    var ehx=hcx+4, ehy=hcy+hb*0.42;
+    // Sombra ao redor do buraco
+    ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#4A2800';
+    ctx.beginPath();ctx.ellipse(ehx,ehy,18,16,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    // Buraco
+    ctx.fillStyle='#0D0500';ctx.beginPath();ctx.ellipse(ehx,ehy,14,13,0,0,Math.PI*2);ctx.fill();
+    // Brilho interno (profundidade)
+    var eGrad=ctx.createRadialGradient(ehx-3,ehy-4,1,ehx,ehy,13);
+    eGrad.addColorStop(0,'rgba(200,100,0,0.18)');eGrad.addColorStop(1,'rgba(0,0,0,0)');
+    ctx.fillStyle=eGrad;ctx.beginPath();ctx.ellipse(ehx,ehy,14,13,0,0,Math.PI*2);ctx.fill();
+
+    // ── Abelhazinhas pousadas na superfície ──
+    var bt=Date.now()/480;
+    var beeSurf=[
+      {a:0.25},{a:1.05},{a:1.9},{a:3.1},{a:4.0},{a:5.2}
+    ];
+    for(var bi2=0;bi2<beeSurf.length;bi2++){
+      var bAng=beeSurf[bi2].a+Math.sin(bt*0.7+bi2*1.1)*0.06;
+      // Posição na superfície do oval
+      var bex=hcx+Math.cos(bAng)*(ha+1);
+      var bey=hcy+Math.sin(bAng)*(hb+1)*0.82;
+      // Angulo para ficar perpendicular à superfície
+      var tang=Math.atan2(Math.sin(bAng)*ha*ha,Math.cos(bAng)*hb*hb)+Math.PI/2;
+      ctx.save();ctx.translate(bex,bey);ctx.rotate(tang);ctx.globalAlpha=0.88;
+      // Corpo
+      ctx.fillStyle='#FDD835';ctx.beginPath();ctx.ellipse(0,0,5.5,3.5,0,0,Math.PI*2);ctx.fill();
+      // Listras
+      ctx.strokeStyle='rgba(30,20,0,0.9)';ctx.lineWidth=1.2;
+      ctx.beginPath();ctx.moveTo(-1.5,-3.5);ctx.lineTo(-1.5,3.5);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(1.5,-3.5);ctx.lineTo(1.5,3.5);ctx.stroke();
+      // Cabeça
+      ctx.fillStyle='#333';ctx.beginPath();ctx.arc(-5.5,0,2.8,0,Math.PI*2);ctx.fill();
+      // Asas (pequenas, dobradas)
+      ctx.globalAlpha=0.45;ctx.fillStyle='rgba(220,245,255,0.9)';
+      ctx.beginPath();ctx.ellipse(-1,-4.5,4.5,2.5,-0.25,0,Math.PI*2);ctx.fill();
+      ctx.beginPath();ctx.ellipse(2,-4.5,4.5,2.5,0.25,0,Math.PI*2);ctx.fill();
+      ctx.globalAlpha=1;ctx.restore();
+    }
+
+    // ── Indicador de progresso (hexágonos visíveis na superfície) ──
+    if(p8HexFilled>0){
+      ctx.save();ctx.globalAlpha=0.62;
+      var hR2=7, hpxA=[hcx-16,hcx,hcx+16], hpyA=hcy+8;
+      for(var hei=0;hei<Math.min(p8HexFilled,3);hei++){
+        ctx.beginPath();
+        for(var hpi8=0;hpi8<6;hpi8++){var ha8=Math.PI/6+hpi8*Math.PI/3;if(hpi8===0)ctx.moveTo(hpxA[hei]+hR2*Math.cos(ha8),hpyA+hR2*Math.sin(ha8));else ctx.lineTo(hpxA[hei]+hR2*Math.cos(ha8),hpyA+hR2*Math.sin(ha8));}
+        ctx.closePath();ctx.fillStyle='#FFD54F';ctx.fill();ctx.strokeStyle='rgba(180,100,0,0.5)';ctx.lineWidth=1;ctx.stroke();
+      }
+      if(p8HexFilled>=10){ctx.globalAlpha=1;ctx.fillStyle='#FFD700';ctx.font='bold 13px Arial';ctx.textAlign='center';ctx.fillText('✅',hcx,hcy-hb-10);}
+      ctx.restore();
+    }
+
+    // ── Glow + aviso "Entre na colmeia" quando carrega néctar ──
+    if(p8NectarCarried&&Math.abs(pl.x+pl.w/2-p8HiveX-75)<220){
+      ctx.save();
+      // Pulso dourado ao redor do buraco
+      ctx.globalAlpha=0.22+Math.sin(Date.now()/160)*0.16;
+      ctx.fillStyle='#FFD700';ctx.beginPath();ctx.ellipse(ehx,ehy,26,23,0,0,Math.PI*2);ctx.fill();
+      // Banner
+      ctx.globalAlpha=0.82+Math.sin(Date.now()/200)*0.1;
+      ctx.fillStyle='#FFD700';ctx.strokeStyle='#E65100';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.roundRect(hcx-58,hcy-hb-38,116,22,6);ctx.fill();ctx.stroke();
+      ctx.fillStyle='#3E1E00';ctx.font='bold 11px Arial';ctx.textAlign='center';
+      ctx.fillText('🍯 Entre na colmeia!',hcx,hcy-hb-22);
+      ctx.globalAlpha=1;ctx.restore();
     }
   }
   // Indicador de néctar na abelha
