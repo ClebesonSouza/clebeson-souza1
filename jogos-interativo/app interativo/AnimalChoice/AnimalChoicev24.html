@@ -5587,10 +5587,12 @@ function drawBee(cx,cy,def){
   // Antenas balançando
   var antennaWave=isMoving?Math.sin(t*3)*0.18:Math.sin(t*0.8)*0.06;
 
+  // Offset vertical: com scale 0.55 os pés ficam ~10px acima do chão; corrige alinhamento
+  var beeOffY = pl.h/2 - 17*0.55; // ≈ 9.65px
   ctx.save();
-  ctx.translate(cx,cy+bob);
+  ctx.translate(cx,cy+bob+beeOffY);
   ctx.rotate(tilt);
-  ctx.scale(sqX,sqY);
+  ctx.scale(sqX*0.55,sqY*0.55);
 
   // ── Brilho de pólen ───────────────────────────────────────────────────────
   if(pollenGlow>0){
@@ -6488,143 +6490,117 @@ function drawP8Flowers(){
   if(hvsx>-200&&hvsx<CW+200){
     var hcx=hvsx+75;      // centro x da colmeia no canvas
     var hcy=GY-155;       // centro y da colmeia (elevada, pendurada)
-    var ha=44;            // semi-eixo horizontal
-    var hb=65;            // semi-eixo vertical
+    var ha=28;            // semi-eixo horizontal
+    var hb=42;            // semi-eixo vertical
     var trkX=hcx+105;     // centro x do tronco da árvore
     var branchY=GY-245;   // y do galho
 
-    // ── Árvore ──
-    var fkY=GY-110; // altura do fork
+    // ── Árvore (cartoon 3D) ──
+    var fkY=GY-105; // altura do fork
+    var canCX=trkX, canCY=GY-250;
 
-    // --- Copa: ATRÁS dos galhos (camada base escura — irregular) ---
-    var canCX=trkX, canCY=GY-210, canCR=78;
-    ctx.fillStyle='#1A5C20';
-    // Círculos irregulares: posições e raios todos diferentes
-    var c0=[
-      {x:canCX-5,  y:canCY-5,  r:72}, // blob central
-      {x:canCX-30, y:canCY-18, r:54}, // sub-blob sup-esq
-      {x:canCX+28, y:canCY-10, r:50}, // sub-blob sup-dir
-      {x:canCX-8,  y:canCY+28, r:46}, // blob inferior
-      // protuberâncias irregulares na borda
-      {x:canCX-78, y:canCY+8,  r:38}, // esquerda grande
-      {x:canCX-65, y:canCY-42, r:32}, // sup-esq grande
-      {x:canCX-32, y:canCY-72, r:30}, // topo-esq
-      {x:canCX+14, y:canCY-78, r:26}, // topo
-      {x:canCX+52, y:canCY-55, r:34}, // sup-dir
-      {x:canCX+80, y:canCY-10, r:28}, // direita
-      {x:canCX+68, y:canCY+36, r:22}, // inf-dir pequena
-      {x:canCX+22, y:canCY+65, r:24}, // inferior
-      {x:canCX-44, y:canCY+60, r:30}, // inf-esq
-      {x:canCX-82, y:canCY-18, r:20}, // esq-baixo pequena
-      {x:canCX-50, y:canCY-62, r:18}  // sup-esq pequena extra
-    ];
-    for(var bi=0;bi<c0.length;bi++){ctx.beginPath();ctx.arc(c0[bi].x,c0[bi].y,c0[bi].r,0,Math.PI*2);ctx.fill();}
+    // --- Sombra no chão ---
+    ctx.save();ctx.globalAlpha=0.15;ctx.fillStyle='#000';
+    ctx.beginPath();ctx.ellipse(trkX,GY,115,14,0,0,Math.PI*2);ctx.fill();ctx.restore();
 
-    // --- Tronco com gradiente ---
-    var tg=ctx.createLinearGradient(trkX-24,0,trkX+24,0);
-    tg.addColorStop(0,'#2E1505');tg.addColorStop(0.18,'#6B3A10');tg.addColorStop(0.5,'#C07828');tg.addColorStop(0.72,'#A06020');tg.addColorStop(1,'#2E1505');
+    // --- Gramado base ---
+    var gg2=ctx.createRadialGradient(trkX,GY,8,trkX,GY,88);
+    gg2.addColorStop(0,'#56C25A');gg2.addColorStop(1,'#2A7D2E');
+    ctx.fillStyle=gg2;ctx.beginPath();ctx.ellipse(trkX,GY,88,13,0,0,Math.PI*2);ctx.fill();
+
+    // --- Tronco principal ---
+    var tg=ctx.createLinearGradient(trkX-32,0,trkX+32,0);
+    tg.addColorStop(0,'#1E0E03');tg.addColorStop(0.14,'#5C2A0A');
+    tg.addColorStop(0.42,'#A0621A');tg.addColorStop(0.60,'#C07828');
+    tg.addColorStop(0.80,'#8A5010');tg.addColorStop(1,'#1E0E03');
     ctx.fillStyle=tg;
     ctx.beginPath();
-    ctx.moveTo(trkX-24,GY);ctx.bezierCurveTo(trkX-26,GY-80,trkX-20,GY-160,trkX-11,fkY);
-    ctx.lineTo(trkX+11,fkY);ctx.bezierCurveTo(trkX+20,GY-160,trkX+26,GY-80,trkX+24,GY);
+    ctx.moveTo(trkX-30,GY);
+    ctx.bezierCurveTo(trkX-32,GY-85,trkX-24,GY-165,trkX-13,fkY);
+    ctx.lineTo(trkX+13,fkY);
+    ctx.bezierCurveTo(trkX+24,GY-165,trkX+32,GY-85,trkX+30,GY);
     ctx.closePath();ctx.fill();
-    // Base alargada do tronco
-    ctx.fillStyle='#2E1505';
-    ctx.beginPath();ctx.moveTo(trkX-22,GY-8);ctx.bezierCurveTo(trkX-40,GY-18,trkX-58,GY-6,trkX-72,GY);ctx.lineTo(trkX-22,GY);ctx.closePath();ctx.fill();
-    ctx.beginPath();ctx.moveTo(trkX+22,GY-8);ctx.bezierCurveTo(trkX+40,GY-18,trkX+58,GY-6,trkX+72,GY);ctx.lineTo(trkX+22,GY);ctx.closePath();ctx.fill();
+    // Casca: linhas sinuosas
+    ctx.save();ctx.strokeStyle='rgba(0,0,0,0.18)';ctx.lineWidth=2.5;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(trkX-9,GY-18);ctx.bezierCurveTo(trkX-6,GY-70,trkX-10,GY-130,trkX-8,fkY+8);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(trkX+9,GY-18);ctx.bezierCurveTo(trkX+12,GY-70,trkX+8,GY-130,trkX+10,fkY+8);ctx.stroke();
+    ctx.restore();
+    // Highlight lateral do tronco
+    ctx.save();ctx.globalAlpha=0.22;ctx.fillStyle='#D4902A';
+    ctx.beginPath();ctx.moveTo(trkX-4,GY-5);ctx.bezierCurveTo(trkX+2,GY-80,trkX+4,GY-150,trkX+5,fkY+5);ctx.lineTo(trkX+10,fkY+5);ctx.bezierCurveTo(trkX+9,GY-150,trkX+7,GY-80,trkX+3,GY-5);ctx.closePath();ctx.fill();ctx.restore();
 
-    // --- Galhos (strokes em 2 tons: escuro + claro) ---
-    ctx.lineCap='round';
-    // Galho esq principal — segura colmeia
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=17;
-    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-10,trkX-82,fkY-18,hcx+6,branchY+3);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=11;
-    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-10,trkX-82,fkY-18,hcx+6,branchY+3);ctx.stroke();
-    ctx.strokeStyle='#C8882A';ctx.lineWidth=5;
-    ctx.beginPath();ctx.moveTo(trkX-5,fkY);ctx.bezierCurveTo(trkX-45,fkY-12,trkX-82,fkY-20,hcx+6,branchY+2);ctx.stroke();
-    // Galho sup-esq
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=14;
-    ctx.beginPath();ctx.moveTo(trkX-3,fkY);ctx.bezierCurveTo(trkX-20,fkY-40,trkX-45,fkY-72,trkX-62,fkY-105);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=9;
-    ctx.beginPath();ctx.moveTo(trkX-3,fkY);ctx.bezierCurveTo(trkX-20,fkY-40,trkX-45,fkY-72,trkX-62,fkY-105);ctx.stroke();
-    // Fork do galho sup-esq
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=9;
-    ctx.beginPath();ctx.moveTo(trkX-38,fkY-68);ctx.quadraticCurveTo(trkX-52,fkY-88,trkX-68,fkY-108);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=5;
-    ctx.beginPath();ctx.moveTo(trkX-38,fkY-68);ctx.quadraticCurveTo(trkX-52,fkY-88,trkX-68,fkY-108);ctx.stroke();
-    // Galho central
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=13;
-    ctx.beginPath();ctx.moveTo(trkX+2,fkY);ctx.bezierCurveTo(trkX-5,fkY-38,trkX-2,fkY-78,trkX+2,fkY-112);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=8;
-    ctx.beginPath();ctx.moveTo(trkX+2,fkY);ctx.bezierCurveTo(trkX-5,fkY-38,trkX-2,fkY-78,trkX+2,fkY-112);ctx.stroke();
-    // Galho dir
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=14;
-    ctx.beginPath();ctx.moveTo(trkX+5,fkY);ctx.bezierCurveTo(trkX+35,fkY-28,trkX+68,fkY-52,trkX+92,fkY-72);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=9;
-    ctx.beginPath();ctx.moveTo(trkX+5,fkY);ctx.bezierCurveTo(trkX+35,fkY-28,trkX+68,fkY-52,trkX+92,fkY-72);ctx.stroke();
-    // Fork galho dir
-    ctx.strokeStyle='#2E1505';ctx.lineWidth=9;
-    ctx.beginPath();ctx.moveTo(trkX+75,fkY-58);ctx.quadraticCurveTo(trkX+88,fkY-80,trkX+100,fkY-100);ctx.stroke();
-    ctx.strokeStyle='#A06020';ctx.lineWidth=5;
-    ctx.beginPath();ctx.moveTo(trkX+75,fkY-58);ctx.quadraticCurveTo(trkX+88,fkY-80,trkX+100,fkY-100);ctx.stroke();
-
-    // --- Copa FRENTE: verde médio irregular ---
-    ctx.fillStyle='#2E9438';
-    var c1=[
-      {x:canCX-5,  y:canCY-5,  r:63},
-      {x:canCX-28, y:canCY-16, r:46},
-      {x:canCX+24, y:canCY-8,  r:42},
-      {x:canCX-10, y:canCY+25, r:38},
-      {x:canCX-72, y:canCY+6,  r:30},
-      {x:canCX-60, y:canCY-40, r:26},
-      {x:canCX-28, y:canCY-68, r:24},
-      {x:canCX+12, y:canCY-72, r:20},
-      {x:canCX+50, y:canCY-50, r:28},
-      {x:canCX+74, y:canCY-8,  r:22},
-      {x:canCX+62, y:canCY+32, r:18},
-      {x:canCX+18, y:canCY+60, r:20},
-      {x:canCX-40, y:canCY+55, r:24},
-      {x:canCX-76, y:canCY-16, r:16}
+    // --- Raízes alargadas ---
+    var roots=[
+      {sx:trkX-28,sy:GY-18,ex:trkX-80,ey:GY,w:20},
+      {sx:trkX-16,sy:GY-8, ex:trkX-42,ey:GY,w:13},
+      {sx:trkX+28,sy:GY-18,ex:trkX+80,ey:GY,w:20},
+      {sx:trkX+16,sy:GY-8, ex:trkX+42,ey:GY,w:13}
     ];
-    for(var bi2=0;bi2<c1.length;bi2++){ctx.beginPath();ctx.arc(c1[bi2].x,c1[bi2].y,c1[bi2].r,0,Math.PI*2);ctx.fill();}
-
-    // Camada verde claro (luz solar — tendência ao canto sup-esq)
-    ctx.fillStyle='#48B850';
-    var c2=[
-      {x:canCX-15, y:canCY-15, r:52},
-      {x:canCX-38, y:canCY-30, r:36},
-      {x:canCX+8,  y:canCY-22, r:32},
-      {x:canCX-65, y:canCY-15, r:22},
-      {x:canCX-52, y:canCY-52, r:20},
-      {x:canCX-20, y:canCY-60, r:18},
-      {x:canCX+38, y:canCY-48, r:22},
-      {x:canCX-8,  y:canCY+18, r:26},
-      {x:canCX+52, y:canCY-12, r:16}
-    ];
-    for(var bi3=0;bi3<c2.length;bi3++){ctx.beginPath();ctx.arc(c2[bi3].x,c2[bi3].y,c2[bi3].r,0,Math.PI*2);ctx.fill();}
-
-    // Highlights brilhantes
-    ctx.fillStyle='#68CC6A';
-    ctx.beginPath();ctx.arc(canCX-22,canCY-28,28,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(canCX+8, canCY-18,18,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(canCX-42,canCY-40,14,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='#88E080';
-    ctx.beginPath();ctx.arc(canCX-26,canCY-36,14,0,Math.PI*2);ctx.fill();
-    ctx.beginPath();ctx.arc(canCX+5, canCY-30,9, 0,Math.PI*2);ctx.fill();
-
-    // Folhinhas pontudas em posições irregulares nas bordas
-    ctx.fillStyle='#2E9438';
-    var lpts=[
-      {x:canCX-88,y:canCY+14, a:0.5},{x:canCX-70,y:canCY-48,a:1.1},
-      {x:canCX-36,y:canCY-80,a:0.2},{x:canCX+16,y:canCY-84,a:-0.1},
-      {x:canCX+58,y:canCY-62,a:-0.7},{x:canCX+86,y:canCY-14,a:-1.2},
-      {x:canCX+72,y:canCY+40,a:-0.4},{x:canCX+25,y:canCY+70, a:0.15},
-      {x:canCX-48,y:canCY+65,a:0.35},{x:canCX-88,y:canCY-24,a:0.9}
-    ];
-    for(var lp=0;lp<lpts.length;lp++){
-      ctx.save();ctx.translate(lpts[lp].x,lpts[lp].y);ctx.rotate(lpts[lp].a);
-      ctx.beginPath();ctx.ellipse(0,0,5,11,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    for(var ri2=0;ri2<roots.length;ri2++){
+      var r2=roots[ri2];
+      var rmx=(r2.sx+r2.ex)*0.5;
+      ctx.strokeStyle='#2E1505';ctx.lineWidth=r2.w;ctx.lineCap='round';
+      ctx.beginPath();ctx.moveTo(r2.sx,r2.sy);ctx.quadraticCurveTo(rmx,r2.sy+4,r2.ex,r2.ey);ctx.stroke();
+      ctx.strokeStyle='#7A4010';ctx.lineWidth=r2.w*0.45;
+      ctx.beginPath();ctx.moveTo(r2.sx,r2.sy);ctx.quadraticCurveTo(rmx,r2.sy+2,r2.ex,r2.ey);ctx.stroke();
     }
+
+    // --- Galhos ---
+    ctx.lineCap='round';
+    var gbranches=[
+      // galho esq principal — segura colmeia (obrigatório)
+      {x0:trkX-8,y0:fkY, cp1x:trkX-50,cp1y:fkY-12, cp2x:trkX-92,cp2y:fkY-20, ex:hcx+6,ey:branchY+3, w:20},
+      // galho sup-esq
+      {x0:trkX-5,y0:fkY, cp1x:trkX-32,cp1y:fkY-55, cp2x:trkX-62,cp2y:fkY-98, ex:trkX-78,ey:fkY-128, w:16},
+      // fork sup-esq
+      {x0:trkX-44,y0:fkY-72, cp1x:trkX-60,cp1y:fkY-95, cp2x:trkX-72,cp2y:fkY-112, ex:trkX-80,ey:fkY-130, w:9},
+      // galho central
+      {x0:trkX,   y0:fkY, cp1x:trkX-8, cp1y:fkY-50, cp2x:trkX-4, cp2y:fkY-100,ex:trkX+2, ey:fkY-132, w:14},
+      // galho sup-dir
+      {x0:trkX+5, y0:fkY, cp1x:trkX+38,cp1y:fkY-52, cp2x:trkX+70,cp2y:fkY-92, ex:trkX+88,ey:fkY-120, w:16},
+      // fork sup-dir
+      {x0:trkX+58,y0:fkY-72, cp1x:trkX+70,cp1y:fkY-92, cp2x:trkX+80,cp2y:fkY-110,ex:trkX+88,ey:fkY-128, w:9},
+      // galho dir principal
+      {x0:trkX+8, y0:fkY, cp1x:trkX+55,cp1y:fkY-22, cp2x:trkX+95,cp2y:fkY-50, ex:trkX+118,ey:fkY-68, w:20}
+    ];
+    for(var bri=0;bri<gbranches.length;bri++){
+      var gbr=gbranches[bri];
+      ctx.strokeStyle='#1E0E03';ctx.lineWidth=gbr.w;
+      ctx.beginPath();ctx.moveTo(gbr.x0,gbr.y0);ctx.bezierCurveTo(gbr.cp1x,gbr.cp1y,gbr.cp2x,gbr.cp2y,gbr.ex,gbr.ey);ctx.stroke();
+      ctx.strokeStyle='#8A5010';ctx.lineWidth=gbr.w*0.62;
+      ctx.beginPath();ctx.moveTo(gbr.x0,gbr.y0);ctx.bezierCurveTo(gbr.cp1x,gbr.cp1y,gbr.cp2x,gbr.cp2y,gbr.ex,gbr.ey);ctx.stroke();
+      ctx.strokeStyle='#C07828';ctx.lineWidth=gbr.w*0.28;
+      ctx.beginPath();ctx.moveTo(gbr.x0,gbr.y0);ctx.bezierCurveTo(gbr.cp1x-2,gbr.cp1y-2,gbr.cp2x-2,gbr.cp2y-2,gbr.ex-2,gbr.ey-2);ctx.stroke();
+    }
+
+    // --- Copa: clusters distintos arredondados ---
+    var clusters=[
+      {cx:canCX,    cy:canCY-10, r:82},  // centro-topo
+      {cx:canCX-80, cy:canCY-22, r:70},  // sup-esq grande
+      {cx:canCX+78, cy:canCY-20, r:68},  // sup-dir grande
+      {cx:canCX-108,cy:canCY+30, r:58},  // inf-esq
+      {cx:canCX+105,cy:canCY+28, r:55},  // inf-dir
+      {cx:canCX,    cy:canCY+55, r:60},  // centro-baixo
+      {cx:canCX-40, cy:canCY-78, r:46},  // topo-esq
+      {cx:canCX+38, cy:canCY-76, r:44},  // topo-dir
+      {cx:canCX-130,cy:canCY+5,  r:40},  // esq extremo
+      {cx:canCX+128,cy:canCY+5,  r:38}   // dir extremo
+    ];
+    // camada 1: sombra escura
+    ctx.fillStyle='#1A5C20';
+    for(var ci=0;ci<clusters.length;ci++){ctx.beginPath();ctx.arc(clusters[ci].cx,clusters[ci].cy,clusters[ci].r+7,0,Math.PI*2);ctx.fill();}
+    // camada 2: verde médio escuro
+    ctx.fillStyle='#257A2C';
+    for(var ci2=0;ci2<clusters.length;ci2++){ctx.beginPath();ctx.arc(clusters[ci2].cx,clusters[ci2].cy,clusters[ci2].r,0,Math.PI*2);ctx.fill();}
+    // camada 3: verde vivo
+    ctx.fillStyle='#3DB848';
+    for(var ci3=0;ci3<clusters.length;ci3++){ctx.beginPath();ctx.arc(clusters[ci3].cx-3,clusters[ci3].cy-3,clusters[ci3].r*0.82,0,Math.PI*2);ctx.fill();}
+    // camada 4: verde claro (luz)
+    ctx.fillStyle='#56CC5A';
+    for(var ci4=0;ci4<clusters.length;ci4++){ctx.beginPath();ctx.arc(clusters[ci4].cx-clusters[ci4].r*0.28,clusters[ci4].cy-clusters[ci4].r*0.28,clusters[ci4].r*0.50,0,Math.PI*2);ctx.fill();}
+    // camada 5: reflexo brilhante
+    ctx.fillStyle='#85E280';
+    for(var ci5=0;ci5<clusters.length;ci5++){ctx.beginPath();ctx.arc(clusters[ci5].cx-clusters[ci5].r*0.36,clusters[ci5].cy-clusters[ci5].r*0.36,clusters[ci5].r*0.24,0,Math.PI*2);ctx.fill();}
 
     // ── Fio/corda de sustentação ──
     ctx.strokeStyle='#6D4C41';ctx.lineWidth=2;ctx.lineCap='round';
@@ -6673,16 +6649,16 @@ function drawP8Flowers(){
     ctx.restore();
 
     // ── Buraco de entrada (redondo, posição característica) ──
-    var ehx=hcx+4, ehy=hcy+hb*0.42;
+    var ehx=hcx-12, ehy=hcy+hb*0.42;
     // Sombra ao redor do buraco
     ctx.save();ctx.globalAlpha=0.35;ctx.fillStyle='#4A2800';
-    ctx.beginPath();ctx.ellipse(ehx,ehy,18,16,0,0,Math.PI*2);ctx.fill();ctx.restore();
+    ctx.beginPath();ctx.ellipse(ehx,ehy,11,10,0,0,Math.PI*2);ctx.fill();ctx.restore();
     // Buraco
-    ctx.fillStyle='#0D0500';ctx.beginPath();ctx.ellipse(ehx,ehy,14,13,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#0D0500';ctx.beginPath();ctx.ellipse(ehx,ehy,8,7,0,0,Math.PI*2);ctx.fill();
     // Brilho interno (profundidade)
-    var eGrad=ctx.createRadialGradient(ehx-3,ehy-4,1,ehx,ehy,13);
+    var eGrad=ctx.createRadialGradient(ehx-2,ehy-2,1,ehx,ehy,8);
     eGrad.addColorStop(0,'rgba(200,100,0,0.18)');eGrad.addColorStop(1,'rgba(0,0,0,0)');
-    ctx.fillStyle=eGrad;ctx.beginPath();ctx.ellipse(ehx,ehy,14,13,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle=eGrad;ctx.beginPath();ctx.ellipse(ehx,ehy,8,7,0,0,Math.PI*2);ctx.fill();
 
     // ── Abelhazinhas pousadas na superfície ──
     var bt=Date.now()/480;
