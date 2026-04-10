@@ -882,10 +882,10 @@
           <thead>
             <tr>
               <th>Dia</th>
-              <th>E. Manhã</th>
-              <th>S. Manhã</th>
-              <th>E. Tarde</th>
-              <th>S. Tarde</th>
+              <th>Entrada M.</th>
+              <th>Saída M.</th>
+              <th>Entrada T.</th>
+              <th>Saída T.</th>
               <th>Extras</th>
               <th>Total</th>
             </tr>
@@ -2084,7 +2084,7 @@
       cx.fillText(`${u.cargo || ""}`, 14, 56);
 
       // Colunas header
-      const cols = ["Dia","E1","S1","E2","S2","Extras","Total"];
+      const cols = ["Dia","Entrada M.","Saída M.","Entrada T.","Saída T.","Extras","Total"];
       const colX = [10, 60, 120, 180, 240, 300, 400];
       cx.fillStyle = "#1a5296";
       cx.fillRect(0, HEADER_H, LARGURA, COL_H);
