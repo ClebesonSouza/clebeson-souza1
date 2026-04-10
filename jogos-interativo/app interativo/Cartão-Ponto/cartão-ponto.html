@@ -1238,7 +1238,7 @@
     function carregarConfig() {
       let salvo = null;
       try { salvo = JSON.parse(localStorage.getItem("config_area_bjk")); } catch {}
-      return salvo || { lat: -27.1000, lng: -52.6000, raio: 5 };
+      return salvo || { lat: -27.1000, lng: -52.6000, raio: 50 };
     }
 
     // Navegação para tela de config
