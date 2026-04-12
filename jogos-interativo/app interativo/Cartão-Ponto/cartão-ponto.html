@@ -2084,6 +2084,7 @@
       // Monta linhas de dados
       const linhas = [];
       let totalExtrasGeral = 0;
+      let totalMinGeral = 0;
       for (let i = 1; i <= diasNoMes; i++) {
         const bDia = batidasMes
           .filter(b => new Date(b.data_hora).getDate() === i)
@@ -2093,6 +2094,7 @@
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
         const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana);
         totalExtrasGeral += extrasMin;
+        totalMinGeral += totalMin;
 
         linhas.push({
           dia: String(i).padStart(2,"0"),
@@ -2110,7 +2112,7 @@
       const LINHA_H = 22;
       const HEADER_H = 60;
       const COL_H = 26;
-      const RODAPE_H = 40;
+      const RODAPE_H = 56;
       const alturaTotal = HEADER_H + COL_H + (linhas.length * LINHA_H) + RODAPE_H;
 
       const c = document.createElement("canvas");
@@ -2195,11 +2197,20 @@
       cx.font = "bold 12px Arial";
       cx.textAlign = "left";
       cx.fillText(
-        totalExtrasGeral > 0
-          ? `Total de horas extras: ${formatarMin(totalExtrasGeral)}`
-          : "Nenhuma hora extra no mês",
+        totalMinGeral > 0
+          ? `Total de horas trabalhadas: ${formatarMin(totalMinGeral)}`
+          : "Nenhuma hora registrada no mês",
         14,
-        rodapeY + 24
+        rodapeY + 18
+      );
+      cx.fillStyle = totalExtrasGeral > 0 ? "#ffe082" : "rgba(255,255,255,0.65)";
+      cx.font = "11px Arial";
+      cx.fillText(
+        totalExtrasGeral > 0
+          ? `Horas extras: ${formatarMin(totalExtrasGeral)}`
+          : "Sem horas extras no mês",
+        14,
+        rodapeY + 38
       );
 
       btn.disabled = false;
