@@ -452,7 +452,8 @@
       text-align: center; word-break: break-word;
     }
     #tabelaRelatorio th:nth-child(1),
-    #tabelaRelatorio td:nth-child(1) { width: 8%; }
+    #tabelaRelatorio td:nth-child(1) { width: 11%; line-height: 1.3; }
+    #tabelaRelatorio td:nth-child(1) small { display: block; font-size: 0.82em; font-weight: bold; line-height: 1; }
     #tabelaRelatorio th:nth-child(2),
     #tabelaRelatorio td:nth-child(2),
     #tabelaRelatorio th:nth-child(3),
@@ -460,11 +461,18 @@
     #tabelaRelatorio th:nth-child(4),
     #tabelaRelatorio td:nth-child(4),
     #tabelaRelatorio th:nth-child(5),
-    #tabelaRelatorio td:nth-child(5) { width: 12%; }
+    #tabelaRelatorio td:nth-child(5) { width: 11%; }
     #tabelaRelatorio th:nth-child(6),
     #tabelaRelatorio td:nth-child(6) { width: 18%; } /* Extras: mais espaço para "1h 30min" */
     #tabelaRelatorio th:nth-child(7),
     #tabelaRelatorio td:nth-child(7) { width: 18%; } /* Total: mais espaço */
+    /* Destaque visual para fins de semana */
+    #tabelaRelatorio tbody tr.dia-sabado { background: #fff8e1 !important; }
+    #tabelaRelatorio tbody tr.dia-sabado td:nth-child(1) { color: #e65100 !important; font-weight: bold; }
+    #tabelaRelatorio tbody tr.dia-sabado td:nth-child(1) small { color: #e65100; }
+    #tabelaRelatorio tbody tr.dia-domingo { background: #fce4ec !important; }
+    #tabelaRelatorio tbody tr.dia-domingo td:nth-child(1) { color: #c62828 !important; font-weight: bold; }
+    #tabelaRelatorio tbody tr.dia-domingo td:nth-child(1) small { color: #c62828; }
     /* Telas médias (tablets menores) */
     @media (max-width: 600px) {
       #modalRelatorio .modal-box { padding: 12px 8px; }
@@ -882,10 +890,10 @@
           <thead>
             <tr>
               <th>Dia</th>
-              <th>Entrada 1</th>
-              <th>Saída 1</th>
-              <th>Entrada 2</th>
-              <th>Saída 2</th>
+              <th>Ent. 1</th>
+              <th>Saí. 1</th>
+              <th>Ent. 2</th>
+              <th>Saí. 2</th>
               <th>Extras</th>
               <th>Total</th>
             </tr>
@@ -1777,10 +1785,15 @@
 
     const NOMES_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
                          "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
+    const DIAS_SEMANA_ABREV = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
     // Distribui batidas do dia em E1/S1 (manhã, < 13h) e E2/S2 (tarde, >= 13h)
     // Regra: a hora da ENTRADA define o turno; a saída segue a entrada correspondente.
-    function distribuirBatidas(bDia) {
+    // diaSemana: 0=Dom, 1=Seg...5=Sex, 6=Sáb
+    //   Domingo  → todo o tempo trabalhado é extra
+    //   Sábado   → horas a partir das 13h são extras
+    //   Seg–Sex  → extras acima de 8h (480 min)
+    function distribuirBatidas(bDia, diaSemana) {
       const fmtHora = b => {
         const dt = new Date(b.data_hora);
         return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
@@ -1806,12 +1819,40 @@
         if (d > 0) totalMin += d;
       }
 
+      // Cálculo de extras conforme dia da semana
+      let extrasMin = 0;
+      if (diaSemana === 0) {
+        // Domingo: todo tempo trabalhado é extra
+        extrasMin = totalMin;
+      } else if (diaSemana === 6) {
+        // Sábado: apenas o tempo a partir das 13h é extra
+        const entradasOrd = bDia.filter(b => b.tipo === "entrada")
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+        const saidasOrd = bDia.filter(b => b.tipo === "saida")
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+        const pares = Math.min(entradasOrd.length, saidasOrd.length);
+        for (let i = 0; i < pares; i++) {
+          const ent = new Date(entradasOrd[i].data_hora);
+          const sai = new Date(saidasOrd[i].data_hora);
+          const entMin = ent.getHours() * 60 + ent.getMinutes();
+          const saiMin = sai.getHours() * 60 + sai.getMinutes();
+          const inicioExtra = Math.max(entMin, 13 * 60); // a partir das 13h
+          if (saiMin > inicioExtra) {
+            extrasMin += saiMin - inicioExtra;
+          }
+        }
+      } else {
+        // Segunda a sexta: extras apenas acima de 8h (480 min)
+        extrasMin = Math.max(0, totalMin - JORNADA_MIN);
+      }
+
       return {
         e1: ent1 ? fmtHora(ent1) : "",
         s1: sai1 ? fmtHora(sai1) : "",
         e2: ent2 ? fmtHora(ent2) : "",
         s2: sai2 ? fmtHora(sai2) : "",
         totalMin,
+        extrasMin,
       };
     }
 
@@ -1864,10 +1905,13 @@
 
         totalRegistros += bDia.length;
 
-        // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin } = distribuirBatidas(bDia);
+        // Dia da semana para cálculo correto de extras
+        const diaSemana = new Date(ano, mes, numDia).getDay(); // 0=Dom...6=Sáb
+        const semAbrv = DIAS_SEMANA_ABREV[diaSemana];
 
-        const extrasMin = Math.max(0, totalMin - JORNADA_MIN);
+        // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana);
+
         totalExtrasGeral += extrasMin;
         totalMinGeral += totalMin;
 
@@ -1882,15 +1926,17 @@
         const temDados = bDia.length > 0;
         const ehAdminLogado = !!(usuarioLogado && usuarioLogado.admin);
         const clicavel = temDados || ehAdminLogado;
+        const classFimSemana = diaSemana === 0 ? "dia-domingo" : (diaSemana === 6 ? "dia-sabado" : "");
         const classTr = [
           ehHoje ? "dia-hoje" : (temDados ? "dia-com-dados" : (ehAdminLogado ? "dia-admin-vazio" : "")),
-          clicavel ? "dia-clicavel" : ""
+          clicavel ? "dia-clicavel" : "",
+          classFimSemana,
         ].join(" ").trim();
         const onclickAttr = clicavel ? `onclick="abrirBatidasDia(${numDia})"` : "";
 
         const diaFmt = String(numDia).padStart(2,"0");
         return `<tr class="${classTr}" ${onclickAttr}>
-          <td>${diaFmt}</td>
+          <td>${diaFmt}<br><small>${semAbrv}</small></td>
           <td>${e1}</td>
           <td>${s1}</td>
           <td>${e2}</td>
@@ -1958,6 +2004,10 @@
           const tipoTexto = b.tipo === "entrada" ? "Entrada" : "Saída";
           const corHeader = b.tipo === "entrada" ? "#2a6eb6" : "#c62828";
           const coord = escaparHTML(b.coordenadas || "");
+          const cidade = escaparHTML(b.cidade || "");
+          const locDisplay = cidade && coord
+            ? `${cidade} (${coord})`
+            : cidade || coord;
           const isoEscapado = escaparHTML(b.data_hora);
           return `
             <div class="batida-dia-card">
@@ -1972,7 +2022,7 @@
                   <span>${tipoTexto}</span><br/>
                   <span>${diaFmt}/${mesFmt}/${ano}</span><br/>
                   <span>${hh}:${mm}:${ss}</span>
-                  ${coord ? `<br/><span style="font-size:0.8em;color:#777;">${coord}</span>` : ""}
+                  ${locDisplay ? `<br/><span style="font-size:0.78em;color:#555;">📍 ${locDisplay}</span>` : ""}
                 </div>
               </div>
               ${usuarioLogado && usuarioLogado.admin ? `
@@ -2039,13 +2089,15 @@
           .filter(b => new Date(b.data_hora).getDate() === i)
           .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
 
+        const diaSemana = new Date(ano, mes, i).getDay();
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin } = distribuirBatidas(bDia);
-        const extrasMin = Math.max(0, totalMin - JORNADA_MIN);
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana);
         totalExtrasGeral += extrasMin;
 
         linhas.push({
           dia: String(i).padStart(2,"0"),
+          semana: DIAS_SEMANA_ABREV[diaSemana],
+          ehFimSemana: diaSemana === 0 || diaSemana === 6,
           e1: e1 || "—", s1: s1 || "—", e2: e2 || "—", s2: s2 || "—",
           extras: extrasMin > 0 ? formatarMin(extrasMin) : "—",
           total: totalMin > 0 ? formatarMin(totalMin) : "—",
@@ -2084,32 +2136,46 @@
       cx.fillText(`${u.cargo || ""}`, 14, 56);
 
       // Colunas header
-      const cols = ["Dia","Entrada 1","Saída 1","Entrada 2","Saída 2","Extras","Total"];
-      const colX = [10, 60, 120, 180, 240, 300, 400];
+      const cols = ["Dia","Ent. 1","Saí. 1","Ent. 2","Saí. 2","Extras","Total"];
+      const colX = [10, 76, 136, 196, 256, 316, 420];
       cx.fillStyle = "#1a5296";
       cx.fillRect(0, HEADER_H, LARGURA, COL_H);
       cx.fillStyle = "#ffffff";
       cx.font = "bold 11px Arial";
       cols.forEach((col, i) => {
         cx.textAlign = "center";
-        cx.fillText(col, colX[i] + (i < cols.length - 1 ? 25 : 70), HEADER_H + 17);
+        cx.fillText(col, colX[i] + (i < cols.length - 1 ? 25 : 60), HEADER_H + 17);
       });
 
       // Linhas
       linhas.forEach((l, idx) => {
         const y = HEADER_H + COL_H + (idx * LINHA_H);
-        cx.fillStyle = l.temDados ? (idx % 2 === 0 ? "#e8f0fb" : "#d4e4f7") : (idx % 2 === 0 ? "#ffffff" : "#f5f5f5");
+        // Fundo: fim de semana tem cor diferente
+        if (l.ehFimSemana && !l.temDados) {
+          cx.fillStyle = idx % 2 === 0 ? "#fff3e0" : "#ffe0b2";
+        } else if (l.ehFimSemana && l.temDados) {
+          cx.fillStyle = idx % 2 === 0 ? "#ffe0b2" : "#ffcc80";
+        } else {
+          cx.fillStyle = l.temDados ? (idx % 2 === 0 ? "#e8f0fb" : "#d4e4f7") : (idx % 2 === 0 ? "#ffffff" : "#f5f5f5");
+        }
         cx.fillRect(0, y, LARGURA, LINHA_H);
 
-        cx.font = l.temDados ? "bold 11px Arial" : "11px Arial";
-        cx.fillStyle = l.temDados ? "#2a6eb6" : "#999";
         cx.textAlign = "center";
-        const vals = [l.dia, l.e1, l.s1, l.e2, l.s2, l.extras, l.total];
+        // Coluna Dia: número + abreviação do dia da semana
+        const corDia = l.ehFimSemana ? (l.temDados ? "#b71c1c" : "#e65100") : (l.temDados ? "#2a6eb6" : "#aaa");
+        cx.fillStyle = corDia;
+        cx.font = l.temDados ? "bold 10px Arial" : "10px Arial";
+        cx.fillText(`${l.dia} ${l.semana}`, colX[0] + 25, y + 14);
+
+        // Demais colunas
+        const vals = [l.e1, l.s1, l.e2, l.s2, l.extras, l.total];
         vals.forEach((val, i) => {
-          if (i === 5 && val !== "—") cx.fillStyle = "#e65100";
-          else if (i === 6 && val !== "—") cx.fillStyle = "#2e7d32";
-          else cx.fillStyle = l.temDados ? (i === 0 ? "#2a6eb6" : "#333") : "#aaa";
-          cx.fillText(val, colX[i] + (i < vals.length - 1 ? 25 : 70), y + 15);
+          const ci = i + 1; // índice real da coluna (0 já foi usado para dia)
+          if (ci === 5 && val !== "—") cx.fillStyle = "#e65100";
+          else if (ci === 6 && val !== "—") cx.fillStyle = "#2e7d32";
+          else cx.fillStyle = l.temDados ? "#333" : "#aaa";
+          cx.font = l.temDados ? "bold 11px Arial" : "11px Arial";
+          cx.fillText(val, colX[ci] + (ci < vals.length ? 25 : 60), y + 15);
         });
 
         // Linha separadora
@@ -2395,6 +2461,44 @@
     }
 
     // ============================
+    // GPS NO MOMENTO DA BATIDA + REVERSE GEOCODING
+    // ============================
+
+    // Captura GPS fresco (roda em paralelo à biometria, timeout configurável)
+    function capturarGPSFresco(timeoutMs) {
+      timeoutMs = timeoutMs || 8000;
+      return new Promise(function(resolve) {
+        if (!navigator.geolocation) { resolve(null); return; }
+        var timer = setTimeout(function() { resolve(null); }, timeoutMs);
+        navigator.geolocation.getCurrentPosition(
+          function(pos) {
+            clearTimeout(timer);
+            resolve({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+          },
+          function() { clearTimeout(timer); resolve(null); }
+        );
+      });
+    }
+
+    // Converte lat/lng em nome de cidade via Nominatim (OpenStreetMap, gratuito)
+    async function obterCidade(lat, lng) {
+      try {
+        const resp = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`,
+          { headers: { 'Accept-Language': 'pt-BR' } }
+        );
+        if (!resp.ok) return "";
+        const data = await resp.json();
+        const a = data.address || {};
+        const cidade = a.city || a.town || a.village || a.municipality || a.county || "";
+        const estado = a.state || "";
+        return [cidade, estado].filter(Boolean).join(", ");
+      } catch {
+        return "";
+      }
+    }
+
+    // ============================
     // ASSINATURA DIGITAL (CANVAS)
     // ============================
     const canvas = document.getElementById("assinaturaCanvas");
@@ -2499,6 +2603,7 @@
         return;
       }
       assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
+      _geoPromisePonto = capturarGPSFresco(); // inicia GPS em paralelo à biometria
       abrirBiometria(tipoBatidaPendente);
     });
 
@@ -2509,6 +2614,7 @@
     let tipoBatidaPendente = null;
 
     let _stopAutoPonto = null;
+    let _geoPromisePonto = null; // GPS iniciado ao clicar "Assinar ponto", resolvido antes da batida
     // FIX #4: mapa de assinaturas por cartao para "compartilhar todos"
     const assinaturasPorCartao = new Map();
     // Mapa de fotos (blob URL) por cartao — inclui cartões restaurados do IDB
@@ -2632,6 +2738,26 @@
       const nomeEsc  = escaparHTML(nome);
       const cargoEsc = escaparHTML(cargo);
 
+      // Aguarda GPS (iniciado ao clicar "Assinar ponto", ~3-5s antes — já deve estar pronto)
+      const geoAtual = await Promise.race([
+        _geoPromisePonto || Promise.resolve(null),
+        new Promise(r => setTimeout(() => r(null), 2000))
+      ]);
+      _geoPromisePonto = null;
+      const coordStr = geoAtual
+        ? `${geoAtual.lat.toFixed(6)}, ${geoAtual.lng.toFixed(6)}`
+        : (document.getElementById("coordenadas").textContent.replace(/[()]/g, "").trim() || "");
+      const cidadeStr = geoAtual
+        ? (await Promise.race([
+            obterCidade(geoAtual.lat, geoAtual.lng),
+            new Promise(r => setTimeout(() => r(""), 4000))
+          ]) || "")
+        : "";
+      const locStr = cidadeStr && coordStr
+        ? `${cidadeStr} (${coordStr})`
+        : cidadeStr || coordStr;
+      const locEsc = escaparHTML(locStr);
+
       // Cria e adiciona novo cartão com silhueta temporária enquanto blob carrega
       const cardId = "cartao_" + Date.now();
       const novoCartao = document.createElement("div");
@@ -2643,12 +2769,13 @@
           <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
           </div>
-          <div class="cartao-info">
+          <div class="cartao-info" data-localizacao="${locEsc}">
             <strong style="display:block;font-size:1em;color:#2a6eb6;">${nomeEsc}</strong>
             <span style="color:#555;font-size:0.85em">${cargoEsc}</span><br/>
             <span>${tipoTexto}</span><br/>
             <span>${dataStr}</span><br/>
             <span>${horaStr}</span>
+            ${locStr ? `<br/><span style="font-size:0.78em;color:#555;margin-top:2px;">📍 ${locEsc}</span>` : ""}
           </div>
         </div>
         <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
@@ -2678,7 +2805,7 @@
 
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
         const fotoUrl = fotosPorCartao.get(cardId) || "";
-        const c = await gerarCanvasCartao(fotoUrl, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar);
+        const c = await gerarCanvasCartao(fotoUrl, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStr);
         await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
       });
 
@@ -2688,7 +2815,8 @@
         usuario: nome,
         usuarioId: usuarioLogado.id,
         data_hora: agora.toISOString(),
-        coordenadas: document.getElementById("coordenadas").textContent,
+        coordenadas: coordStr,
+        cidade: cidadeStr,
       });
       salvarBatidas();
 
@@ -2756,18 +2884,23 @@
         novoCartao.className = "cartao-registro ativo";
         novoCartao.id = cardId;
         // Foto não é salva no localStorage (Fix #8) — carregada do IndexedDB
+        const locBatida = (b.cidade && b.coordenadas)
+          ? `${b.cidade} (${b.coordenadas})`
+          : (b.cidade || b.coordenadas || "");
+        const locBatidaEsc = escaparHTML(locBatida);
         novoCartao.innerHTML = `
           <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
           <div class="cartao-body">
             <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
             </div>
-            <div class="cartao-info">
+            <div class="cartao-info" data-localizacao="${locBatidaEsc}">
               <strong style="display:block;font-size:1em;color:#2a6eb6;">${escaparHTML(nomeUsuario)}</strong>
               <span style="color:#555;font-size:0.85em">${escaparHTML(cargo)}</span><br/>
               <span>${tipoTexto}</span><br/>
               <span>${dataHojeStr}</span><br/>
               <span>${horaStr}</span>
+              ${locBatida ? `<br/><span style="font-size:0.78em;color:#555;margin-top:2px;">📍 ${locBatidaEsc}</span>` : ""}
             </div>
           </div>
           <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
@@ -2790,7 +2923,7 @@
         novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
           // FIX #2: aguarda foto do IDB se ainda não carregou
           const fotoUrl = fotosPorCartao.get(cardId) || await fotoIDBPromise || "";
-          const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null);
+          const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null, locBatida);
           await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
         });
       });
@@ -2800,12 +2933,13 @@
       }
     }
 
-    // FIX #3 e #4: async, aguarda img.onload, inclui assinatura opcional
-    async function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinatura) {
+    // FIX #3 e #4: async, aguarda img.onload, inclui assinatura opcional e localização
+    async function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinatura, localizacao) {
       const temAssinatura = !!assinatura;
+      const temLoc = !!(localizacao && localizacao.trim());
       const c = document.createElement("canvas");
       c.width = 400;
-      c.height = temAssinatura ? 230 : 160;
+      c.height = temAssinatura ? (temLoc ? 252 : 230) : (temLoc ? 180 : 160);
       const cx = c.getContext("2d");
 
       cx.fillStyle = "#2a6eb6";
@@ -2816,7 +2950,7 @@
       cx.fillText("Cartao Ponto BJK - " + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
-      cx.fillRect(0, 40, 400, temAssinatura ? 190 : 120);
+      cx.fillRect(0, 40, 400, temAssinatura ? (temLoc ? 212 : 190) : (temLoc ? 140 : 120));
 
       // FIX #3: aguarda carregamento da foto antes de desenhar
       await new Promise((resolve) => {
@@ -2838,20 +2972,29 @@
       cx.fillText(dataStr, 105, 118);
       cx.fillText(horaStr, 105, 134);
 
+      // Localização da batida
+      if (temLoc) {
+        cx.fillStyle = "#555";
+        cx.font = "10px Arial";
+        const locTrunc = localizacao.length > 52 ? localizacao.slice(0, 49) + "..." : localizacao;
+        cx.fillText("📍 " + locTrunc, 105, 150);
+      }
+
       // FIX #4: desenha assinatura se existir
       if (temAssinatura) {
+        const sigY = temLoc ? 184 : 164;
         cx.strokeStyle = "#ddd";
         cx.lineWidth = 1;
         cx.beginPath();
-        cx.moveTo(10, 164);
-        cx.lineTo(390, 164);
+        cx.moveTo(10, sigY);
+        cx.lineTo(390, sigY);
         cx.stroke();
         cx.fillStyle = "#888";
         cx.font = "11px Arial";
-        cx.fillText("Assinatura:", 10, 178);
+        cx.fillText("Assinatura:", 10, sigY + 14);
         await new Promise((resolve) => {
           const sig = new Image();
-          sig.onload = () => { cx.drawImage(sig, 10, 182, 380, 38); resolve(); };
+          sig.onload = () => { cx.drawImage(sig, 10, sigY + 18, 380, 38); resolve(); };
           sig.onerror = resolve;
           sig.src = assinatura;
         });
@@ -2900,6 +3043,7 @@
       cards.forEach(card => {
         const img = card.querySelector("img");
         const spans = card.querySelectorAll(".cartao-info span");
+        const infoEl = card.querySelector(".cartao-info");
         dadosCartoes.push({
           foto: img ? img.src : (fotosPorCartao.get(card.id) || ""),
           nome: card.querySelector(".cartao-info strong") ? card.querySelector(".cartao-info strong").textContent : "",
@@ -2908,11 +3052,12 @@
           data: spans[2] ? spans[2].textContent : "",
           hora: spans[3] ? spans[3].textContent : "",
           assinatura: assinaturasPorCartao.get(card.id) || null,
+          localizacao: infoEl ? (infoEl.dataset.localizacao || "") : "",
         });
       });
 
       const canvases = await Promise.all(dadosCartoes.map(d =>
-        gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora, d.assinatura)
+        gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora, d.assinatura, d.localizacao)
       ));
 
       const totalHeight = canvases.reduce((sum, c, i) => sum + c.height + (i > 0 ? gap : 0), 0);
