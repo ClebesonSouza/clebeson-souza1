@@ -473,6 +473,10 @@
     #tabelaRelatorio tbody tr.dia-domingo { background: #fce4ec !important; }
     #tabelaRelatorio tbody tr.dia-domingo td:nth-child(1) { color: #c62828 !important; font-weight: bold; }
     #tabelaRelatorio tbody tr.dia-domingo td:nth-child(1) small { color: #c62828; }
+    /* Destaque para feriados nacionais */
+    #tabelaRelatorio tbody tr.dia-feriado { background: #ede7f6 !important; }
+    #tabelaRelatorio tbody tr.dia-feriado td:nth-child(1) { color: #6a1b9a !important; font-weight: bold; }
+    #tabelaRelatorio tbody tr.dia-feriado td:nth-child(1) small { color: #6a1b9a; }
     /* Telas médias (tablets menores) */
     @media (max-width: 600px) {
       #modalRelatorio .modal-box { padding: 12px 8px; }
@@ -1787,13 +1791,63 @@
                          "Julho","Agosto","Setembro","Outubro","Novembro","Dezembro"];
     const DIAS_SEMANA_ABREV = ["Dom","Seg","Ter","Qua","Qui","Sex","Sáb"];
 
+    // Retorna a data da Páscoa para um dado ano (algoritmo de Butcher/Anonymous Gregorian)
+    function calcularPascoa(ano) {
+      const a = ano % 19, b = Math.floor(ano / 100), c = ano % 100;
+      const d = Math.floor(b / 4), e = b % 4;
+      const f = Math.floor((b + 8) / 25), g = Math.floor((b - f + 1) / 3);
+      const h = (19 * a + b - d - g + 15) % 30;
+      const i = Math.floor(c / 4), k = c % 4;
+      const l = (32 + 2 * e + 2 * i - h - k) % 7;
+      const m = Math.floor((a + 11 * h + 22 * l) / 451);
+      const mes = Math.floor((h + l - 7 * m + 114) / 31) - 1; // 0-indexed
+      const dia = ((h + l - 7 * m + 114) % 31) + 1;
+      return new Date(ano, mes, dia);
+    }
+
+    // Verifica se uma data (objeto Date) é feriado nacional brasileiro
+    function ehFeriado(data) {
+      const ano = data.getFullYear();
+      const mes = data.getMonth(); // 0-indexed
+      const dia = data.getDate();
+
+      // Feriados fixos: [mês 0-indexed, dia]
+      const fixos = [
+        [0,  1],  // Ano Novo
+        [3, 21],  // Tiradentes
+        [4,  1],  // Dia do Trabalho
+        [8,  7],  // Independência do Brasil
+        [9, 12],  // Nossa Sra. Aparecida
+        [10, 2],  // Finados
+        [10,15],  // Proclamação da República
+        [10,20],  // Consciência Negra
+        [11,25],  // Natal
+      ];
+      if (fixos.some(([m, d]) => mes === m && dia === d)) return true;
+
+      // Feriados móveis calculados a partir da Páscoa
+      const pascoa = calcularPascoa(ano);
+      const offset = d => new Date(pascoa.getTime() + d * 86400000);
+      const movereis = [
+        offset(-47), // Carnaval (segunda)
+        offset(-48), // Carnaval (terça) — ambos os dias
+        offset(-2),  // Sexta-feira Santa
+        offset(0),   // Páscoa
+        offset(60),  // Corpus Christi
+      ];
+      return movereis.some(f =>
+        f.getFullYear() === ano && f.getMonth() === mes && f.getDate() === dia
+      );
+    }
+
     // Distribui batidas do dia em E1/S1 (manhã, < 13h) e E2/S2 (tarde, >= 13h)
     // Regra: a hora da ENTRADA define o turno; a saída segue a entrada correspondente.
     // diaSemana: 0=Dom, 1=Seg...5=Sex, 6=Sáb
+    //   Feriado  → todo o tempo trabalhado é extra (igual ao domingo)
     //   Domingo  → todo o tempo trabalhado é extra
     //   Sábado   → horas a partir das 13h são extras
     //   Seg–Sex  → extras acima de 8h (480 min)
-    function distribuirBatidas(bDia, diaSemana) {
+    function distribuirBatidas(bDia, diaSemana, dataRef) {
       const fmtHora = b => {
         const dt = new Date(b.data_hora);
         return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
@@ -1832,9 +1886,12 @@
         if (d > 0) totalMin += d;
       }
 
-      // Cálculo de extras conforme dia da semana
+      // Cálculo de extras conforme dia da semana (feriado tem prioridade sobre dia da semana)
       let extrasMin = 0;
-      if (diaSemana === 0) {
+      if (dataRef && ehFeriado(dataRef)) {
+        // Feriado nacional: todo tempo trabalhado é extra (igual ao domingo)
+        extrasMin = totalMin;
+      } else if (diaSemana === 0) {
         // Domingo: todo tempo trabalhado é extra
         extrasMin = totalMin;
       } else if (diaSemana === 6) {
@@ -1919,11 +1976,12 @@
         totalRegistros += bDia.length;
 
         // Dia da semana para cálculo correto de extras
-        const diaSemana = new Date(ano, mes, numDia).getDay(); // 0=Dom...6=Sáb
+        const dataRef = new Date(ano, mes, numDia);
+        const diaSemana = dataRef.getDay(); // 0=Dom...6=Sáb
         const semAbrv = DIAS_SEMANA_ABREV[diaSemana];
 
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana);
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef);
 
         totalExtrasGeral += extrasMin;
         totalMinGeral += totalMin;
@@ -1939,7 +1997,10 @@
         const temDados = bDia.length > 0;
         const ehAdminLogado = !!(usuarioLogado && usuarioLogado.admin);
         const clicavel = temDados || ehAdminLogado;
-        const classFimSemana = diaSemana === 0 ? "dia-domingo" : (diaSemana === 6 ? "dia-sabado" : "");
+        const ehFeriadoNacional = ehFeriado(dataRef);
+        const classFimSemana = ehFeriadoNacional ? "dia-feriado"
+          : diaSemana === 0 ? "dia-domingo"
+          : diaSemana === 6 ? "dia-sabado" : "";
         const classTr = [
           ehHoje ? "dia-hoje" : (temDados ? "dia-com-dados" : (ehAdminLogado ? "dia-admin-vazio" : "")),
           clicavel ? "dia-clicavel" : "",
@@ -2103,16 +2164,17 @@
           .filter(b => new Date(b.data_hora).getDate() === i)
           .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
 
-        const diaSemana = new Date(ano, mes, i).getDay();
+        const dataRefCanvas = new Date(ano, mes, i);
+        const diaSemana = dataRefCanvas.getDay();
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana);
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRefCanvas);
         totalExtrasGeral += extrasMin;
         totalMinGeral += totalMin;
 
         linhas.push({
           dia: String(i).padStart(2,"0"),
           semana: DIAS_SEMANA_ABREV[diaSemana],
-          ehFimSemana: diaSemana === 0 || diaSemana === 6,
+          ehFimSemana: diaSemana === 0 || diaSemana === 6 || ehFeriado(dataRefCanvas),
           e1: e1 || "—", s1: s1 || "—", e2: e2 || "—", s2: s2 || "—",
           extras: extrasMin > 0 ? formatarMin(extrasMin) : "—",
           total: totalMin > 0 ? formatarMin(totalMin) : "—",
@@ -2505,21 +2567,29 @@
     }
 
     // Converte lat/lng em nome de cidade via Nominatim (OpenStreetMap, gratuito)
+    // Tenta até 2 vezes com timeout de 8s cada para garantir que a cidade sempre apareça
     async function obterCidade(lat, lng) {
-      try {
-        const resp = await fetch(
-          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`,
-          { headers: { 'Accept-Language': 'pt-BR' } }
-        );
-        if (!resp.ok) return "";
-        const data = await resp.json();
-        const a = data.address || {};
-        const cidade = a.city || a.town || a.village || a.municipality || a.county || "";
-        const estado = a.state || "";
-        return [cidade, estado].filter(Boolean).join(", ");
-      } catch {
-        return "";
+      for (let tentativa = 0; tentativa < 2; tentativa++) {
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 8000);
+          const resp = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=pt-BR`,
+            { headers: { 'Accept-Language': 'pt-BR' }, signal: ctrl.signal }
+          );
+          clearTimeout(timer);
+          if (!resp.ok) continue;
+          const data = await resp.json();
+          const a = data.address || {};
+          const cidade = a.city || a.town || a.village || a.municipality || a.county || "";
+          const estado = a.state || "";
+          const resultado = [cidade, estado].filter(Boolean).join(", ");
+          if (resultado) return resultado;
+        } catch {
+          if (tentativa < 1) await new Promise(r => setTimeout(r, 1500)); // aguarda antes de tentar novamente
+        }
       }
+      return "";
     }
 
     // ============================
@@ -2771,19 +2841,15 @@
       const coordStr = geoAtual
         ? `${geoAtual.lat.toFixed(6)}, ${geoAtual.lng.toFixed(6)}`
         : (document.getElementById("coordenadas").textContent.replace(/[()]/g, "").trim() || "");
-      const cidadeStr = geoAtual
-        ? (await Promise.race([
-            obterCidade(geoAtual.lat, geoAtual.lng),
-            new Promise(r => setTimeout(() => r(""), 4000))
-          ]) || "")
-        : "";
-      const locStr = cidadeStr && coordStr
-        ? `${cidadeStr} (${coordStr})`
-        : cidadeStr || coordStr;
-      const locEsc = escaparHTML(locStr);
+
+      // Exibe coordenadas imediatamente; cidade será preenchida de forma assíncrona
+      // locStrAtual é mutável para que o botão de compartilhar sempre use o valor mais recente
+      const cardId = "cartao_" + Date.now();
+      let locStrAtual = coordStr;
+      const locEsc = coordStr ? escaparHTML(coordStr) : "";
+      const locSpanId = `loc-${cardId}`;
 
       // Cria e adiciona novo cartão com silhueta temporária enquanto blob carrega
-      const cardId = "cartao_" + Date.now();
       const novoCartao = document.createElement("div");
       novoCartao.className = "cartao-registro ativo";
       novoCartao.id = cardId;
@@ -2799,7 +2865,7 @@
             <span>${tipoTexto}</span><br/>
             <span>${dataStr}</span><br/>
             <span>${horaStr}</span>
-            ${locStr ? `<br/><span style="font-size:0.78em;color:#555;margin-top:2px;">📍 ${locEsc}</span>` : ""}
+            ${coordStr ? `<br/><span id="${locSpanId}" style="font-size:0.78em;color:#555;margin-top:2px;">📍 Obtendo cidade... (${locEsc})</span>` : ""}
           </div>
         </div>
         <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
@@ -2827,22 +2893,59 @@
         }
       }, "image/jpeg", 0.75);
 
+      // O botão de compartilhar lê locStrAtual que é atualizado quando a cidade chegar
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
         const fotoUrl = fotosPorCartao.get(cardId) || "";
-        const c = await gerarCanvasCartao(fotoUrl, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStr);
+        const c = await gerarCanvasCartao(fotoUrl, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStrAtual);
         await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
       });
 
       // FIX #8: nao armazena foto base64 no localStorage (evita estouro de quota)
+      const dataHoraBatida = agora.toISOString();
       batidas.push({
         tipo: tipoBatidaPendente,
         usuario: nome,
         usuarioId: usuarioLogado.id,
-        data_hora: agora.toISOString(),
+        data_hora: dataHoraBatida,
         coordenadas: coordStr,
-        cidade: cidadeStr,
+        cidade: "",  // será preenchido abaixo de forma assíncrona
       });
       salvarBatidas();
+
+      // Busca a cidade em background sem bloquear a batida — atualiza card e localStorage quando chegar
+      if (geoAtual) {
+        obterCidade(geoAtual.lat, geoAtual.lng).then(cidade => {
+          const span = document.getElementById(locSpanId);
+          if (cidade) {
+            locStrAtual = `${cidade} (${coordStr})`;
+            if (span) span.textContent = `📍 ${locStrAtual}`;
+            // Atualiza a batida salva com a cidade
+            const idx = batidas.findIndex(b => b.data_hora === dataHoraBatida && b.usuarioId === usuarioLogado.id);
+            if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); }
+          } else {
+            // Cidade não encontrada: exibe apenas coordenadas sem o "Obtendo cidade..."
+            locStrAtual = coordStr;
+            if (span) span.textContent = `📍 ${coordStr}`;
+          }
+        });
+      } else if (coordStr) {
+        // Sem GPS fresco mas com coordenadas anteriores: tenta reverso geocoding mesmo assim
+        const partes = coordStr.split(",").map(s => parseFloat(s.trim()));
+        if (partes.length === 2 && !isNaN(partes[0]) && !isNaN(partes[1])) {
+          obterCidade(partes[0], partes[1]).then(cidade => {
+            const span = document.getElementById(locSpanId);
+            if (cidade) {
+              locStrAtual = `${cidade} (${coordStr})`;
+              if (span) span.textContent = `📍 ${locStrAtual}`;
+              const idx = batidas.findIndex(b => b.data_hora === dataHoraBatida && b.usuarioId === usuarioLogado.id);
+              if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); }
+            } else {
+              locStrAtual = coordStr;
+              if (span) span.textContent = `📍 ${coordStr}`;
+            }
+          });
+        }
+      }
 
       // FIX #4: reseta assinatura e canvas para proxima batida
       assinaturaAtual = null;
