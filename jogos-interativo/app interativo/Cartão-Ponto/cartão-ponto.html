@@ -1801,21 +1801,34 @@
       const entradas = bDia.filter(b => b.tipo === "entrada");
       const saidas   = bDia.filter(b => b.tipo === "saida");
 
-      // Primeira entrada antes das 13h → turno da manhã
-      const ent1 = entradas.find(b => new Date(b.data_hora).getHours() < 13) || null;
-      // Primeira entrada às 13h ou depois → turno da tarde
-      const ent2 = entradas.find(b => new Date(b.data_hora).getHours() >= 13) || null;
-      // Saída antes das 18h → S1 (manhã); saída a partir das 18h → S2 (tarde)
-      const sai1 = saidas.find(b => new Date(b.data_hora).getHours() < 18) || null;
-      const sai2 = saidas.find(b => new Date(b.data_hora).getHours() >= 18) || null;
+      // Emparelhamento cronológico: ordena entradas e saídas por horário
+      // e pareia em sequência (1ª entrada → 1ª saída posterior, etc.)
+      const entradasOrdGeral = [...entradas].sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+      const saidasOrdGeral   = [...saidas].sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+
+      // Pareia cada entrada com a próxima saída disponível após ela
+      const paresGeral = [];
+      const saidasUsadas = new Set();
+      for (const ent of entradasOrdGeral) {
+        const saiPar = saidasOrdGeral.find(s => !saidasUsadas.has(s) && new Date(s.data_hora) > new Date(ent.data_hora));
+        if (saiPar) {
+          paresGeral.push({ ent, sai: saiPar });
+          saidasUsadas.add(saiPar);
+        }
+      }
+
+      // Para exibição: determina E1/S1 (manhã, entrada < 13h) e E2/S2 (tarde, entrada >= 13h)
+      const parManha = paresGeral.find(p => new Date(p.ent.data_hora).getHours() < 13) || null;
+      const parTarde = paresGeral.find(p => new Date(p.ent.data_hora).getHours() >= 13) || null;
+
+      const ent1 = parManha ? parManha.ent : null;
+      const sai1 = parManha ? parManha.sai : null;
+      const ent2 = parTarde ? parTarde.ent : null;
+      const sai2 = parTarde ? parTarde.sai : null;
 
       let totalMin = 0;
-      if (ent1 && sai1) {
-        const d = (new Date(sai1.data_hora) - new Date(ent1.data_hora)) / 60000;
-        if (d > 0) totalMin += d;
-      }
-      if (ent2 && sai2) {
-        const d = (new Date(sai2.data_hora) - new Date(ent2.data_hora)) / 60000;
+      for (const { ent, sai } of paresGeral) {
+        const d = (new Date(sai.data_hora) - new Date(ent.data_hora)) / 60000;
         if (d > 0) totalMin += d;
       }
 
@@ -2958,7 +2971,7 @@
       cx.fillStyle = "white";
       cx.font = "bold 14px Arial";
       cx.textAlign = "left";
-      cx.fillText("Cartao Ponto BJK - " + tipoTexto, 10, 26);
+      cx.fillText("Cartao Ponto BJK -" + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
       cx.fillRect(0, 40, 400, temAssinatura ? (temLoc ? 212 : 190) : (temLoc ? 140 : 120));
