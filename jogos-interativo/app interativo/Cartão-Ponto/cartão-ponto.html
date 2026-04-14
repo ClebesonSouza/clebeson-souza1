@@ -554,6 +554,22 @@
     .forca-label { font-size: 0.78em; color: #888; margin-bottom: 4px; display: block; }
     /* ===== MENSAGEM DE SUCESSO ===== */
     .sucesso { color: #2e7d32; margin: 5px 0; font-size: 0.9em; }
+    /* ===== LOADING OVERLAY ===== */
+    @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    #loadingOverlay {
+      display: none; position: fixed; inset: 0;
+      background: rgba(0,0,0,0.45); z-index: 3000;
+      align-items: center; justify-content: center;
+    }
+    #loadingOverlay.ativo { display: flex; }
+    .loading-box {
+      background: white; border-radius: 12px; padding: 28px 36px; text-align: center;
+    }
+    .loading-spinner {
+      border: 4px solid #e0e0e0; border-top: 4px solid #2a6eb6;
+      border-radius: 50%; width: 40px; height: 40px;
+      animation: spin 0.8s linear infinite; margin: 0 auto 12px;
+    }
   </style>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
@@ -846,6 +862,10 @@
         <label>Cargo</label>
         <input type="text" id="editCargo" />
       </div>
+      <div id="editJornadaGroup">
+        <label>Jornada diária <span style="font-weight:normal;color:#888;font-size:0.82em">(horas — padrão: 8h)</span></label>
+        <input type="number" id="editJornada" min="1" max="12" step="0.5" placeholder="8" />
+      </div>
       <div id="editTelefoneGroup">
         <label>Telefone</label>
         <input type="tel" id="editTelefone" />
@@ -908,6 +928,7 @@
       <p id="totalHorasResumo"></p>
       <p id="totalExtrasResumo"></p>
       <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
+      <button id="btnExportarCSV" style="background:#1565c0;margin-top:6px;">Exportar CSV (Excel)</button>
       <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
     </div>
   </div>
@@ -942,6 +963,29 @@
       <div id="editBatidaStatus" style="font-size:0.85em;min-height:1.2em;margin:8px 0;color:#555;"></div>
       <button id="btnSalvarEdicaoBatida" style="background:#2a6eb6;">Salvar</button>
       <button id="btnCancelarEdicaoBatida" style="background:#888;margin-top:6px;">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- LOADING OVERLAY -->
+  <div id="loadingOverlay">
+    <div class="loading-box">
+      <div class="loading-spinner"></div>
+      <span id="loadingMsg" style="color:#333;font-size:0.95em;">Carregando...</span>
+    </div>
+  </div>
+
+  <!-- MODAL DE CONFIRMAÇÃO GENÉRICO (substitui confirm() nativo) -->
+  <div class="modal-overlay" id="modalConfirmar" style="z-index:2500;">
+    <div class="modal-box" style="max-width:360px;width:94vw;text-align:center;">
+      <p id="confirmarMensagem" style="font-size:1em;color:#333;margin-bottom:16px;line-height:1.5;white-space:pre-line;"></p>
+      <div id="confirmarDigitarGroup" style="display:none;margin-bottom:12px;">
+        <p style="font-size:0.85em;color:#888;margin-bottom:6px;" id="confirmarDigitarLabel"></p>
+        <input type="text" id="confirmarDigitar" style="text-align:center;" />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button id="btnConfirmarSim" style="background:#e53935;flex:1;">Confirmar</button>
+        <button id="btnConfirmarNao" style="background:#888;flex:1;margin-top:0;">Cancelar</button>
+      </div>
     </div>
   </div>
 
@@ -1092,6 +1136,100 @@
 
     // FIX #6: Promise do hash — aguardada no momento do uso, sem race condition
     const _hashCodigoAdminPromise = hashSenha("BJK@ADMIN2024");
+
+    // ============================
+    // MODAL DE CONFIRMAÇÃO (substitui confirm() nativo)
+    // ============================
+    let _confirmarResolve = null;
+
+    document.getElementById("btnConfirmarSim").addEventListener("click", () => {
+      const digitarGroup = document.getElementById("confirmarDigitarGroup");
+      if (digitarGroup.style.display !== "none") {
+        const esperado = document.getElementById("btnConfirmarSim").dataset.esperado || "";
+        const digitado = document.getElementById("confirmarDigitar").value.trim();
+        if (digitado !== esperado) {
+          document.getElementById("confirmarDigitar").style.border = "2px solid #e53935";
+          return;
+        }
+      }
+      document.getElementById("modalConfirmar").classList.remove("ativo");
+      if (_confirmarResolve) { _confirmarResolve(true); _confirmarResolve = null; }
+    });
+
+    document.getElementById("btnConfirmarNao").addEventListener("click", () => {
+      document.getElementById("modalConfirmar").classList.remove("ativo");
+      if (_confirmarResolve) { _confirmarResolve(false); _confirmarResolve = null; }
+    });
+
+    function confirmar(mensagem, opcoes) {
+      opcoes = opcoes || {};
+      document.getElementById("confirmarMensagem").textContent = mensagem;
+      const digitarGroup = document.getElementById("confirmarDigitarGroup");
+      const digitarInput = document.getElementById("confirmarDigitar");
+      const digitarLabel = document.getElementById("confirmarDigitarLabel");
+      const btnSim = document.getElementById("btnConfirmarSim");
+      if (opcoes.digitar) {
+        digitarGroup.style.display = "block";
+        digitarLabel.textContent = opcoes.labelDigitar || `Digite "${opcoes.digitar}" para confirmar:`;
+        digitarInput.value = "";
+        digitarInput.style.border = "";
+        digitarInput.placeholder = opcoes.digitar;
+        btnSim.dataset.esperado = opcoes.digitar;
+        btnSim.textContent = opcoes.btnTexto || "Confirmar";
+      } else {
+        digitarGroup.style.display = "none";
+        btnSim.dataset.esperado = "";
+        btnSim.textContent = opcoes.btnTexto || "Confirmar";
+      }
+      document.getElementById("modalConfirmar").classList.add("ativo");
+      return new Promise(resolve => { _confirmarResolve = resolve; });
+    }
+
+    // ============================
+    // LOADING OVERLAY
+    // ============================
+    function mostrarLoading(msg) {
+      document.getElementById("loadingMsg").textContent = msg || "Carregando...";
+      document.getElementById("loadingOverlay").classList.add("ativo");
+    }
+    function ocultarLoading() {
+      document.getElementById("loadingOverlay").classList.remove("ativo");
+    }
+
+    // ============================
+    // AUTO-LOGOUT POR INATIVIDADE (10 minutos)
+    // ============================
+    const INATIVIDADE_MS = 10 * 60 * 1000;
+    let _timerInatividade = null;
+
+    function resetarTimerInatividade() {
+      if (!usuarioLogado) return;
+      clearTimeout(_timerInatividade);
+      _timerInatividade = setTimeout(() => {
+        if (!usuarioLogado) return;
+        realizarLogout();
+        confirmar("Você foi desconectado por inatividade (10 min).\nFaça login novamente.", { btnTexto: "OK" });
+      }, INATIVIDADE_MS);
+    }
+
+    function realizarLogout() {
+      clearTimeout(_timerInatividade);
+      usuarioLogado = null;
+      tipoBatidaPendente = null;
+      _dentroDoLocal = null;
+      assinaturasPorCartao.clear();
+      fotosPorCartao.forEach(url => { if (url) URL.revokeObjectURL(url); });
+      fotosPorCartao.clear();
+      document.getElementById("listaCartoes").innerHTML = "";
+      document.getElementById("btnCompartilharTodos").style.display = "none";
+      document.getElementById("batidaStatus").textContent = "";
+      try { desenharPlaceholder(); } catch(_) {}
+      mudarTela("loginScreen");
+    }
+
+    ["click","keydown","touchstart","mousemove"].forEach(evt =>
+      document.addEventListener(evt, resetarTimerInatividade, { passive: true })
+    );
 
     // ============================
     // CONSTANTES GLOBAIS
@@ -1728,7 +1866,7 @@
             ${infoExtra}
             <div class="admin-user-actions">
               <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
-              ${!ehAdmin ? `<button class="btn-relatorio" onclick="abrirRelatorio(${u.id})">Relatório</button>` : ''}
+              <button class="btn-relatorio" onclick="abrirRelatorio(${u.id})">Relatório</button>
               ${btnExcluir}
             </div>
           </div>`;
@@ -1763,15 +1901,17 @@
         document.getElementById("editCargo").value = u.cargo || "";
         document.getElementById("editTelefone").value = u.telefone || "";
         document.getElementById("editNascimento").value = u.nascimento || "";
+        document.getElementById("editJornada").value = u.jornadaHoras != null ? u.jornadaHoras : "";
         document.getElementById("editGeoLat").value = u.geoLat != null ? u.geoLat : "";
         document.getElementById("editGeoLng").value = u.geoLng != null ? u.geoLng : "";
         document.getElementById("editGeoRaio").value = u.geoRaio != null ? u.geoRaio : "";
       }
+      document.getElementById("editJornadaGroup").style.display = mostrar(!ehAdmin);
 
       document.getElementById("modalEditarUsuario").classList.add("ativo");
     }
 
-    function excluirUsuario(id) {
+    async function excluirUsuario(id) {
       const u = usuarios.find(u => u.id === id);
       if (!u) return;
       if (u.admin && u.id === usuarioLogado.id) {
@@ -1781,7 +1921,8 @@
         return;
       }
       const tipo = u.admin ? "administrador" : "funcionário";
-      if (!confirm(`Excluir o ${tipo} "${u.nome}"?\nEsta ação não pode ser desfeita.`)) return;
+      const ok = await confirmar(`Excluir o ${tipo} "${u.nome}"?\nEsta ação não pode ser desfeita.`);
+      if (!ok) return;
       usuarios.splice(usuarios.indexOf(u), 1);
       salvarUsuarios();
       renderAdminUsers();
@@ -1847,7 +1988,8 @@
     //   Domingo  → todo o tempo trabalhado é extra
     //   Sábado   → horas a partir das 13h são extras
     //   Seg–Sex  → extras acima de 8h (480 min)
-    function distribuirBatidas(bDia, diaSemana, dataRef) {
+    function distribuirBatidas(bDia, diaSemana, dataRef, jornadaMin) {
+      jornadaMin = jornadaMin != null ? jornadaMin : JORNADA_MIN;
       const fmtHora = b => {
         const dt = new Date(b.data_hora);
         return `${String(dt.getHours()).padStart(2,"0")}:${String(dt.getMinutes()).padStart(2,"0")}`;
@@ -1912,8 +2054,8 @@
           }
         }
       } else {
-        // Segunda a sexta: extras apenas acima de 8h (480 min)
-        extrasMin = Math.max(0, totalMin - JORNADA_MIN);
+        // Segunda a sexta: extras apenas acima da jornada configurada
+        extrasMin = Math.max(0, totalMin - jornadaMin);
       }
 
       return {
@@ -1942,8 +2084,15 @@
     }
 
     function renderRelatorio() {
+      mostrarLoading("Carregando relatório...");
+      setTimeout(() => { _renderRelatorioInterno(); ocultarLoading(); }, 30);
+    }
+
+    function _renderRelatorioInterno() {
       const u = usuarios.find(u => u.id === _relatorioUserId);
       if (!u) return;
+
+      const jornadaMin = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
 
       const ano = _relatorioAno;
       const mes = _relatorioMes; // 0-11
@@ -1981,7 +2130,7 @@
         const semAbrv = DIAS_SEMANA_ABREV[diaSemana];
 
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef);
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef, jornadaMin);
 
         totalExtrasGeral += extrasMin;
         totalMinGeral += totalMin;
@@ -2146,6 +2295,7 @@
       btn.disabled = true;
       btn.textContent = "Gerando imagem...";
 
+      const jornadaMinCanvas = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
       const ano = _relatorioAno;
       const mes = _relatorioMes;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
@@ -2167,7 +2317,7 @@
         const dataRefCanvas = new Date(ano, mes, i);
         const diaSemana = dataRefCanvas.getDay();
         // Distribui em E1/S1 (manhã < 13h) e E2/S2 (tarde ≥ 13h)
-        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRefCanvas);
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRefCanvas, jornadaMinCanvas);
         totalExtrasGeral += extrasMin;
         totalMinGeral += totalMin;
 
@@ -2294,9 +2444,65 @@
       await compartilharOuBaixar(c, `relatorio-${u.nome.replace(/\s+/g,"-")}-${NOMES_MESES[mes]}-${ano}.png`);
     });
 
-    document.getElementById("btnResetarBiometria").addEventListener("click", () => {
+    // ============================
+    // EXPORTAR CSV
+    // ============================
+    document.getElementById("btnExportarCSV").addEventListener("click", () => {
+      const u = usuarios.find(u => u.id === _relatorioUserId);
+      if (!u) return;
+      const jornadaMinCsv = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
+      const ano = _relatorioAno;
+      const mes = _relatorioMes;
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+      const batidasMes = batidas.filter(b => {
+        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        const dt = new Date(b.data_hora);
+        return dt.getFullYear() === ano && dt.getMonth() === mes;
+      });
+
+      const linhas = [["Dia","Dia da Semana","Entrada 1","Saída 1","Entrada 2","Saída 2","Total","Extras","Feriado"]];
+      let totalMin = 0, totalExtras = 0;
+
+      for (let i = 1; i <= diasNoMes; i++) {
+        const dataRef = new Date(ano, mes, i);
+        const diaSemana = dataRef.getDay();
+        const bDia = batidasMes
+          .filter(b => new Date(b.data_hora).getDate() === i)
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+        const { e1, s1, e2, s2, totalMin: tMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef, jornadaMinCsv);
+        totalMin += tMin;
+        totalExtras += extrasMin;
+        const feriado = ehFeriado(dataRef) ? "Sim" : "";
+        linhas.push([
+          String(i).padStart(2,"0"),
+          DIAS_SEMANA_ABREV[diaSemana],
+          e1 || "", s1 || "", e2 || "", s2 || "",
+          tMin > 0 ? formatarMin(tMin) : "",
+          extrasMin > 0 ? formatarMin(extrasMin) : "",
+          feriado,
+        ]);
+      }
+      linhas.push([]);
+      linhas.push(["Total trabalhado","","","","","",formatarMin(totalMin),"",""]);
+      linhas.push(["Total extras","","","","","","",formatarMin(totalExtras),""]);
+
+      const bom = "\uFEFF";
+      const csv = bom + linhas.map(r => r.map(c => `"${String(c).replace(/"/g,'""')}"`).join(";")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `relatorio-${u.nome.replace(/\s+/g,"-")}-${NOMES_MESES[mes]}-${ano}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    document.getElementById("btnResetarBiometria").addEventListener("click", async () => {
       if (!usuarioEditando) return;
-      if (!confirm("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.")) return;
+      const ok = await confirmar("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.");
+      if (!ok) return;
       usuarioEditando.faceDescriptor = null;
       usuarioEditando.faceDescriptors = null;
       const s = document.getElementById("editStatus");
@@ -2337,6 +2543,8 @@
         usuarioEditando.cargo = novoCargo;
         usuarioEditando.telefone = novoTelefone;
         usuarioEditando.nascimento = novoNascimento;
+        const jornadaVal = document.getElementById("editJornada").value.trim();
+        usuarioEditando.jornadaHoras = jornadaVal !== "" ? parseFloat(jornadaVal) : null;
         const latVal  = document.getElementById("editGeoLat").value.trim();
         const lngVal  = document.getElementById("editGeoLng").value.trim();
         const raioVal = document.getElementById("editGeoRaio").value.trim();
@@ -2373,26 +2581,17 @@
       document.getElementById("editGeoRaio").value = "";
     });
 
-    document.getElementById("btnSairAdmin").addEventListener("click", () => {
-      usuarioLogado = null;
-      _dentroDoLocal = null;
+    document.getElementById("btnSairAdmin").addEventListener("click", async () => {
+      const ok = await confirmar("Deseja sair da área administrativa?");
+      if (!ok) return;
       document.getElementById("adminStatus").textContent = "";
-      mudarTela("loginScreen");
+      realizarLogout();
     });
 
-    document.getElementById("btnSairApp").addEventListener("click", () => {
-      usuarioLogado = null;
-      tipoBatidaPendente = null;
-      _dentroDoLocal = null;
-      // FIX #4: limpa dados de sessão do usuário ao sair
-      assinaturasPorCartao.clear();
-      fotosPorCartao.forEach(url => { if (url) URL.revokeObjectURL(url); });
-      fotosPorCartao.clear();
-      document.getElementById("listaCartoes").innerHTML = "";
-      document.getElementById("btnCompartilharTodos").style.display = "none";
-      document.getElementById("batidaStatus").textContent = "";
-      desenharPlaceholder();
-      mudarTela("loginScreen");
+    document.getElementById("btnSairApp").addEventListener("click", async () => {
+      const ok = await confirmar("Deseja sair?\nOs comprovantes da sessão atual serão perdidos da tela.");
+      if (!ok) return;
+      realizarLogout();
     });
 
     document.getElementById("btnMeuRelatorio").addEventListener("click", () => {
@@ -2406,7 +2605,7 @@
       mudarTela("cadastroAdminScreen");
     });
 
-    document.getElementById("btnResetarCadastros").addEventListener("click", () => {
+    document.getElementById("btnResetarCadastros").addEventListener("click", async () => {
       const st = document.getElementById("adminStatus");
       st.textContent = "";
       const funcionarios = usuarios.filter(u => !u.admin);
@@ -2415,11 +2614,17 @@
         st.style.color = "#c00";
         return;
       }
-      if (!confirm(`Isso vai apagar ${funcionarios.length} funcionário(s).\nEsta ação não pode ser desfeita. Continuar?`)) return;
+      const ok = await confirmar(
+        `Isso vai apagar ${funcionarios.length} funcionário(s) e todas as suas batidas.\nEsta ação NÃO pode ser desfeita.`,
+        { digitar: "RESETAR", labelDigitar: 'Digite "RESETAR" para confirmar a exclusão:' }
+      );
+      if (!ok) return;
       const admins = usuarios.filter(u => u.admin);
       usuarios.splice(0, usuarios.length, ...admins);
       salvarUsuarios();
       renderAdminUsers();
+      st.textContent = "Todos os funcionários foram removidos.";
+      st.style.color = "#2e7d32";
     });
 
     // Rastreia de qual tela o usuário veio para o cadastro de admin
@@ -2695,6 +2900,20 @@
         document.getElementById("batidaStatus").textContent = "⚠ Selecione primeiro 'Bater ponto de entrada' ou 'Bater ponto de saída'.";
         document.getElementById("batidaStatus").style.color = "#c00";
         return;
+      }
+      // Intervalo mínimo de 3 minutos entre batidas consecutivas
+      const agora = Date.now();
+      const ultimaBatidaUsuario = batidas
+        .filter(b => b.usuarioId ? b.usuarioId === usuarioLogado.id : b.usuario === usuarioLogado.nome)
+        .sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora))[0];
+      if (ultimaBatidaUsuario) {
+        const diffMin = (agora - new Date(ultimaBatidaUsuario.data_hora).getTime()) / 60000;
+        if (diffMin < 3) {
+          document.getElementById("batidaStatus").textContent =
+            `⚠ Aguarde pelo menos 3 minutos entre batidas (${Math.ceil(3 - diffMin)} min restantes).`;
+          document.getElementById("batidaStatus").style.color = "#c00";
+          return;
+        }
       }
       assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
       _geoPromisePonto = capturarGPSFresco(); // inicia GPS em paralelo à biometria
@@ -3064,9 +3283,11 @@
     async function gerarCanvasCartao(foto, nome, cargo, tipoTexto, dataStr, horaStr, assinatura, localizacao) {
       const temAssinatura = !!assinatura;
       const temLoc = !!(localizacao && localizacao.trim());
+      const locLinhas = temLoc ? Math.ceil(("📍 " + localizacao).length / 42) : 0;
+      const locAltura = locLinhas > 1 ? locLinhas * 14 : (temLoc ? 14 : 0);
       const c = document.createElement("canvas");
       c.width = 400;
-      c.height = temAssinatura ? (temLoc ? 252 : 230) : (temLoc ? 180 : 160);
+      c.height = (temAssinatura ? 230 : 160) + locAltura;
       const cx = c.getContext("2d");
 
       cx.fillStyle = "#2a6eb6";
@@ -3077,7 +3298,7 @@
       cx.fillText("Cartao Ponto BJK -" + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
-      cx.fillRect(0, 40, 400, temAssinatura ? (temLoc ? 212 : 190) : (temLoc ? 140 : 120));
+      cx.fillRect(0, 40, 400, c.height - 40);
 
       // FIX #3: aguarda carregamento da foto antes de desenhar
       await new Promise((resolve) => {
@@ -3099,17 +3320,30 @@
       cx.fillText(dataStr, 105, 118);
       cx.fillText(horaStr, 105, 134);
 
-      // Localização da batida
+      // Localização da batida — quebra em duas linhas se necessário
       if (temLoc) {
         cx.fillStyle = "#555";
         cx.font = "10px Arial";
-        const locTrunc = localizacao.length > 52 ? localizacao.slice(0, 49) + "..." : localizacao;
-        cx.fillText("📍 " + locTrunc, 105, 150);
+        const maxWidth = 280;
+        const palavras = ("📍 " + localizacao).split(" ");
+        let linha = "";
+        let y = 150;
+        for (const palavra of palavras) {
+          const teste = linha ? linha + " " + palavra : palavra;
+          if (cx.measureText(teste).width > maxWidth && linha) {
+            cx.fillText(linha, 105, y);
+            linha = palavra;
+            y += 13;
+          } else {
+            linha = teste;
+          }
+        }
+        if (linha) cx.fillText(linha, 105, y);
       }
 
-      // FIX #4: desenha assinatura se existir
+      // FIX #4: desenha assinatura se existir (posição dinâmica)
       if (temAssinatura) {
-        const sigY = temLoc ? 184 : 164;
+        const sigY = c.height - 70;
         cx.strokeStyle = "#ddd";
         cx.lineWidth = 1;
         cx.beginPath();
@@ -3210,6 +3444,21 @@
 
     function salvarBatidas() {
       localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+      try {
+        let total = 0;
+        for (const k in localStorage) {
+          if (Object.prototype.hasOwnProperty.call(localStorage, k)) {
+            total += (localStorage[k].length + k.length) * 2;
+          }
+        }
+        if (total > 4 * 1024 * 1024) {
+          confirmar(
+            "⚠ Atenção: o armazenamento local está quase cheio (" + Math.round(total/1024) + "KB de ~5000KB).\n" +
+            "Exporte os dados em CSV e considere limpar registros antigos para evitar perda de dados.",
+            { btnTexto: "Entendido" }
+          );
+        }
+      } catch(_) {}
     }
 
     // Garante alternância obrigatória entrada → saída → entrada
