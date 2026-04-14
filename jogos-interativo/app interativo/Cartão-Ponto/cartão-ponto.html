@@ -928,7 +928,10 @@
       <p id="totalHorasResumo"></p>
       <p id="totalExtrasResumo"></p>
       <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
-      <button id="btnExportarCSV" style="background:#1565c0;margin-top:6px;">Exportar CSV (Excel)</button>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="btnExportarCSV" style="background:#1565c0;flex:1;margin-top:0;">Exportar CSV</button>
+        <button id="btnExportarPDF" style="background:#c62828;flex:1;margin-top:0;">Exportar PDF</button>
+      </div>
       <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
     </div>
   </div>
@@ -2013,13 +2016,19 @@
         }
       }
 
-      // Para exibição: determina E1/S1 (manhã, entrada < 13h) e E2/S2 (tarde, entrada >= 13h)
+      // Para exibição: entrada aparece mesmo sem saída; saída só aparece quando o par estiver completo
       const parManha = paresGeral.find(p => new Date(p.ent.data_hora).getHours() < 13) || null;
       const parTarde = paresGeral.find(p => new Date(p.ent.data_hora).getHours() >= 13) || null;
 
-      const ent1 = parManha ? parManha.ent : null;
+      // Entrada de exibição: usa o par se existir, senão a primeira entrada avulsa no turno
+      const entManhaDisp = parManha ? parManha.ent
+        : (entradasOrdGeral.find(e => new Date(e.data_hora).getHours() < 13) || null);
+      const entTardeDisp = parTarde ? parTarde.ent
+        : (entradasOrdGeral.find(e => new Date(e.data_hora).getHours() >= 13) || null);
+
+      const ent1 = entManhaDisp;
       const sai1 = parManha ? parManha.sai : null;
-      const ent2 = parTarde ? parTarde.ent : null;
+      const ent2 = entTardeDisp;
       const sai2 = parTarde ? parTarde.sai : null;
 
       let totalMin = 0;
@@ -2497,6 +2506,160 @@
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
+    });
+
+    // ============================
+    // EXPORTAR PDF
+    // ============================
+    document.getElementById("btnExportarPDF").addEventListener("click", () => {
+      const u = usuarios.find(u => u.id === _relatorioUserId);
+      if (!u) return;
+
+      const jornadaMinPdf = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
+      const ano = _relatorioAno;
+      const mes = _relatorioMes;
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+      const batidasMes = batidas.filter(b => {
+        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        const dt = new Date(b.data_hora);
+        return dt.getFullYear() === ano && dt.getMonth() === mes;
+      });
+
+      let totalMinGeral = 0, totalExtrasGeral = 0, totalRegistros = 0;
+      const linhas = [];
+
+      for (let i = 1; i <= diasNoMes; i++) {
+        const dataRef = new Date(ano, mes, i);
+        const diaSemana = dataRef.getDay();
+        const bDia = batidasMes
+          .filter(b => new Date(b.data_hora).getDate() === i)
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+        const { e1, s1, e2, s2, totalMin, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef, jornadaMinPdf);
+        totalMinGeral += totalMin;
+        totalExtrasGeral += extrasMin;
+        totalRegistros += bDia.length;
+
+        const feriado = ehFeriado(dataRef);
+        const ehDom = diaSemana === 0;
+        const ehSab = diaSemana === 6;
+        let corLinha = "";
+        if (feriado)    corLinha = "#ede7f6";
+        else if (ehDom) corLinha = "#fce4ec";
+        else if (ehSab) corLinha = "#fff8e1";
+        else if (bDia.length > 0) corLinha = "#f0f7ff";
+
+        const badge = feriado ? " <span style='font-size:0.7em;color:#6a1b9a;font-weight:bold;'>FERIADO</span>"
+          : ehDom ? " <span style='font-size:0.7em;color:#c62828;font-weight:bold;'>DOM</span>"
+          : ehSab ? " <span style='font-size:0.7em;color:#e65100;font-weight:bold;'>SÁB</span>" : "";
+
+        linhas.push(`
+          <tr style="background:${corLinha}">
+            <td style="font-weight:bold;">${String(i).padStart(2,"0")}<br>
+              <small style="font-size:0.8em;">${DIAS_SEMANA_ABREV[diaSemana]}${badge}</small>
+            </td>
+            <td>${e1 || "—"}</td>
+            <td>${s1 || "—"}</td>
+            <td>${e2 || "—"}</td>
+            <td>${s2 || "—"}</td>
+            <td style="color:${extrasMin > 0 ? "#e65100" : "#aaa"};font-weight:${extrasMin > 0 ? "bold" : "normal"};">
+              ${extrasMin > 0 ? formatarMin(extrasMin) : "—"}
+            </td>
+            <td style="color:${totalMin > 0 ? "#2e7d32" : "#aaa"};font-weight:${totalMin > 0 ? "bold" : "normal"};">
+              ${totalMin > 0 ? formatarMin(totalMin) : "—"}
+            </td>
+          </tr>`);
+      }
+
+      const dataGeracao = new Date().toLocaleDateString("pt-BR");
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Relatório ${u.nome} — ${NOMES_MESES[mes]} ${ano}</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: Arial, sans-serif; font-size: 11px; color: #222; padding: 20px; }
+    .cabecalho { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px; border-bottom: 2px solid #2a6eb6; padding-bottom: 10px; }
+    .cabecalho h1 { font-size: 16px; color: #2a6eb6; }
+    .cabecalho p { font-size: 11px; color: #555; margin-top: 2px; }
+    .info-bloco { margin-bottom: 12px; }
+    .info-bloco span { display: inline-block; margin-right: 24px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+    thead th { background: #2a6eb6; color: white; padding: 6px 4px; text-align: center; font-size: 11px; }
+    td { padding: 5px 4px; border-bottom: 1px solid #e0e0e0; text-align: center; font-size: 11px; }
+    .rodape { margin-top: 14px; border-top: 2px solid #2a6eb6; padding-top: 10px; display: flex; gap: 24px; }
+    .rodape .bloco { background: #f5f5f5; border-radius: 6px; padding: 8px 16px; flex: 1; text-align: center; }
+    .rodape .bloco .valor { font-size: 15px; font-weight: bold; color: #2a6eb6; margin-top: 2px; }
+    .rodape .bloco .valor.extras { color: #e65100; }
+    .assinatura { margin-top: 40px; display: flex; gap: 40px; }
+    .assinatura .linha { flex: 1; border-top: 1px solid #333; text-align: center; padding-top: 4px; font-size: 10px; color: #555; }
+    @media print {
+      body { padding: 10px; }
+      @page { margin: 15mm; size: A4 portrait; }
+      button { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="cabecalho">
+    <div>
+      <h1>Relatório de Ponto — ${NOMES_MESES[mes]} ${ano}</h1>
+      <p>Gerado em ${dataGeracao}</p>
+    </div>
+    <div style="text-align:right;">
+      <strong style="font-size:13px;color:#2a6eb6;">${escaparHTML(u.nome)}</strong><br>
+      <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+    </div>
+  </div>
+
+  <div class="info-bloco">
+    <span><strong>CPF/Mat.:</strong> ${escaparHTML(u.cpf || "—")}</span>
+    <span><strong>Jornada:</strong> ${u.jornadaHoras != null ? u.jornadaHoras + "h" : "8h"} / dia</span>
+    <span><strong>Registros no mês:</strong> ${totalRegistros}</span>
+  </div>
+
+  <table>
+    <thead>
+      <tr>
+        <th style="width:10%;">Dia</th>
+        <th style="width:12%;">Ent. 1</th>
+        <th style="width:12%;">Saí. 1</th>
+        <th style="width:12%;">Ent. 2</th>
+        <th style="width:12%;">Saí. 2</th>
+        <th style="width:15%;">Extras</th>
+        <th style="width:15%;">Total</th>
+      </tr>
+    </thead>
+    <tbody>${linhas.join("")}</tbody>
+  </table>
+
+  <div class="rodape">
+    <div class="bloco">
+      <div>Total trabalhado em ${NOMES_MESES[mes]}</div>
+      <div class="valor">${totalMinGeral > 0 ? formatarMin(totalMinGeral) : "—"}</div>
+    </div>
+    <div class="bloco">
+      <div>Total de horas extras</div>
+      <div class="valor extras">${totalExtrasGeral > 0 ? formatarMin(totalExtrasGeral) : "—"}</div>
+    </div>
+  </div>
+
+  <div class="assinatura">
+    <div class="linha">Assinatura do Funcionário</div>
+    <div class="linha">Assinatura do Responsável</div>
+  </div>
+</body>
+</html>`;
+
+      const janela = window.open("", "_blank", "width=800,height=700");
+      if (!janela) {
+        confirmar("O navegador bloqueou a abertura da janela de PDF.\nPermita pop-ups para este site e tente novamente.", { btnTexto: "OK" });
+        return;
+      }
+      janela.document.write(html);
+      janela.document.close();
+      janela.onload = () => janela.print();
     });
 
     document.getElementById("btnResetarBiometria").addEventListener("click", async () => {
