@@ -2113,7 +2113,7 @@
 
       // Batidas do funcionário neste mês
       const batidasMes = batidas.filter(b => {
-        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        if (!_matchUsuarioBatida(b, u)) return false;
         const dt = new Date(b.data_hora);
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
@@ -2209,7 +2209,7 @@
 
       const bDia = batidas
         .filter(b => {
-          if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+          if (!_matchUsuarioBatida(b, u)) return false;
           const dt = new Date(b.data_hora);
           return dt.getFullYear() === ano && dt.getMonth() === mes && dt.getDate() === numDia;
         })
@@ -2309,7 +2309,7 @@
       const mes = _relatorioMes;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
       const batidasMes = batidas.filter(b => {
-        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        if (!_matchUsuarioBatida(b, u)) return false;
         const dt = new Date(b.data_hora);
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
@@ -2464,7 +2464,7 @@
       const mes = _relatorioMes;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
       const batidasMes = batidas.filter(b => {
-        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        if (!_matchUsuarioBatida(b, u)) return false;
         const dt = new Date(b.data_hora);
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
@@ -2520,7 +2520,7 @@
       const mes = _relatorioMes;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
       const batidasMes = batidas.filter(b => {
-        if (b.usuarioId ? b.usuarioId !== u.id : b.usuario !== u.nome) return false;
+        if (!_matchUsuarioBatida(b, u)) return false;
         const dt = new Date(b.data_hora);
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
@@ -3605,8 +3605,23 @@
     let batidas = [];
     try { batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || []; } catch {}
 
+    function _matchUsuarioBatida(b, u) {
+      // Aceita por ID (com coerção de tipo) OU por nome como fallback
+      if (b.usuarioId != null && u.id != null && String(b.usuarioId) === String(u.id)) return true;
+      return b.usuario === u.nome;
+    }
+
     function salvarBatidas() {
-      localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+      try {
+        localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+      } catch (e) {
+        confirmar(
+          "⚠ Não foi possível salvar a batida no armazenamento local (memória cheia).\n" +
+          "Exporte os dados em CSV e limpe registros antigos para evitar perda de dados.",
+          { btnTexto: "Entendido" }
+        );
+        return;
+      }
       try {
         let total = 0;
         for (const k in localStorage) {
