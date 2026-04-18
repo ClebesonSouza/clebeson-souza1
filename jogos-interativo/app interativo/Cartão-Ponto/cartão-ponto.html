@@ -2047,20 +2047,31 @@
         }
       }
 
-      // Para exibição: entrada aparece mesmo sem saída; saída só aparece quando o par estiver completo
-      const parManha = paresGeral.find(p => new Date(p.ent.data_hora).getHours() < 13) || null;
-      const parTarde = paresGeral.find(p => new Date(p.ent.data_hora).getHours() >= 13) || null;
+      // Para exibição: mostra os dois primeiros pares em ordem cronológica (sem corte às 13h).
+      // Entradas sem saída correspondente também são exibidas na próxima coluna disponível.
+      const entradasSemPar = entradasOrdGeral.filter(e => !paresGeral.some(p => p.ent === e));
 
-      // Entrada de exibição: usa o par se existir, senão a primeira entrada avulsa no turno
-      const entManhaDisp = parManha ? parManha.ent
-        : (entradasOrdGeral.find(e => new Date(e.data_hora).getHours() < 13) || null);
-      const entTardeDisp = parTarde ? parTarde.ent
-        : (entradasOrdGeral.find(e => new Date(e.data_hora).getHours() >= 13) || null);
-
-      const ent1 = entManhaDisp;
-      const sai1 = parManha ? parManha.sai : null;
-      const ent2 = entTardeDisp;
-      const sai2 = parTarde ? parTarde.sai : null;
+      let ent1 = null, sai1 = null, ent2 = null, sai2 = null;
+      if (paresGeral.length >= 1) {
+        ent1 = paresGeral[0].ent;
+        sai1 = paresGeral[0].sai;
+        if (paresGeral.length >= 2) {
+          ent2 = paresGeral[1].ent;
+          sai2 = paresGeral[1].sai;
+        } else if (entradasSemPar.length >= 1) {
+          // Há entrada avulsa sem saída — exibe em E2 sem S2
+          ent2 = entradasSemPar[0];
+          sai2 = null;
+        }
+      } else if (entradasSemPar.length >= 1) {
+        // Nenhum par completo — exibe entradas avulsas
+        ent1 = entradasSemPar[0];
+        sai1 = null;
+        if (entradasSemPar.length >= 2) {
+          ent2 = entradasSemPar[1];
+          sai2 = null;
+        }
+      }
 
       let totalMin = 0;
       for (const { ent, sai } of paresGeral) {
@@ -2125,16 +2136,29 @@
 
     function renderRelatorio() {
       mostrarLoading("Carregando relatório...");
-      setTimeout(() => { _renderRelatorioInterno(); ocultarLoading(); }, 30);
+      setTimeout(() => {
+        try {
+          _renderRelatorioInterno();
+        } catch (err) {
+          console.error("Erro ao renderizar relatório:", err);
+          const tbody = document.getElementById("tabelaRelatorioBody");
+          if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:#c00;text-align:center;padding:16px;">⚠ Erro ao carregar relatório. Recarregue a página e tente novamente.<br><small>${err.message}</small></td></tr>`;
+        }
+        ocultarLoading();
+      }, 30);
     }
 
     function _renderRelatorioInterno() {
       // Usa String() para evitar falha por diferença de tipo (number vs string)
       const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
       if (!u) {
-        // Segurança: se o usuário foi removido mas tem batidas, ainda exibe o relatório
+        // Se o usuário não existe mais, só exibe se ainda houver batidas registradas
         const temBatidas = batidas.some(b => String(b.usuarioId) === String(_relatorioUserId));
         if (!temBatidas) return;
+        // Se chegou aqui: usuário deletado mas tem batidas — exibe aviso e encerra
+        const tbody = document.getElementById("tabelaRelatorioBody");
+        if (tbody) tbody.innerHTML = `<tr><td colspan="7" style="color:#c00;text-align:center;padding:16px;">⚠ Usuário não encontrado. Os dados foram preservados mas o cadastro foi removido.</td></tr>`;
+        return;
       }
 
       const jornadaMin = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
@@ -2230,7 +2254,7 @@
     }
 
     function abrirBatidasDia(numDia) {
-      const u = usuarios.find(u => u.id === _relatorioUserId);
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
       if (!u) return;
 
       _batidasDiaNumDia = numDia;
@@ -2333,7 +2357,7 @@
     });
 
     document.getElementById("btnCompartilharRelatorio").addEventListener("click", async () => {
-      const u = usuarios.find(u => u.id === _relatorioUserId);
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
       if (!u) return;
 
       const btn = document.getElementById("btnCompartilharRelatorio");
@@ -2493,7 +2517,7 @@
     // EXPORTAR CSV
     // ============================
     document.getElementById("btnExportarCSV").addEventListener("click", () => {
-      const u = usuarios.find(u => u.id === _relatorioUserId);
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
       if (!u) return;
       const jornadaMinCsv = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
       const ano = _relatorioAno;
@@ -2548,7 +2572,7 @@
     // EXPORTAR PDF
     // ============================
     document.getElementById("btnExportarPDF").addEventListener("click", () => {
-      const u = usuarios.find(u => u.id === _relatorioUserId);
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
       if (!u) return;
 
       const jornadaMinPdf = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
@@ -3103,7 +3127,7 @@
       // Intervalo mínimo de 3 minutos entre batidas consecutivas
       const agora = Date.now();
       const ultimaBatidaUsuario = batidas
-        .filter(b => b.usuarioId ? b.usuarioId === usuarioLogado.id : b.usuario === usuarioLogado.nome)
+        .filter(b => _matchUsuarioBatida(b, usuarioLogado))
         .sort((a, b) => new Date(b.data_hora) - new Date(a.data_hora))[0];
       if (ultimaBatidaUsuario) {
         const diffMin = (agora - new Date(ultimaBatidaUsuario.data_hora).getTime()) / 60000;
@@ -3407,7 +3431,7 @@
       const fimDia    = new Date(anoHoje, agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
 
       const batidasDeHoje = batidas.filter(b => {
-        if (b.usuarioId ? b.usuarioId !== usuarioLogado.id : b.usuario !== nomeUsuario) return false;
+        if (!_matchUsuarioBatida(b, usuarioLogado)) return false;
         const ts = new Date(b.data_hora).getTime();
         return ts >= inicioDia && ts <= fimDia;
       });
@@ -3821,7 +3845,7 @@
         }
       } else {
         // Nova batida
-        const u = usuarios.find(u => u.id === _relatorioUserId);
+        const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
         if (!u) return;
         batidas.push({
           tipo,
