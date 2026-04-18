@@ -1216,6 +1216,14 @@
     }
 
     function realizarLogout() {
+      // Fecha todos os modais abertos antes de limpar a sessão
+      document.querySelectorAll(".modal-overlay.ativo").forEach(m => {
+        m.classList.remove("ativo");
+      });
+      // Encerra câmeras se estiverem ativas
+      try { fecharBiometria(); } catch(_) {}
+      try { fecharBiometriaCadastro(); } catch(_) {}
+
       clearTimeout(_timerInatividade);
       usuarioLogado = null;
       tipoBatidaPendente = null;
@@ -1505,15 +1513,37 @@
       const selAno  = document.getElementById("nascAno");
       const campo   = document.getElementById("campoNascimento");
 
-      for (let d = 1; d <= 31; d++) {
-        const o = document.createElement("option");
-        o.value = String(d).padStart(2, "0");
-        o.textContent = String(d).padStart(2, "0");
-        selDia.appendChild(o);
-      }
-
       const anoAtual = new Date().getFullYear();
       selAno.max = anoAtual - 14;
+
+      // Atualiza os dias disponíveis conforme o mês e ano selecionados
+      function atualizarDias() {
+        const mes = parseInt(selMes.value) || 1;
+        const ano = parseInt(selAno.value) || 2000;
+        const maxDia = new Date(ano, mes, 0).getDate(); // último dia do mês
+        const diaAtual = selDia.value;
+
+        // Remove todas as opções exceto o placeholder "Dia"
+        while (selDia.options.length > 1) selDia.remove(1);
+
+        // Adiciona apenas os dias válidos para aquele mês/ano
+        for (let d = 1; d <= maxDia; d++) {
+          const o = document.createElement("option");
+          o.value = String(d).padStart(2, "0");
+          o.textContent = String(d).padStart(2, "0");
+          selDia.appendChild(o);
+        }
+
+        // Mantém o dia selecionado se ainda for válido; caso contrário reseta
+        if (diaAtual && parseInt(diaAtual) <= maxDia) {
+          selDia.value = diaAtual;
+        } else {
+          selDia.value = "";
+        }
+      }
+
+      // Inicializa com 31 dias (nenhum mês selecionado ainda)
+      atualizarDias();
 
       function sync() {
         const anoVal = selAno.value;
@@ -1523,9 +1553,10 @@
           ? `${anoNum}-${selMes.value}-${selDia.value}`
           : "";
       }
+
       selDia.addEventListener("change", sync);
-      selMes.addEventListener("change", sync);
-      selAno.addEventListener("input", sync);
+      selMes.addEventListener("change", () => { atualizarDias(); sync(); });
+      selAno.addEventListener("input",  () => { atualizarDias(); sync(); });
     })();
     document.getElementById("cadastroSenha").addEventListener("input", function() {
       atualizarIndicadorForca(this.value);
@@ -1602,8 +1633,8 @@
       const email = fd.get("email").trim();
       const senha = fd.get("senha");
       const confirmarSenha = fd.get("confirmarSenha");
-      const cargo = fd.get("cargo");
-      const telefone = fd.get("telefone");
+      const cargo    = (fd.get("cargo") || "").trim();
+      const telefone = (fd.get("telefone") || "").trim();
       const nascimento = fd.get("nascimento");
 
       // Validação de senha
@@ -2098,8 +2129,13 @@
     }
 
     function _renderRelatorioInterno() {
-      const u = usuarios.find(u => u.id === _relatorioUserId);
-      if (!u) return;
+      // Usa String() para evitar falha por diferença de tipo (number vs string)
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
+      if (!u) {
+        // Segurança: se o usuário foi removido mas tem batidas, ainda exibe o relatório
+        const temBatidas = batidas.some(b => String(b.usuarioId) === String(_relatorioUserId));
+        if (!temBatidas) return;
+      }
 
       const jornadaMin = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
 
@@ -3603,7 +3639,20 @@
     // BATIDAS DE PONTO
     // ============================
     let batidas = [];
-    try { batidas = JSON.parse(localStorage.getItem("batidas_bjk")) || []; } catch {}
+    try {
+      const rawBatidas = localStorage.getItem("batidas_bjk");
+      if (rawBatidas) {
+        const parsed = JSON.parse(rawBatidas);
+        // Garante que é um array válido antes de usar
+        batidas = Array.isArray(parsed) ? parsed : [];
+        if (!Array.isArray(parsed)) {
+          console.warn("Dados de batidas corrompidos no localStorage — iniciando vazio.");
+        }
+      }
+    } catch (e) {
+      console.warn("Erro ao carregar batidas do localStorage:", e);
+      batidas = [];
+    }
 
     function _matchUsuarioBatida(b, u) {
       // Aceita por ID (com coerção de tipo) OU por nome como fallback
@@ -3612,31 +3661,45 @@
     }
 
     function salvarBatidas() {
+      let salvoOk = false;
       try {
         localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+        salvoOk = true;
       } catch (e) {
+        // Falha ao salvar — exibe alerta visível com destaque vermelho na tela
+        const statusEl = document.getElementById("batidaStatus");
+        if (statusEl) {
+          statusEl.textContent = "⚠ ATENÇÃO: batida NÃO salva! Armazenamento cheio. Exporte o CSV e avise o administrador.";
+          statusEl.style.color = "#c00";
+          statusEl.style.fontWeight = "bold";
+        }
+        // Também exibe o modal de confirmação para garantir que o usuário veja
         confirmar(
-          "⚠ Não foi possível salvar a batida no armazenamento local (memória cheia).\n" +
-          "Exporte os dados em CSV e limpe registros antigos para evitar perda de dados.",
+          "⚠ BATIDA NÃO SALVA!\n\nO armazenamento local está cheio.\n" +
+          "Esta batida aparece na tela mas será perdida ao recarregar.\n\n" +
+          "Avise o administrador para exportar os dados em CSV e limpar registros antigos.",
           { btnTexto: "Entendido" }
         );
         return;
       }
-      try {
-        let total = 0;
-        for (const k in localStorage) {
-          if (Object.prototype.hasOwnProperty.call(localStorage, k)) {
-            total += (localStorage[k].length + k.length) * 2;
+      // Verifica capacidade após salvar com sucesso
+      if (salvoOk) {
+        try {
+          let total = 0;
+          for (const k in localStorage) {
+            if (Object.prototype.hasOwnProperty.call(localStorage, k)) {
+              total += (localStorage[k].length + k.length) * 2;
+            }
           }
-        }
-        if (total > 4 * 1024 * 1024) {
-          confirmar(
-            "⚠ Atenção: o armazenamento local está quase cheio (" + Math.round(total/1024) + "KB de ~5000KB).\n" +
-            "Exporte os dados em CSV e considere limpar registros antigos para evitar perda de dados.",
-            { btnTexto: "Entendido" }
-          );
-        }
-      } catch(_) {}
+          if (total > 4 * 1024 * 1024) {
+            confirmar(
+              "⚠ Atenção: o armazenamento local está quase cheio (" + Math.round(total/1024) + "KB de ~5000KB).\n" +
+              "Exporte os dados em CSV e considere limpar registros antigos para evitar perda de dados.",
+              { btnTexto: "Entendido" }
+            );
+          }
+        } catch(_) {}
+      }
     }
 
     // Garante alternância obrigatória entrada → saída → entrada
@@ -3647,7 +3710,8 @@
       const fimDia   = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate(), 23, 59, 59, 999).getTime();
       const batidasHoje = batidas
         .filter(b => {
-          if (b.usuarioId ? b.usuarioId !== usuarioLogado.id : b.usuario !== usuarioLogado.nome) return false;
+          // Usa String() para evitar falha por diferença de tipo (number vs string)
+          if (!_matchUsuarioBatida(b, usuarioLogado)) return false;
           const ts = new Date(b.data_hora).getTime();
           return ts >= inicioDia && ts <= fimDia;
         })
