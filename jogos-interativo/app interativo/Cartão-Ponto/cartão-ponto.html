@@ -301,12 +301,27 @@
       background: rgba(0,0,0,0.72);
       color: #fff;
       font-size: 0.82em;
-      padding: 5px 18px;
+      padding: 5px 18px 7px;
       border-radius: 20px;
       pointer-events: none;
       z-index: 4;
       white-space: nowrap;
       letter-spacing: 0.2px;
+      text-align: center;
+    }
+    .bio-progress {
+      width: 100%;
+      height: 5px;
+      background: rgba(255,255,255,0.25);
+      border-radius: 3px;
+      margin-top: 5px;
+      overflow: hidden;
+    }
+    .bio-progress-fill {
+      height: 100%;
+      background: #4caf50;
+      border-radius: 3px;
+      transition: width 0.1s linear;
     }
 
     /* ===== CARTÃO DE REGISTRO ===== */
@@ -571,6 +586,8 @@
       animation: spin 0.8s linear infinite; margin: 0 auto 12px;
     }
   </style>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
 <body>
@@ -805,6 +822,7 @@
         <div id="listaUsuariosAdmin"></div>
         <p id="adminStatus" style="min-height:1.2em;font-size:0.9em;margin:8px 0;text-align:center;"></p>
         <button id="btnCadastrarNovoAdmin" style="background:#2a6eb6;margin-top:12px;">Cadastrar novo administrador</button>
+        <button id="btnGerarCodigoAtivacao" style="background:#6a1b9a;margin-top:6px;display:none;">Gerar código de ativação</button>
         <button id="btnResetarCadastros" style="background:#e53935;margin-top:6px;">Resetar todos os cadastros</button>
         <button id="btnSairAdmin">Sair</button>
       </div>
@@ -830,9 +848,9 @@
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
           </div>
 
-          <label>Código de acesso</label>
+          <label>Código de ativação</label>
           <div class="senha-wrapper">
-            <input type="password" name="codigoAdmin" placeholder="Código fornecido pela empresa" required />
+            <input type="password" name="codigoAdmin" placeholder="Código gerado pelo titular da conta" required />
             <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
           </div>
 
@@ -1029,6 +1047,122 @@
 
   <script>
     // ============================
+    // FIREBASE / FIRESTORE
+    // ============================
+    const firebaseConfig = {
+      apiKey: "AIzaSyDC-gAy0k0SNF2opdupcn7jvBFBjbpYw-4",
+      authDomain: "cartao-ponto-bjk.firebaseapp.com",
+      projectId: "cartao-ponto-bjk",
+      storageBucket: "cartao-ponto-bjk.firebasestorage.app",
+      messagingSenderId: "744252664042",
+      appId: "1:744252664042:web:437931d911093f90650f93"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+
+    function _batidaDocId(iso) {
+      return iso.replace(/[:.]/g, "-");
+    }
+
+    async function carregarDadosFirestore() {
+      try {
+        const [snapU, snapB] = await Promise.all([
+          db.collection("usuarios").get(),
+          db.collection("batidas").get(),
+        ]);
+
+        if (!snapU.empty) {
+          usuarios = snapU.docs.map(d => d.data());
+        } else {
+          // Migração do localStorage na primeira vez
+          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
+          if (local.length > 0) {
+            const batch = db.batch();
+            local.forEach(u => batch.set(db.collection("usuarios").doc(String(u.id)), u));
+            await batch.commit();
+            usuarios = local;
+          }
+        }
+
+        if (!snapB.empty) {
+          batidas = snapB.docs.map(d => d.data());
+        } else {
+          // Migração do localStorage na primeira vez
+          const localB = JSON.parse(localStorage.getItem("batidas_bjk") || "[]");
+          if (localB.length > 0) {
+            for (let i = 0; i < localB.length; i += 500) {
+              const batch = db.batch();
+              localB.slice(i, i + 500).forEach(b =>
+                batch.set(db.collection("batidas").doc(_batidaDocId(b.data_hora)), b)
+              );
+              await batch.commit();
+            }
+            batidas = localB;
+          }
+        }
+      } catch (e) {
+        console.warn("Firestore indisponível, usando localStorage:", e);
+        try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
+        try {
+          const raw = localStorage.getItem("batidas_bjk");
+          batidas = raw ? (JSON.parse(raw) || []) : [];
+        } catch {}
+      }
+    }
+
+    async function _syncUsuariosFirestore() {
+      try {
+        const snapshot = await db.collection("usuarios").get();
+        const existingIds = new Set(snapshot.docs.map(d => d.id));
+        const currentIds = new Set(usuarios.map(u => String(u.id)));
+        const ops = [];
+        for (const u of usuarios) ops.push({ type: "set", id: String(u.id), data: u });
+        for (const id of existingIds) {
+          if (!currentIds.has(id)) ops.push({ type: "delete", id });
+        }
+        for (let i = 0; i < ops.length; i += 500) {
+          const batch = db.batch();
+          ops.slice(i, i + 500).forEach(op => {
+            const ref = db.collection("usuarios").doc(op.id);
+            if (op.type === "set") batch.set(ref, op.data);
+            else batch.delete(ref);
+          });
+          await batch.commit();
+        }
+      } catch (e) { console.warn("Firestore sync usuarios:", e); }
+    }
+
+    function _salvarBatidaFirestore(b) {
+      db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b)
+        .catch(e => console.warn("Firestore salvar batida:", e));
+    }
+
+    function _excluirBatidaFirestore(iso) {
+      db.collection("batidas").doc(_batidaDocId(iso)).delete()
+        .catch(e => console.warn("Firestore excluir batida:", e));
+    }
+
+    function _atualizarCidadeBatidaFirestore(iso, cidade) {
+      db.collection("batidas").doc(_batidaDocId(iso)).update({ cidade })
+        .catch(e => console.warn("Firestore atualizar cidade:", e));
+    }
+
+    function _excluirBatidasDoUsuarioFirestore(idsSet) {
+      // Exclui todas as batidas de usuários cujos IDs estão no Set
+      db.collection("batidas").get().then(snap => {
+        const toDelete = snap.docs.filter(d => {
+          const b = d.data();
+          return b.usuarioId != null && idsSet.has(String(b.usuarioId));
+        });
+        for (let i = 0; i < toDelete.length; i += 500) {
+          const batch = db.batch();
+          toDelete.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+          batch.commit().catch(e => console.warn("Firestore delete batidas usuario:", e));
+        }
+      }).catch(e => console.warn("Firestore excluir batidas usuario:", e));
+    }
+
+    // ============================
     // UTILITARIOS
     // ============================
 
@@ -1204,6 +1338,7 @@
     // ============================
     const INATIVIDADE_MS = 10 * 60 * 1000;
     let _timerInatividade = null;
+    let usuarioLogado = null; // declarado aqui para evitar TDZ em resetarTimerInatividade
 
     function resetarTimerInatividade() {
       if (!usuarioLogado) return;
@@ -1231,6 +1366,7 @@
       assinaturasPorCartao.clear();
       fotosPorCartao.forEach(url => { if (url) URL.revokeObjectURL(url); });
       fotosPorCartao.clear();
+      fotoIDBPromises.clear();
       document.getElementById("listaCartoes").innerHTML = "";
       document.getElementById("btnCompartilharTodos").style.display = "none";
       document.getElementById("batidaStatus").textContent = "";
@@ -1309,7 +1445,6 @@
     // ============================
     const MODEL_URL = "https://cdn.jsdelivr.net/npm/@vladmandic/face-api/model/";
     let modelosCarregados = false;
-    let usuarioLogado = null;
     let _promessaModelos = null;
     let _dentroDoLocal = null; // null=desconhecido, true=autorizado, false=fora da área
 
@@ -1368,6 +1503,13 @@
 
       async function loop() {
         if (!ativo || !videoEl.srcObject) return;
+        // Se os modelos ainda estão carregando, exibe aviso e aguarda sem tentar detectar
+        if (!modelosCarregados) {
+          labelEl.textContent = "Carregando reconhecimento facial...";
+          setDetectado(false);
+          if (ativo) setTimeout(loop, 300);
+          return;
+        }
         try {
           const det = await faceapi.detectSingleFace(
             videoEl,
@@ -1376,14 +1518,14 @@
           if (det) {
             frames++;
             setDetectado(true);
-            const seg = Math.ceil((FRAMES_PARA_CAPTURAR - frames) / 10);
-            labelEl.textContent = frames >= FRAMES_PARA_CAPTURAR
-              ? "Capturando..."
-              : `Rosto detectado — aguarde ${seg}s`;
+            const pct = Math.min(100, Math.round((frames / FRAMES_PARA_CAPTURAR) * 100));
             if (frames >= FRAMES_PARA_CAPTURAR) {
+              labelEl.innerHTML = `Capturando...<div class="bio-progress"><div class="bio-progress-fill" style="width:100%"></div></div>`;
               ativo = false;
               onCapturado();
               return;
+            } else {
+              labelEl.innerHTML = `Rosto detectado<div class="bio-progress"><div class="bio-progress-fill" style="width:${pct}%"></div></div>`;
             }
           } else {
             frames = 0;
@@ -1477,6 +1619,27 @@
     setInterval(atualizarRelogios, 1000);
 
     // ============================
+    // INICIALIZAÇÃO DO APP (carrega Firestore antes de liberar a tela)
+    // ============================
+    async function inicializarApp() {
+      mostrarLoading("Conectando ao servidor...");
+      try {
+        await carregarDadosFirestore();
+        migrarTitular();
+      } catch (e) {
+        console.warn("Erro na inicialização:", e);
+      }
+      ocultarLoading();
+      // Pré-preenche e-mail do último login após carregar dados
+      const ultimoEmail = carregarUltimoEmail();
+      if (ultimoEmail) {
+        const inputEmail = document.querySelector("#loginForm input[name=email]");
+        if (inputEmail) inputEmail.value = ultimoEmail;
+      }
+    }
+    inicializarApp();
+
+    // ============================
     // TELAS: LOGIN, CADASTRO, APP
     // ============================
     function mudarTela(id) {
@@ -1562,12 +1725,7 @@
       atualizarIndicadorForca(this.value);
     });
 
-    // Pré-preenche e-mail do último login
-    const ultimoEmail = carregarUltimoEmail();
-    if (ultimoEmail) {
-      const inputEmail = document.querySelector("#loginForm input[name=email]");
-      if (inputEmail) inputEmail.value = ultimoEmail;
-    }
+    // E-mail do último login preenchido em inicializarApp()
 
     document.getElementById("gotoLoginAdmin").addEventListener("click", () => {
       mudarTela("loginAdminScreen");
@@ -1612,13 +1770,25 @@
     // ============================
     // CADASTRO DE USUÁRIO (com biometria)
     // ============================
-    let usuarios = [];
-    try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk")) || []; } catch {}
+    let usuarios = []; // preenchido pelo Firestore em inicializarApp()
+
+    // Migração: chamada dentro de inicializarApp() após carregar Firestore
+    function migrarTitular() {
+      const admins = usuarios.filter(u => u.admin);
+      const jaTemTitular = admins.some(u => u.titular);
+      if (admins.length > 0 && !jaTemTitular) {
+        const maisAntigo = admins.reduce((a, b) => (a.id < b.id ? a : b));
+        maisAntigo.titular = true;
+        salvarUsuarios();
+      }
+    }
+
     let dadosCadastroPendente = null;
     let streamCadastro = null;
 
     function salvarUsuarios() {
       localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      _syncUsuariosFirestore();
     }
 
     document.getElementById("cadastroForm").addEventListener("submit", async (e) => {
@@ -1821,23 +1991,22 @@
       }
 
       const senhaHash = await hashSenha(fd.get("senha"));
-      const user = usuarios.find((u) => u.email === email && u.senha === senhaHash);
+      // Busca apenas funcionários (não admins) — admins devem usar o login administrativo
+      const user = usuarios.find((u) => !u.admin && u.email === email && u.senha === senhaHash);
 
       if (!user) {
+        // Verifica se é uma conta admin tentando entrar pelo form errado
+        const ehAdmin = usuarios.some((u) => u.admin && u.email === email);
         registrarTentativaFalha(email);
-        erroEl.textContent = "E-mail ou senha inválidos.";
+        erroEl.textContent = ehAdmin
+          ? "Esta conta é de administrador. Use o acesso administrativo."
+          : "E-mail ou senha inválidos.";
         return;
       }
 
       limparBloqueio(email);
       salvarUltimoEmail(email);
       usuarioLogado = user;
-
-      if (user.admin) {
-        renderAdminUsers();
-        mudarTela("adminScreen");
-        return;
-      }
 
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
@@ -1865,6 +2034,10 @@
     let _relatorioMes = 0; // 0-11
 
     function renderAdminUsers() {
+      // Exibe botão de gerar código apenas para o titular
+      const btnGerar = document.getElementById("btnGerarCodigoAtivacao");
+      if (btnGerar) btnGerar.style.display = (usuarioLogado && usuarioLogado.titular) ? "block" : "none";
+
       const lista = document.getElementById("listaUsuariosAdmin");
       if (usuarios.length === 0) {
         lista.innerHTML = '<p style="color:#888;font-size:0.9em;text-align:center;padding:12px 0;">Nenhum cadastro encontrado.</p>';
@@ -2828,6 +3001,26 @@
       mudarTela("cadastroAdminScreen");
     });
 
+    document.getElementById("btnGerarCodigoAtivacao").addEventListener("click", async () => {
+      if (!usuarioLogado || !usuarioLogado.titular) return;
+
+      // Gera código aleatório de 12 caracteres (letras maiúsculas + números)
+      const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789"; // sem O/0/I/1 para evitar confusão
+      let codigoPlano = "";
+      const arr = new Uint8Array(12);
+      crypto.getRandomValues(arr);
+      arr.forEach(b => { codigoPlano += chars[b % chars.length]; });
+
+      const codigoHash = await hashSenha(codigoPlano);
+      localStorage.setItem("bjk_codigo_ativacao", JSON.stringify({ hash: codigoHash }));
+
+      // Exibe o código em modal — aparece apenas uma vez
+      await confirmar(
+        `Código de ativação gerado:\n\n${codigoPlano}\n\nRepasse este código ao novo administrador.\nEle será válido para um único cadastro e desaparecerá após o uso.`,
+        { btnTexto: "Entendido, já copiei" }
+      );
+    });
+
     document.getElementById("btnResetarCadastros").addEventListener("click", async () => {
       const st = document.getElementById("adminStatus");
       st.textContent = "";
@@ -2842,11 +3035,23 @@
         { digitar: "RESETAR", labelDigitar: 'Digite "RESETAR" para confirmar a exclusão:' }
       );
       if (!ok) return;
+      // Guarda os IDs dos funcionários que serão removidos para limpar as batidas
+      const idsFuncionarios = new Set(funcionarios.map(u => String(u.id)));
       const admins = usuarios.filter(u => u.admin);
       usuarios.splice(0, usuarios.length, ...admins);
       salvarUsuarios();
+      // Remove também todas as batidas dos funcionários excluídos
+      const totalAntes = batidas.length;
+      batidas.splice(0, batidas.length, ...batidas.filter(b =>
+        b.usuarioId != null
+          ? !idsFuncionarios.has(String(b.usuarioId))
+          : false // sem ID = batida de funcionário antigo, também remove
+      ));
+      salvarBatidas();
+      _excluirBatidasDoUsuarioFirestore(idsFuncionarios);
+      const removidas = totalAntes - batidas.length;
       renderAdminUsers();
-      st.textContent = "Todos os funcionários foram removidos.";
+      st.textContent = `Todos os funcionários foram removidos (${removidas} batida${removidas !== 1 ? "s" : ""} excluída${removidas !== 1 ? "s" : ""}).`;
       st.style.color = "#2e7d32";
     });
 
@@ -2881,14 +3086,6 @@
       const codigo = fd.get("codigoAdmin");
       const statusEl = document.getElementById("statusCadastroAdmin");
 
-      // Verifica o código de acesso comparando com o hash pré-computado
-      const [codigoHash, hashEsperado] = await Promise.all([hashSenha(codigo), _hashCodigoAdminPromise]);
-      if (codigoHash !== hashEsperado) {
-        statusEl.textContent = "Código de acesso inválido.";
-        statusEl.style.color = "red";
-        return;
-      }
-
       const jaExiste = usuarios.some(u => u.admin && u.email === email);
       if (jaExiste) {
         statusEl.textContent = "Já existe um administrador com esse e-mail.";
@@ -2896,8 +3093,35 @@
         return;
       }
 
+      const adminsExistentes = usuarios.filter(u => u.admin);
+      const codigoHash = await hashSenha(codigo);
+      let ehTitular = false;
+
+      if (adminsExistentes.length === 0) {
+        // Primeiro admin: deve usar o código padrão BJK@ADMIN2024 → será o titular
+        const hashPadrao = await _hashCodigoAdminPromise;
+        if (codigoHash !== hashPadrao) {
+          statusEl.textContent = "Código de acesso inválido.";
+          statusEl.style.color = "red";
+          return;
+        }
+        ehTitular = true;
+      } else {
+        // Admins subsequentes: validam contra o código gerado pelo titular (uso único)
+        const codigoSalvo = (() => {
+          try { return JSON.parse(localStorage.getItem("bjk_codigo_ativacao")) || null; } catch { return null; }
+        })();
+        if (!codigoSalvo || codigoSalvo.hash !== codigoHash) {
+          statusEl.textContent = "Código de ativação inválido ou expirado.";
+          statusEl.style.color = "red";
+          return;
+        }
+        // Código válido — remove imediatamente (uso único)
+        localStorage.removeItem("bjk_codigo_ativacao");
+      }
+
       const senhaHash = await hashSenha(senha);
-      usuarios.push({ id: Date.now(), nome, email, senha: senhaHash, admin: true });
+      usuarios.push({ id: Date.now(), nome, email, senha: senhaHash, admin: true, titular: ehTitular });
       salvarUsuarios();
       statusEl.textContent = "Administrador cadastrado com sucesso!";
       statusEl.style.color = "green";
@@ -3155,6 +3379,8 @@
     const assinaturasPorCartao = new Map();
     // Mapa de fotos (blob URL) por cartao — inclui cartões restaurados do IDB
     const fotosPorCartao = new Map();
+    // Mapa de promises do IDB por cartao — permite aguardar foto antes de compartilhar
+    const fotoIDBPromises = new Map();
 
     function abrirBiometria(tipo) {
       tipoBatidaPendente = tipo;
@@ -3344,15 +3570,17 @@
 
       // FIX #8: nao armazena foto base64 no localStorage (evita estouro de quota)
       const dataHoraBatida = agora.toISOString();
-      batidas.push({
+      const _novaBatida = {
         tipo: tipoBatidaPendente,
         usuario: nome,
         usuarioId: usuarioLogado.id,
         data_hora: dataHoraBatida,
         coordenadas: coordStr,
         cidade: "",  // será preenchido abaixo de forma assíncrona
-      });
+      };
+      batidas.push(_novaBatida);
       salvarBatidas();
+      _salvarBatidaFirestore(_novaBatida);
 
       // Busca a cidade em background sem bloquear a batida — atualiza card e localStorage quando chegar
       if (geoAtual) {
@@ -3363,7 +3591,7 @@
             if (span) span.textContent = `📍 ${locStrAtual}`;
             // Atualiza a batida salva com a cidade
             const idx = batidas.findIndex(b => b.data_hora === dataHoraBatida && b.usuarioId === usuarioLogado.id);
-            if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); }
+            if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); _atualizarCidadeBatidaFirestore(dataHoraBatida, cidade); }
           } else {
             // Cidade não encontrada: exibe apenas coordenadas sem o "Obtendo cidade..."
             locStrAtual = coordStr;
@@ -3380,7 +3608,7 @@
               locStrAtual = `${cidade} (${coordStr})`;
               if (span) span.textContent = `📍 ${locStrAtual}`;
               const idx = batidas.findIndex(b => b.data_hora === dataHoraBatida && b.usuarioId === usuarioLogado.id);
-              if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); }
+              if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); _atualizarCidadeBatidaFirestore(dataHoraBatida, cidade); }
             } else {
               locStrAtual = coordStr;
               if (span) span.textContent = `📍 ${coordStr}`;
@@ -3477,7 +3705,7 @@
         lista.appendChild(novoCartao);
 
         // Carrega foto do IndexedDB e substitui o placeholder quando disponível
-        // FIX #2: guarda a Promise para que o botão de compartilhar possa aguardá-la
+        // Guarda a Promise no Map global para que "compartilhar todos" também possa aguardá-la
         const fotoIDBPromise = buscarFotoIDB(b.data_hora).then(blob => {
           if (!blob) return "";
           const url = URL.createObjectURL(blob);
@@ -3489,8 +3717,10 @@
           return url;
         }).catch(() => "");
 
+        // Registra promise no mapa global para que "compartilhar todos" possa aguardá-la
+        fotoIDBPromises.set(cardId, fotoIDBPromise);
+
         novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-          // FIX #2: aguarda foto do IDB se ainda não carregou
           const fotoUrl = fotosPorCartao.get(cardId) || await fotoIDBPromise || "";
           const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null, locBatida);
           await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
@@ -3623,13 +3853,19 @@
       if (cards.length === 0) return;
 
       const gap = 10;
-      const dadosCartoes = [];
-      cards.forEach(card => {
+      // Aguarda todas as fotos do IDB antes de gerar os canvases
+      const dadosCartoes = await Promise.all(Array.from(cards).map(async card => {
         const img = card.querySelector("img");
+        let foto = img ? img.src : (fotosPorCartao.get(card.id) || "");
+        // Se foto ainda não carregou, aguarda a promise do IDB (para cartões restaurados)
+        if (!foto) {
+          const promise = fotoIDBPromises.get(card.id);
+          if (promise) foto = await promise || "";
+        }
         const spans = card.querySelectorAll(".cartao-info span");
         const infoEl = card.querySelector(".cartao-info");
-        dadosCartoes.push({
-          foto: img ? img.src : (fotosPorCartao.get(card.id) || ""),
+        return {
+          foto,
           nome: card.querySelector(".cartao-info strong") ? card.querySelector(".cartao-info strong").textContent : "",
           cargo: spans[0] ? spans[0].textContent : "",
           tipo: spans[1] ? spans[1].textContent : "",
@@ -3637,8 +3873,8 @@
           hora: spans[3] ? spans[3].textContent : "",
           assinatura: assinaturasPorCartao.get(card.id) || null,
           localizacao: infoEl ? (infoEl.dataset.localizacao || "") : "",
-        });
-      });
+        };
+      }));
 
       const canvases = await Promise.all(dadosCartoes.map(d =>
         gerarCanvasCartao(d.foto, d.nome, d.cargo, d.tipo, d.data, d.hora, d.assinatura, d.localizacao)
@@ -3662,21 +3898,7 @@
     // ============================
     // BATIDAS DE PONTO
     // ============================
-    let batidas = [];
-    try {
-      const rawBatidas = localStorage.getItem("batidas_bjk");
-      if (rawBatidas) {
-        const parsed = JSON.parse(rawBatidas);
-        // Garante que é um array válido antes de usar
-        batidas = Array.isArray(parsed) ? parsed : [];
-        if (!Array.isArray(parsed)) {
-          console.warn("Dados de batidas corrompidos no localStorage — iniciando vazio.");
-        }
-      }
-    } catch (e) {
-      console.warn("Erro ao carregar batidas do localStorage:", e);
-      batidas = [];
-    }
+    let batidas = []; // preenchido pelo Firestore em inicializarApp()
 
     function _matchUsuarioBatida(b, u) {
       // Aceita por ID (com coerção de tipo) OU por nome como fallback
@@ -3685,45 +3907,10 @@
     }
 
     function salvarBatidas() {
-      let salvoOk = false;
-      try {
-        localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
-        salvoOk = true;
-      } catch (e) {
-        // Falha ao salvar — exibe alerta visível com destaque vermelho na tela
-        const statusEl = document.getElementById("batidaStatus");
-        if (statusEl) {
-          statusEl.textContent = "⚠ ATENÇÃO: batida NÃO salva! Armazenamento cheio. Exporte o CSV e avise o administrador.";
-          statusEl.style.color = "#c00";
-          statusEl.style.fontWeight = "bold";
-        }
-        // Também exibe o modal de confirmação para garantir que o usuário veja
-        confirmar(
-          "⚠ BATIDA NÃO SALVA!\n\nO armazenamento local está cheio.\n" +
-          "Esta batida aparece na tela mas será perdida ao recarregar.\n\n" +
-          "Avise o administrador para exportar os dados em CSV e limpar registros antigos.",
-          { btnTexto: "Entendido" }
-        );
-        return;
-      }
-      // Verifica capacidade após salvar com sucesso
-      if (salvoOk) {
-        try {
-          let total = 0;
-          for (const k in localStorage) {
-            if (Object.prototype.hasOwnProperty.call(localStorage, k)) {
-              total += (localStorage[k].length + k.length) * 2;
-            }
-          }
-          if (total > 4 * 1024 * 1024) {
-            confirmar(
-              "⚠ Atenção: o armazenamento local está quase cheio (" + Math.round(total/1024) + "KB de ~5000KB).\n" +
-              "Exporte os dados em CSV e considere limpar registros antigos para evitar perda de dados.",
-              { btnTexto: "Entendido" }
-            );
-          }
-        } catch(_) {}
-      }
+      // Mantém localStorage como cache offline
+      try { localStorage.setItem("batidas_bjk", JSON.stringify(batidas)); } catch (_) {}
+      // Sincronização com Firestore é feita de forma pontual em cada operação
+      // (push → _salvarBatidaFirestore, delete → _excluirBatidaFirestore, etc.)
     }
 
     // Garante alternância obrigatória entrada → saída → entrada
@@ -3818,6 +4005,7 @@
       if (idx === -1) return;
       batidas.splice(idx, 1);
       salvarBatidas();
+      _excluirBatidaFirestore(dataHoraISO);
       renderRelatorio();
       abrirBatidasDia(_batidasDiaNumDia);
     }
@@ -3839,21 +4027,25 @@
         // Edição de batida existente
         const b = batidas.find(b => b.data_hora === _batidaEditandoISO);
         if (b) {
+          _excluirBatidaFirestore(_batidaEditandoISO); // remove o doc antigo (ISO mudou)
           b.tipo = tipo;
           b.data_hora = novaDataHora;
           b.coordenadas = (b.coordenadas || "") + " (editado pelo adm)";
+          _salvarBatidaFirestore(b);
         }
       } else {
         // Nova batida
         const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
         if (!u) return;
-        batidas.push({
+        const _novaBatidaAdmin = {
           tipo,
           usuario: u.nome,
           usuarioId: u.id,
           data_hora: novaDataHora,
           coordenadas: "(adicionado pelo administrador)",
-        });
+        };
+        batidas.push(_novaBatidaAdmin);
+        _salvarBatidaFirestore(_novaBatidaAdmin);
       }
 
       salvarBatidas();
