@@ -2448,8 +2448,8 @@
         })
         .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
 
-      const SVG_SILHUETA = `
-        <div style="width:70px;height:70px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;
+      const SVG_SILHUETA_HTML = (id) => `
+        <div id="${id}" style="width:70px;height:70px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;
              display:flex;align-items:center;justify-content:center;flex-shrink:0;">
           <svg width="36" height="36" viewBox="0 0 24 24" fill="#2a6eb6">
             <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/>
@@ -2474,13 +2474,17 @@
             ? `${cidade} (${coord})`
             : cidade || coord;
           const isoEscapado = escaparHTML(b.data_hora);
+          const fotoId = "foto-dia-" + b.data_hora.replace(/[:.]/g, "-");
+          const fotoHtml = b.foto
+            ? `<img id="${fotoId}" src="${b.foto}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;flex-shrink:0;" />`
+            : SVG_SILHUETA_HTML(fotoId);
           return `
             <div class="batida-dia-card">
               <div class="cartao-header" style="background:${corHeader};">
                 Cartão Ponto BJK — ${tipoTexto}
               </div>
               <div class="cartao-body">
-                ${SVG_SILHUETA}
+                ${fotoHtml}
                 <div class="cartao-info">
                   <strong>${escaparHTML(u.nome)}</strong>
                   <span style="color:#555;font-size:0.85em">${escaparHTML(u.cargo || "")}</span><br/>
@@ -2497,6 +2501,19 @@
               </div>` : ""}
             </div>`;
         }).join("");
+
+        // Para batidas sem foto no Firestore, tenta carregar do IndexedDB local
+        bDia.forEach(b => {
+          if (!b.foto) {
+            const fotoId = "foto-dia-" + b.data_hora.replace(/[:.]/g, "-");
+            buscarFotoIDB(b.data_hora).then(blob => {
+              if (!blob) return;
+              const url = URL.createObjectURL(blob);
+              const el = document.getElementById(fotoId);
+              if (el) el.outerHTML = `<img src="${url}" style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;flex-shrink:0;" />`;
+            }).catch(() => {});
+          }
+        });
       }
 
       if (usuarioLogado && usuarioLogado.admin) {
@@ -3559,6 +3576,14 @@
         if (wrapper) {
           wrapper.outerHTML = `<img src="${blobUrl}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
         }
+        // Salva foto no Firestore para sincronização entre dispositivos
+        const reader = new FileReader();
+        reader.onload = () => {
+          db.collection("batidas").doc(_batidaDocId(dataHoraBatida))
+            .update({ foto: reader.result })
+            .catch(e => console.warn("Firestore update foto:", e));
+        };
+        reader.readAsDataURL(blob);
       }, "image/jpeg", 0.75);
 
       // O botão de compartilhar lê locStrAtual que é atualizado quando a cidade chegar
@@ -3704,10 +3729,20 @@
         `;
         lista.appendChild(novoCartao);
 
-        // Carrega foto do IndexedDB e substitui o placeholder quando disponível
+        // Carrega foto do IndexedDB; se não houver, usa foto do Firestore (b.foto)
         // Guarda a Promise no Map global para que "compartilhar todos" também possa aguardá-la
         const fotoIDBPromise = buscarFotoIDB(b.data_hora).then(blob => {
-          if (!blob) return "";
+          if (!blob) {
+            if (b.foto) {
+              fotosPorCartao.set(cardId, b.foto);
+              const wrapper = document.getElementById("foto-" + cardId);
+              if (wrapper) {
+                wrapper.outerHTML = `<img src="${b.foto}" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
+              }
+              return b.foto;
+            }
+            return "";
+          }
           const url = URL.createObjectURL(blob);
           fotosPorCartao.set(cardId, url);
           const wrapper = document.getElementById("foto-" + cardId);
@@ -3721,7 +3756,7 @@
         fotoIDBPromises.set(cardId, fotoIDBPromise);
 
         novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-          const fotoUrl = fotosPorCartao.get(cardId) || await fotoIDBPromise || "";
+          const fotoUrl = fotosPorCartao.get(cardId) || await fotoIDBPromise || b.foto || "";
           const c = await gerarCanvasCartao(fotoUrl, nomeUsuario, cargo, tipoTexto, dataHojeStr, horaStr, null, locBatida);
           await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
         });
