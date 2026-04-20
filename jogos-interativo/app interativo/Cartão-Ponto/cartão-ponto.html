@@ -3576,14 +3576,22 @@
         if (wrapper) {
           wrapper.outerHTML = `<img src="${blobUrl}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;" />`;
         }
-        // Salva foto no Firestore para sincronização entre dispositivos
-        const reader = new FileReader();
-        reader.onload = () => {
-          db.collection("batidas").doc(_batidaDocId(dataHoraBatida))
-            .update({ foto: reader.result })
-            .catch(e => console.warn("Firestore update foto:", e));
-        };
-        reader.readAsDataURL(blob);
+        // Comprime e salva foto no Firestore (320px, JPEG 0.5 — ~10x menor que o original)
+        const compCanvas = document.createElement("canvas");
+        compCanvas.width = 320;
+        compCanvas.height = bioCanvas.height > 0
+          ? Math.round(320 * bioCanvas.height / bioCanvas.width)
+          : 240;
+        compCanvas.getContext("2d").drawImage(bioCanvas, 0, 0, compCanvas.width, compCanvas.height);
+        compCanvas.toBlob(compBlob => {
+          const reader = new FileReader();
+          reader.onload = () => {
+            db.collection("batidas").doc(_batidaDocId(dataHoraBatida))
+              .update({ foto: reader.result })
+              .catch(e => console.warn("Firestore update foto:", e));
+          };
+          reader.readAsDataURL(compBlob);
+        }, "image/jpeg", 0.5);
       }, "image/jpeg", 0.75);
 
       // O botão de compartilhar lê locStrAtual que é atualizado quando a cidade chegar
