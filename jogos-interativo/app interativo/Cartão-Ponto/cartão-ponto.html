@@ -816,6 +816,32 @@
   <!-- TELA ADMIN -->
   <div class="container hidden" id="adminScreen">
     <h1>Cartão Ponto BJK</h1>
+
+    <!-- DASHBOARD TEMPO REAL -->
+    <div class="card" style="margin-bottom:14px;">
+      <div class="card-title" style="display:flex;align-items:center;justify-content:space-between;">
+        <span>Dashboard — Tempo Real</span>
+        <span id="dashHora" style="font-size:0.8em;font-weight:normal;"></span>
+      </div>
+      <div class="card content" style="padding:10px 14px;">
+        <div style="display:flex;gap:10px;margin-bottom:10px;flex-wrap:wrap;">
+          <div style="flex:1;min-width:80px;background:#e8f5e9;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:1.6em;font-weight:bold;color:#2e7d32;" id="dashQtdDentro">0</div>
+            <div style="font-size:0.78em;color:#555;">Dentro</div>
+          </div>
+          <div style="flex:1;min-width:80px;background:#ffebee;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:1.6em;font-weight:bold;color:#c62828;" id="dashQtdFora">0</div>
+            <div style="font-size:0.78em;color:#555;">Fora / Saiu</div>
+          </div>
+          <div style="flex:1;min-width:80px;background:#f5f5f5;border-radius:8px;padding:8px;text-align:center;">
+            <div style="font-size:1.6em;font-weight:bold;color:#757575;" id="dashQtdSemBatida">0</div>
+            <div style="font-size:0.78em;color:#555;">Sem batida</div>
+          </div>
+        </div>
+        <div id="dashLista" style="display:flex;flex-direction:column;gap:6px;"></div>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-title">Área Administrativa</div>
       <div class="card content">
@@ -1800,6 +1826,7 @@
       limparBloqueio(email);
       usuarioLogado = admin;
       renderAdminUsers();
+      iniciarDashboard();
       mudarTela("adminScreen");
     });
 
@@ -2114,6 +2141,74 @@
             </div>
           </div>`;
       }).join('');
+    }
+
+    // ============================
+    // DASHBOARD TEMPO REAL
+    // ============================
+    let _dashUnsubscribe = null;
+
+    function iniciarDashboard() {
+      if (_dashUnsubscribe) _dashUnsubscribe();
+      const hoje = new Date().toISOString().slice(0, 10);
+
+      _dashUnsubscribe = db.collection("batidas")
+        .where("data_hora", ">=", hoje + "T00:00:00.000Z")
+        .where("data_hora", "<=", hoje + "T23:59:59.999Z")
+        .onSnapshot(snap => {
+          const batidasHoje = snap.docs.map(d => d.data());
+          renderDashboard(batidasHoje);
+        }, e => console.warn("Dashboard erro:", e));
+    }
+
+    function pararDashboard() {
+      if (_dashUnsubscribe) { _dashUnsubscribe(); _dashUnsubscribe = null; }
+    }
+
+    function renderDashboard(batidasHoje) {
+      const funcionarios = usuarios.filter(u => !u.admin);
+      let dentro = 0, fora = 0, semBatida = 0;
+      const itens = funcionarios.map(u => {
+        const batidasUser = batidasHoje
+          .filter(b => b.usuario === u.nome)
+          .sort((a, b) => a.data_hora > b.data_hora ? 1 : -1);
+
+        if (batidasUser.length === 0) {
+          semBatida++;
+          return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:#f5f5f5;border-radius:8px;">
+            <span style="font-size:1.3em;">⚪</span>
+            <div style="flex:1;">
+              <div style="font-weight:bold;font-size:0.9em;">${escaparHTML(u.nome)}</div>
+              <div style="font-size:0.78em;color:#999;">Sem batida hoje</div>
+            </div>
+          </div>`;
+        }
+
+        const ultima = batidasUser[batidasUser.length - 1];
+        const hora = ultima.data_hora.slice(11, 16);
+        const estaDentro = ultima.tipo === "entrada";
+        if (estaDentro) dentro++; else fora++;
+
+        const cor = estaDentro ? "#e8f5e9" : "#ffebee";
+        const icone = estaDentro ? "🟢" : "🔴";
+        const status = estaDentro ? `Entrada: ${hora}` : `Saída: ${hora}`;
+        return `<div style="display:flex;align-items:center;gap:10px;padding:7px 10px;background:${cor};border-radius:8px;">
+          <span style="font-size:1.3em;">${icone}</span>
+          <div style="flex:1;">
+            <div style="font-weight:bold;font-size:0.9em;">${escaparHTML(u.nome)}</div>
+            <div style="font-size:0.78em;color:#555;">${status}</div>
+          </div>
+        </div>`;
+      });
+
+      document.getElementById("dashQtdDentro").textContent = dentro;
+      document.getElementById("dashQtdFora").textContent = fora;
+      document.getElementById("dashQtdSemBatida").textContent = semBatida;
+      document.getElementById("dashLista").innerHTML = itens.join('');
+
+      const agora = new Date();
+      document.getElementById("dashHora").textContent =
+        "Atualizado: " + agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
     }
 
     function abrirEdicao(id) {
@@ -3034,6 +3129,7 @@
       const ok = await confirmar("Deseja sair da área administrativa?");
       if (!ok) return;
       document.getElementById("adminStatus").textContent = "";
+      pararDashboard();
       realizarLogout();
     });
 
