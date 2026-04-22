@@ -1621,11 +1621,42 @@
     // ============================
     // INICIALIZAÇÃO DO APP (carrega Firestore antes de liberar a tela)
     // ============================
+    async function _limparBatidasAntigas() {
+      try {
+        const corte = new Date();
+        corte.setMonth(corte.getMonth() - 6);
+        const corteISO = corte.toISOString();
+
+        // Remove do array local e localStorage
+        const antes = batidas.length;
+        batidas = batidas.filter(b => b.data_hora >= corteISO);
+        if (batidas.length < antes) salvarBatidas();
+
+        // Remove do Firestore em lotes
+        const snap = await db.collection("batidas").get();
+        const antigas = snap.docs.filter(d => {
+          const b = d.data();
+          return b.data_hora && b.data_hora < corteISO;
+        });
+        for (let i = 0; i < antigas.length; i += 500) {
+          const batch = db.batch();
+          antigas.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+          await batch.commit();
+        }
+        if (antigas.length > 0) {
+          console.log(`Limpeza automática: ${antigas.length} batidas com mais de 6 meses removidas.`);
+        }
+      } catch (e) {
+        console.warn("Erro na limpeza automática:", e);
+      }
+    }
+
     async function inicializarApp() {
       mostrarLoading("Conectando ao servidor...");
       try {
         await carregarDadosFirestore();
         migrarTitular();
+        await _limparBatidasAntigas();
       } catch (e) {
         console.warn("Erro na inicialização:", e);
       }
