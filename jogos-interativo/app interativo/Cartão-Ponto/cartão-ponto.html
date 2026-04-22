@@ -1088,8 +1088,13 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
-    // Login anônimo automático — bloqueia acesso externo ao Firestore
-    auth.signInAnonymously().catch(e => console.warn("Auth anônima:", e));
+    // Login anônimo automático — aguarda auth antes de liberar operações Firestore
+    const _authPronto = new Promise(resolve => {
+      auth.onAuthStateChanged(user => {
+        if (user) resolve(user);
+        else auth.signInAnonymously().catch(e => console.warn("Auth anônima:", e));
+      });
+    });
 
     function _batidaDocId(iso) {
       return iso.replace(/[:.]/g, "-");
@@ -1097,6 +1102,7 @@
 
     async function carregarDadosFirestore() {
       try {
+        await _authPronto;
         const [snapU, snapB] = await Promise.all([
           db.collection("usuarios").get(),
           db.collection("batidas").get(),
@@ -1143,6 +1149,7 @@
 
     async function _syncUsuariosFirestore() {
       try {
+        await _authPronto;
         const snapshot = await db.collection("usuarios").get();
         const existingIds = new Set(snapshot.docs.map(d => d.id));
         const currentIds = new Set(usuarios.map(u => String(u.id)));
