@@ -587,6 +587,7 @@
     }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore-compat.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
@@ -1058,7 +1059,11 @@
       appId: "1:744252664042:web:437931d911093f90650f93"
     };
     firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
     const db = firebase.firestore();
+
+    // Login anônimo automático — bloqueia acesso externo ao Firestore
+    auth.signInAnonymously().catch(e => console.warn("Auth anônima:", e));
 
     function _batidaDocId(iso) {
       return iso.replace(/[:.]/g, "-");
