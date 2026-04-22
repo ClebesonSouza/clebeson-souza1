@@ -2147,22 +2147,36 @@
     // DASHBOARD TEMPO REAL
     // ============================
     let _dashUnsubscribe = null;
+    let _dashUsuariosUnsubscribe = null;
+    let _dashBatidasHoje = [];
 
     function iniciarDashboard() {
       if (_dashUnsubscribe) _dashUnsubscribe();
+      if (_dashUsuariosUnsubscribe) _dashUsuariosUnsubscribe();
+
       const hoje = new Date().toISOString().slice(0, 10);
 
+      // Escuta mudanças nos usuários em tempo real
+      _dashUsuariosUnsubscribe = db.collection("usuarios").onSnapshot(snap => {
+        usuarios = snap.docs.map(d => d.data());
+        renderAdminUsers();
+        renderDashboard(_dashBatidasHoje);
+      }, e => console.warn("Dashboard usuarios erro:", e));
+
+      // Escuta mudanças nas batidas de hoje em tempo real
       _dashUnsubscribe = db.collection("batidas")
         .where("data_hora", ">=", hoje + "T00:00:00.000Z")
         .where("data_hora", "<=", hoje + "T23:59:59.999Z")
         .onSnapshot(snap => {
-          const batidasHoje = snap.docs.map(d => d.data());
-          renderDashboard(batidasHoje);
-        }, e => console.warn("Dashboard erro:", e));
+          _dashBatidasHoje = snap.docs.map(d => d.data());
+          renderDashboard(_dashBatidasHoje);
+        }, e => console.warn("Dashboard batidas erro:", e));
     }
 
     function pararDashboard() {
       if (_dashUnsubscribe) { _dashUnsubscribe(); _dashUnsubscribe = null; }
+      if (_dashUsuariosUnsubscribe) { _dashUsuariosUnsubscribe(); _dashUsuariosUnsubscribe = null; }
+      _dashBatidasHoje = [];
     }
 
     function renderDashboard(batidasHoje) {
