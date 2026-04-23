@@ -1173,14 +1173,8 @@
     async function _salvarUsuarioFirestore(u) {
       try {
         await _authPronto;
-        const uSalvar = { ...u };
-        if (uSalvar.faceDescriptors) {
-          uSalvar.faceDescriptors = uSalvar.faceDescriptors.map(d => Array.from(d));
-        }
-        if (uSalvar.faceDescriptor) {
-          uSalvar.faceDescriptor = Array.from(uSalvar.faceDescriptor);
-        }
-        await db.collection("usuarios").doc(String(uSalvar.id)).set(uSalvar);
+        const { faceDescriptors, faceDescriptor, ...uSemBio } = u;
+        await db.collection("usuarios").doc(String(uSemBio.id)).set(uSemBio);
       } catch (e) {
         console.error("[Firestore] ERRO ao salvar usuário:", e);
       }
