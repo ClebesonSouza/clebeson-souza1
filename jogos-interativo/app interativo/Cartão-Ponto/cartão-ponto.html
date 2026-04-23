@@ -1162,9 +1162,14 @@
 
     async function _salvarUsuarioFirestore(u) {
       try {
+        console.log("[Firestore] Aguardando auth para salvar usuário:", u.nome);
         await _authPronto;
+        console.log("[Firestore] Auth OK, salvando usuário:", u.nome);
         await db.collection("usuarios").doc(String(u.id)).set(u);
-      } catch (e) { console.warn("Firestore salvar usuario:", e); }
+        console.log("[Firestore] Usuário salvo com sucesso:", u.nome);
+      } catch (e) {
+        console.error("[Firestore] ERRO ao salvar usuário:", e);
+      }
     }
 
     async function _excluirUsuarioFirestore(id) {
