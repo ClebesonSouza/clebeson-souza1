@@ -1109,11 +1109,15 @@
         ]);
 
         if (!snapU.empty) {
-          const firestoreUsers = snapU.docs.map(d => d.data());
+          const firestoreUsers = snapU.docs.map(d => {
+            const u = d.data();
+            if (u.faceDescriptors) u.faceDescriptors = u.faceDescriptors.map(d => new Float32Array(d));
+            if (u.faceDescriptor) u.faceDescriptor = new Float32Array(u.faceDescriptor);
+            return u;
+          });
           const firestoreIds = new Set(firestoreUsers.map(u => String(u.id)));
           const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
           const localOnly = local.filter(u => !firestoreIds.has(String(u.id)));
-          // Salva no Firestore qualquer usuário que só existe localmente (cadastros que falharam antes)
           localOnly.forEach(u => _salvarUsuarioFirestore(u));
           usuarios = [...firestoreUsers, ...localOnly];
         } else {
@@ -1168,11 +1172,15 @@
 
     async function _salvarUsuarioFirestore(u) {
       try {
-        console.log("[Firestore] Aguardando auth para salvar usuário:", u.nome);
         await _authPronto;
-        console.log("[Firestore] Auth OK, salvando usuário:", u.nome);
-        await db.collection("usuarios").doc(String(u.id)).set(u);
-        console.log("[Firestore] Usuário salvo com sucesso:", u.nome);
+        const uSalvar = { ...u };
+        if (uSalvar.faceDescriptors) {
+          uSalvar.faceDescriptors = uSalvar.faceDescriptors.map(d => Array.from(d));
+        }
+        if (uSalvar.faceDescriptor) {
+          uSalvar.faceDescriptor = Array.from(uSalvar.faceDescriptor);
+        }
+        await db.collection("usuarios").doc(String(uSalvar.id)).set(uSalvar);
       } catch (e) {
         console.error("[Firestore] ERRO ao salvar usuário:", e);
       }
@@ -2184,7 +2192,12 @@
 
       // Escuta mudanças nos usuários em tempo real
       _dashUsuariosUnsubscribe = db.collection("usuarios").onSnapshot(snap => {
-        usuarios = snap.docs.map(d => d.data());
+        usuarios = snap.docs.map(d => {
+          const u = d.data();
+          if (u.faceDescriptors) u.faceDescriptors = u.faceDescriptors.map(d => new Float32Array(d));
+          if (u.faceDescriptor) u.faceDescriptor = new Float32Array(u.faceDescriptor);
+          return u;
+        });
         renderAdminUsers();
         renderDashboard(_dashBatidasHoje);
       }, e => console.warn("Dashboard usuarios erro:", e));
