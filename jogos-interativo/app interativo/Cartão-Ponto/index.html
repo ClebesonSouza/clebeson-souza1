@@ -1150,24 +1150,28 @@
     async function _syncUsuariosFirestore() {
       try {
         await _authPronto;
-        const snapshot = await db.collection("usuarios").get();
-        const existingIds = new Set(snapshot.docs.map(d => d.id));
-        const currentIds = new Set(usuarios.map(u => String(u.id)));
-        const ops = [];
-        for (const u of usuarios) ops.push({ type: "set", id: String(u.id), data: u });
-        for (const id of existingIds) {
-          if (!currentIds.has(id)) ops.push({ type: "delete", id });
-        }
-        for (let i = 0; i < ops.length; i += 500) {
+        for (let i = 0; i < usuarios.length; i += 500) {
           const batch = db.batch();
-          ops.slice(i, i + 500).forEach(op => {
-            const ref = db.collection("usuarios").doc(op.id);
-            if (op.type === "set") batch.set(ref, op.data);
-            else batch.delete(ref);
+          usuarios.slice(i, i + 500).forEach(u => {
+            batch.set(db.collection("usuarios").doc(String(u.id)), u);
           });
           await batch.commit();
         }
       } catch (e) { console.warn("Firestore sync usuarios:", e); }
+    }
+
+    async function _salvarUsuarioFirestore(u) {
+      try {
+        await _authPronto;
+        await db.collection("usuarios").doc(String(u.id)).set(u);
+      } catch (e) { console.warn("Firestore salvar usuario:", e); }
+    }
+
+    async function _excluirUsuarioFirestore(id) {
+      try {
+        await _authPronto;
+        await db.collection("usuarios").doc(String(id)).delete();
+      } catch (e) { console.warn("Firestore excluir usuario:", e); }
     }
 
     function _salvarBatidaFirestore(b) {
@@ -1970,8 +1974,10 @@
       if (!dadosCadastroPendente) return;
       const dados = { ...dadosCadastroPendente };
       fecharBiometriaCadastro();
-      usuarios.push({ id: Date.now(), ...dados });
-      salvarUsuarios();
+      const novoUsuario = { id: Date.now(), ...dados };
+      usuarios.push(novoUsuario);
+      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      _salvarUsuarioFirestore(novoUsuario);
       const erroEl = document.getElementById("erroCadastro");
       erroEl.className = "sucesso";
       erroEl.textContent = "Cadastro realizado! Biometria poderá ser adicionada pelo administrador.";
@@ -2012,12 +2018,14 @@
         c.height = video.videoHeight;
         c.getContext("2d").drawImage(video, 0, 0);
 
-        usuarios.push({
+        const novoUsuarioBio = {
           id: Date.now(),
           ...dadosCadastroPendente,
           faceDescriptors: descritores,
-        });
-        salvarUsuarios();
+        };
+        usuarios.push(novoUsuarioBio);
+        localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+        _salvarUsuarioFirestore(novoUsuarioBio);
 
         statusEl.textContent = "Rosto cadastrado com sucesso! (3 amostras)";
         statusEl.style.color = "green";
