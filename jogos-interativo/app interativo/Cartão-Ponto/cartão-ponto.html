@@ -1109,6 +1109,7 @@
         ]);
 
         if (!snapU.empty) {
+          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
           const firestoreUsers = snapU.docs.map(d => {
             const u = d.data();
             if (u.faceDescriptors && typeof u.faceDescriptors === 'string') {
@@ -1117,10 +1118,19 @@
             if (u.faceDescriptor && typeof u.faceDescriptor === 'string') {
               u.faceDescriptor = new Float32Array(JSON.parse(u.faceDescriptor));
             }
+            // Se não tem bio no Firestore, tenta recuperar do localStorage
+            if (!u.faceDescriptors && !u.faceDescriptor) {
+              const localU = local.find(l => String(l.id) === String(u.id));
+              if (localU && (localU.faceDescriptors || localU.faceDescriptor)) {
+                u.faceDescriptors = localU.faceDescriptors;
+                u.faceDescriptor = localU.faceDescriptor;
+                // Salva no Firestore com bio no formato correto
+                _salvarUsuarioFirestore(u);
+              }
+            }
             return u;
           });
           const firestoreIds = new Set(firestoreUsers.map(u => String(u.id)));
-          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
           const localOnly = local.filter(u => !firestoreIds.has(String(u.id)));
           localOnly.forEach(u => _salvarUsuarioFirestore(u));
           usuarios = [...firestoreUsers, ...localOnly];
