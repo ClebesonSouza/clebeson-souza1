@@ -1197,9 +1197,11 @@
       } catch (e) { console.warn("Firestore excluir usuario:", e); }
     }
 
-    function _salvarBatidaFirestore(b) {
-      db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b)
-        .catch(e => console.warn("Firestore salvar batida:", e));
+    async function _salvarBatidaFirestore(b) {
+      try {
+        await _authPronto;
+        await db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b);
+      } catch (e) { console.warn("Firestore salvar batida:", e); }
     }
 
     function _excluirBatidaFirestore(iso) {
