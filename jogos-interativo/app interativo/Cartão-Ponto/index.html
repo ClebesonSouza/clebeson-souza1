@@ -1109,7 +1109,13 @@
         ]);
 
         if (!snapU.empty) {
-          usuarios = snapU.docs.map(d => d.data());
+          const firestoreUsers = snapU.docs.map(d => d.data());
+          const firestoreIds = new Set(firestoreUsers.map(u => String(u.id)));
+          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
+          const localOnly = local.filter(u => !firestoreIds.has(String(u.id)));
+          // Salva no Firestore qualquer usuário que só existe localmente (cadastros que falharam antes)
+          localOnly.forEach(u => _salvarUsuarioFirestore(u));
+          usuarios = [...firestoreUsers, ...localOnly];
         } else {
           // Migração do localStorage na primeira vez
           const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
