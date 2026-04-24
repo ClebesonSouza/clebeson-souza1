@@ -1158,7 +1158,10 @@
         for (let i = 0; i < usuarios.length; i += 500) {
           const batch = db.batch();
           usuarios.slice(i, i + 500).forEach(u => {
-            batch.set(db.collection("usuarios").doc(String(u.id)), u);
+            const uSalvar = { ...u };
+            if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
+            if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
+            batch.set(db.collection("usuarios").doc(String(uSalvar.id)), uSalvar);
           });
           await batch.commit();
         }
