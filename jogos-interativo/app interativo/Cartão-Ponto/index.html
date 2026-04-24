@@ -2301,6 +2301,8 @@
       usuarios.splice(usuarios.indexOf(u), 1);
       salvarUsuarios();
       renderAdminUsers();
+      _excluirUsuarioFirestore(id);
+      _excluirBatidasDoUsuarioFirestore(new Set([String(id)]));
     }
 
     const NOMES_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
