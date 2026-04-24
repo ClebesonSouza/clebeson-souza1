@@ -1109,31 +1109,12 @@
         ]);
 
         if (!snapU.empty) {
-          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
-          const firestoreUsers = snapU.docs.map(d => {
+          usuarios = snapU.docs.map(d => {
             const u = d.data();
-            if (u.faceDescriptors && typeof u.faceDescriptors === 'string') {
-              u.faceDescriptors = JSON.parse(u.faceDescriptors).map(a => new Float32Array(a));
-            }
-            if (u.faceDescriptor && typeof u.faceDescriptor === 'string') {
-              u.faceDescriptor = new Float32Array(JSON.parse(u.faceDescriptor));
-            }
-            // Se não tem bio no Firestore, tenta recuperar do localStorage
-            if (!u.faceDescriptors && !u.faceDescriptor) {
-              const localU = local.find(l => String(l.id) === String(u.id));
-              if (localU && (localU.faceDescriptors || localU.faceDescriptor)) {
-                u.faceDescriptors = localU.faceDescriptors;
-                u.faceDescriptor = localU.faceDescriptor;
-                // Salva no Firestore com bio no formato correto
-                _salvarUsuarioFirestore(u);
-              }
-            }
+            if (typeof u.faceDescriptors === 'string') u.faceDescriptors = JSON.parse(u.faceDescriptors).map(a => new Float32Array(a));
+            if (typeof u.faceDescriptor === 'string') u.faceDescriptor = new Float32Array(JSON.parse(u.faceDescriptor));
             return u;
           });
-          const firestoreIds = new Set(firestoreUsers.map(u => String(u.id)));
-          const localOnly = local.filter(u => !firestoreIds.has(String(u.id)));
-          localOnly.forEach(u => _salvarUsuarioFirestore(u));
-          usuarios = [...firestoreUsers, ...localOnly];
         } else {
           // Migração do localStorage na primeira vez
           const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
@@ -1188,16 +1169,10 @@
       try {
         await _authPronto;
         const uSalvar = { ...u };
-        if (uSalvar.faceDescriptors) {
-          uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
-        }
-        if (uSalvar.faceDescriptor) {
-          uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
-        }
+        if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
+        if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
         await db.collection("usuarios").doc(String(uSalvar.id)).set(uSalvar);
-      } catch (e) {
-        console.error("[Firestore] ERRO ao salvar usuário:", e);
-      }
+      } catch (e) { console.warn("Firestore salvar usuario:", e); }
     }
 
     async function _excluirUsuarioFirestore(id) {
@@ -1207,11 +1182,9 @@
       } catch (e) { console.warn("Firestore excluir usuario:", e); }
     }
 
-    async function _salvarBatidaFirestore(b) {
-      try {
-        await _authPronto;
-        await db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b);
-      } catch (e) { console.warn("Firestore salvar batida:", e); }
+    function _salvarBatidaFirestore(b) {
+      db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b)
+        .catch(e => console.warn("Firestore salvar batida:", e));
     }
 
     function _excluirBatidaFirestore(iso) {
@@ -2208,16 +2181,7 @@
 
       // Escuta mudanças nos usuários em tempo real
       _dashUsuariosUnsubscribe = db.collection("usuarios").onSnapshot(snap => {
-        usuarios = snap.docs.map(d => {
-          const u = d.data();
-          if (u.faceDescriptors && typeof u.faceDescriptors === 'string') {
-            u.faceDescriptors = JSON.parse(u.faceDescriptors).map(a => new Float32Array(a));
-          }
-          if (u.faceDescriptor && typeof u.faceDescriptor === 'string') {
-            u.faceDescriptor = new Float32Array(JSON.parse(u.faceDescriptor));
-          }
-          return u;
-        });
+        usuarios = snap.docs.map(d => d.data());
         renderAdminUsers();
         renderDashboard(_dashBatidasHoje);
       }, e => console.warn("Dashboard usuarios erro:", e));
@@ -2337,8 +2301,6 @@
       usuarios.splice(usuarios.indexOf(u), 1);
       salvarUsuarios();
       renderAdminUsers();
-      _excluirUsuarioFirestore(id);
-      _excluirBatidasDoUsuarioFirestore(new Set([String(id)]));
     }
 
     const NOMES_MESES = ["Janeiro","Fevereiro","Março","Abril","Maio","Junho",
