@@ -673,50 +673,68 @@
   <div id="splashScreen">
     <div class="splash-conteudo">
       <div class="splash-icone">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="190" height="190">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="210" height="210">
           <defs>
-            <linearGradient id="gearGrad" x1="15%" y1="5%" x2="85%" y2="95%">
-              <stop offset="0%" stop-color="#f0f0f0"/>
-              <stop offset="30%" stop-color="#c8c8c8"/>
-              <stop offset="60%" stop-color="#909090"/>
-              <stop offset="100%" stop-color="#484848"/>
+            <linearGradient id="gearGrad" x1="10%" y1="5%" x2="90%" y2="95%">
+              <stop offset="0%"   stop-color="#efefef"/>
+              <stop offset="20%"  stop-color="#d2d2d2"/>
+              <stop offset="50%"  stop-color="#a0a0a0"/>
+              <stop offset="80%"  stop-color="#707070"/>
+              <stop offset="100%" stop-color="#3a3a3a"/>
             </linearGradient>
-            <radialGradient id="bgGrad" cx="38%" cy="33%" r="70%">
-              <stop offset="0%" stop-color="#1c3a70"/>
-              <stop offset="100%" stop-color="#060e20"/>
+            <radialGradient id="gearSheen" cx="27%" cy="22%" r="52%">
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.55)"/>
+              <stop offset="60%"  stop-color="rgba(255,255,255,0.10)"/>
+              <stop offset="100%" stop-color="rgba(255,255,255,0)"/>
             </radialGradient>
+            <radialGradient id="bgGrad" cx="42%" cy="36%" r="68%">
+              <stop offset="0%"   stop-color="#1c3568"/>
+              <stop offset="55%"  stop-color="#0d1d3c"/>
+              <stop offset="100%" stop-color="#060b18"/>
+            </radialGradient>
+            <linearGradient id="bjkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#ff6600"/>
+              <stop offset="45%"  stop-color="#ff4400"/>
+              <stop offset="100%" stop-color="#cc2000"/>
+            </linearGradient>
+            <path id="gearShape" fill-rule="evenodd"
+              d="M255.9,135.1 L287.5,138.0 L287.5,162.0 L255.9,164.9
+                 A107,107 0 0 1 249.2,190.1 L275.1,208.3 L263.0,229.2 L234.3,215.9
+                 A107,107 0 0 1 215.9,234.3 L229.2,263.0 L208.3,275.1 L190.1,249.2
+                 A107,107 0 0 1 164.9,255.9 L162.0,287.5 L138.0,287.5 L135.1,255.9
+                 A107,107 0 0 1 109.9,249.2 L91.7,275.1 L70.8,263.0 L84.1,234.3
+                 A107,107 0 0 1 65.7,215.9 L37.0,229.2 L24.9,208.3 L50.8,190.1
+                 A107,107 0 0 1 44.1,164.9 L12.5,162.0 L12.5,138.0 L44.1,135.1
+                 A107,107 0 0 1 50.8,109.9 L24.9,91.7 L37.0,70.8 L65.7,84.1
+                 A107,107 0 0 1 84.1,65.7 L70.8,37.0 L91.7,24.9 L109.9,50.8
+                 A107,107 0 0 1 135.1,44.1 L138.0,12.5 L162.0,12.5 L164.9,44.1
+                 A107,107 0 0 1 190.1,50.8 L208.3,24.9 L229.2,37.0 L215.9,65.7
+                 A107,107 0 0 1 234.3,84.1 L263.0,70.8 L275.1,91.7 L249.2,109.9
+                 A107,107 0 0 1 255.9,135.1 Z
+                 M182,150 A32,32 0 1 0 118,150 A32,32 0 1 0 182,150 Z"/>
           </defs>
-          <!-- Fundo -->
-          <rect width="300" height="300" rx="30" fill="url(#bgGrad)"/>
-          <!-- Engrenagem com buraco central -->
-          <path fill-rule="evenodd" fill="url(#gearGrad)"
-            style="filter:drop-shadow(2px 5px 7px rgba(0,0,0,0.7))"
-            d="M239.1,137.5 L267.5,139.7 L267.5,160.3 L239.1,162.5
-               A90,90 0 0 1 233.5,183.7 L257.0,199.9 L246.7,217.7 L220.9,205.4
-               A90,90 0 0 1 205.4,220.9 L217.7,246.7 L199.9,257.0 L183.7,233.5
-               A90,90 0 0 1 162.5,239.1 L160.3,267.5 L139.7,267.5 L137.5,239.1
-               A90,90 0 0 1 116.3,233.5 L100.1,257.0 L82.3,246.7 L94.6,220.9
-               A90,90 0 0 1 79.1,205.4 L53.3,217.7 L43.0,199.9 L66.5,183.7
-               A90,90 0 0 1 60.9,162.5 L32.5,160.3 L32.5,139.7 L60.9,137.5
-               A90,90 0 0 1 66.5,116.3 L43.0,100.1 L53.3,82.3 L79.1,94.6
-               A90,90 0 0 1 94.6,79.1 L82.3,53.3 L100.1,43.0 L116.3,66.5
-               A90,90 0 0 1 137.5,60.9 L139.7,32.5 L160.3,32.5 L162.5,60.9
-               A90,90 0 0 1 183.7,66.5 L199.9,43.0 L217.7,53.3 L205.4,79.1
-               A90,90 0 0 1 220.9,94.6 L246.7,82.3 L257.0,100.1 L233.5,116.3
-               A90,90 0 0 1 239.1,137.5 Z
-               M185,150 A35,35 0 1 0 115,150 A35,35 0 1 0 185,150 Z"/>
-          <!-- BJK 3D — camada sombra profunda -->
-          <text x="155" y="156" text-anchor="middle" dominant-baseline="central"
-                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
-                fill="#2a0000">BJK</text>
-          <!-- BJK 3D — camada intermediária -->
-          <text x="152" y="153" text-anchor="middle" dominant-baseline="central"
-                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
-                fill="#991a00">BJK</text>
-          <!-- BJK 3D — camada topo (laranja vivo) -->
-          <text x="150" y="150" text-anchor="middle" dominant-baseline="central"
-                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
-                fill="#ff4400">BJK</text>
+
+          <!-- Fundo azul escuro -->
+          <rect width="300" height="300" fill="url(#bgGrad)"/>
+
+          <!-- Engrenagem: base metálica + brilho -->
+          <use href="#gearShape" fill="url(#gearGrad)"/>
+          <use href="#gearShape" fill="url(#gearSheen)"/>
+
+          <!-- Anel interno decorativo -->
+          <circle cx="150" cy="150" r="84" fill="none" stroke="rgba(180,180,180,0.5)" stroke-width="3.5"/>
+
+          <!-- BJK — 7 camadas de extrusão 3D (escuro → laranja) -->
+          <text x="157" y="158" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#0a0000">BJK</text>
+          <text x="156" y="157" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#220000">BJK</text>
+          <text x="155" y="156" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#440000">BJK</text>
+          <text x="154" y="155" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#660000">BJK</text>
+          <text x="153" y="154" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#881100">BJK</text>
+          <text x="152" y="153" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#aa2200">BJK</text>
+          <text x="151" y="152" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94" fill="#cc3300">BJK</text>
+          <!-- BJK — camada topo: gradiente laranja com contorno escuro -->
+          <text x="150" y="150" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="94"
+                fill="url(#bjkGrad)" stroke="#111" stroke-width="2" paint-order="stroke fill">BJK</text>
         </svg>
       </div>
       <h1 class="splash-titulo">Cartão Ponto BJK</h1>
