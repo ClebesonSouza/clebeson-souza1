@@ -3462,8 +3462,12 @@
       }
 
       const senhaHash = await hashSenha(senha);
-      usuarios.push({ id: Date.now(), nome, email, senha: senhaHash, admin: true, titular: ehTitular });
-      salvarUsuarios();
+      const novoAdmin = { id: Date.now(), nome, email, senha: senhaHash, admin: true, titular: ehTitular };
+      usuarios.push(novoAdmin);
+      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      statusEl.textContent = "Salvando no servidor...";
+      statusEl.style.color = "#555";
+      await _salvarUsuarioFirestore(novoAdmin);
       statusEl.textContent = "Administrador cadastrado com sucesso!";
       statusEl.style.color = "green";
       e.target.reset();
