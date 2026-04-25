@@ -17,6 +17,81 @@
       color: #333;
     }
 
+    /* SPLASH SCREEN */
+    #splashScreen {
+      position: fixed;
+      inset: 0;
+      background: linear-gradient(160deg, #1a237e 0%, #2a6eb6 60%, #00897b 100%);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      transition: opacity 0.6s ease, visibility 0.6s ease;
+    }
+    #splashScreen.splash-saindo {
+      opacity: 0;
+      visibility: hidden;
+    }
+    .splash-conteudo {
+      text-align: center;
+      color: #fff;
+      padding: 32px 24px;
+      animation: splashEntrada 0.7s ease;
+    }
+    @keyframes splashEntrada {
+      from { opacity: 0; transform: translateY(24px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .splash-icone {
+      font-size: 4em;
+      margin-bottom: 12px;
+      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+    }
+    .splash-titulo {
+      font-size: 2em;
+      font-weight: bold;
+      letter-spacing: 1px;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.25);
+      margin-bottom: 6px;
+    }
+    .splash-subtitulo {
+      font-size: 1em;
+      opacity: 0.85;
+      margin-bottom: 24px;
+    }
+    .splash-divisor {
+      width: 60px;
+      height: 2px;
+      background: rgba(255,255,255,0.5);
+      margin: 0 auto 20px;
+      border-radius: 2px;
+    }
+    .splash-dev {
+      font-size: 0.8em;
+      opacity: 0.7;
+      margin-bottom: 4px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+    .splash-dev-nome {
+      font-size: 1.15em;
+      font-weight: bold;
+      opacity: 0.95;
+      margin-bottom: 32px;
+    }
+    .splash-spinner {
+      width: 32px;
+      height: 32px;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: girar 0.8s linear infinite;
+      margin: 0 auto;
+    }
+    @keyframes girar {
+      to { transform: rotate(360deg); }
+    }
+
     .container {
       max-width: 400px;
       margin: 20px auto;
@@ -592,8 +667,21 @@
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
 </head>
 <body>
+  <!-- SPLASH SCREEN -->
+  <div id="splashScreen">
+    <div class="splash-conteudo">
+      <div class="splash-icone">&#128197;</div>
+      <h1 class="splash-titulo">Cartão Ponto BJK</h1>
+      <p class="splash-subtitulo">Sistema de Controle de Ponto</p>
+      <div class="splash-divisor"></div>
+      <p class="splash-dev">Desenvolvido por</p>
+      <p class="splash-dev-nome">Clebeson Souza</p>
+      <div class="splash-spinner"></div>
+    </div>
+  </div>
+
   <!-- TELA INICIAL: LOGIN -->
-  <div class="container" id="loginScreen">
+  <div class="container hidden" id="loginScreen">
     <h1>Cartão Ponto BJK</h1>
     <div class="clock">
       <span id="data">--/--/----</span> |
@@ -1714,7 +1802,7 @@
     }
 
     async function inicializarApp() {
-      mostrarLoading("Conectando ao servidor...");
+      const splashMinimo = new Promise(r => setTimeout(r, 2800));
       try {
         await carregarDadosFirestore();
         migrarTitular();
@@ -1722,7 +1810,11 @@
       } catch (e) {
         console.warn("Erro na inicialização:", e);
       }
-      ocultarLoading();
+      await splashMinimo;
+      const splash = document.getElementById("splashScreen");
+      splash.classList.add("splash-saindo");
+      setTimeout(() => { splash.style.display = "none"; }, 650);
+      mudarTela("loginScreen");
       // Pré-preenche e-mail do último login após carregar dados
       const ultimoEmail = carregarUltimoEmail();
       if (ultimoEmail) {
