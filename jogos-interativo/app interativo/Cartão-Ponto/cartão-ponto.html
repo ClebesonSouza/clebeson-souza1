@@ -1556,9 +1556,10 @@
     // CONSTANTES GLOBAIS
     // ============================
     const JORNADA_MIN        = 480;  // 8 horas em minutos
-    const LIMIAR_BIOMETRIA   = 0.6;  // distância euclidiana máxima para reconhecimento
-    const INPUT_SIZE_DETECTOR = 160; // resolução do detector (múltiplo de 32)
-    const FRAMES_CAPTURA     = 10;   // frames com rosto detectado antes de capturar (~1s)
+    const LIMIAR_BIOMETRIA   = 0.65; // distância euclidiana máxima para reconhecimento
+    const INPUT_SIZE_DETECTOR = 224; // resolução do detector (múltiplo de 32)
+    const FRAMES_CAPTURA     = 6;    // frames com rosto detectado antes de capturar (~0.6s)
+    const SCORE_THRESHOLD    = 0.35; // confiança mínima para detectar rosto
     const IDB_RETENCAO_DIAS  = 30;   // dias de retenção das fotos no IndexedDB
 
     // ============================
@@ -1642,7 +1643,7 @@
     carregarModelos().catch(() => {});
 
     async function obterDescriptor(videoElement) {
-      const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: 0.5 });
+      const opcoes = new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: SCORE_THRESHOLD });
       const resultado = await faceapi
         .detectSingleFace(videoElement, opcoes)
         .withFaceLandmarks(true)
@@ -1687,7 +1688,7 @@
         try {
           const det = await faceapi.detectSingleFace(
             videoEl,
-            new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: 0.5 })
+            new faceapi.TinyFaceDetectorOptions({ inputSize: INPUT_SIZE_DETECTOR, scoreThreshold: SCORE_THRESHOLD })
           );
           if (det) {
             frames++;
