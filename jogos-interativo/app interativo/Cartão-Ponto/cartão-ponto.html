@@ -43,9 +43,11 @@
       to   { opacity: 1; transform: translateY(0); }
     }
     .splash-icone {
-      font-size: 4em;
-      margin-bottom: 12px;
-      filter: drop-shadow(0 2px 8px rgba(0,0,0,0.3));
+      margin-bottom: 14px;
+      line-height: 1;
+    }
+    .splash-icone svg {
+      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6));
     }
     .splash-titulo {
       font-size: 2em;
@@ -670,7 +672,53 @@
   <!-- SPLASH SCREEN -->
   <div id="splashScreen">
     <div class="splash-conteudo">
-      <div class="splash-icone">&#128197;</div>
+      <div class="splash-icone">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 300" width="190" height="190">
+          <defs>
+            <linearGradient id="gearGrad" x1="15%" y1="5%" x2="85%" y2="95%">
+              <stop offset="0%" stop-color="#f0f0f0"/>
+              <stop offset="30%" stop-color="#c8c8c8"/>
+              <stop offset="60%" stop-color="#909090"/>
+              <stop offset="100%" stop-color="#484848"/>
+            </linearGradient>
+            <radialGradient id="bgGrad" cx="38%" cy="33%" r="70%">
+              <stop offset="0%" stop-color="#1c3a70"/>
+              <stop offset="100%" stop-color="#060e20"/>
+            </radialGradient>
+          </defs>
+          <!-- Fundo -->
+          <rect width="300" height="300" rx="30" fill="url(#bgGrad)"/>
+          <!-- Engrenagem com buraco central -->
+          <path fill-rule="evenodd" fill="url(#gearGrad)"
+            style="filter:drop-shadow(2px 5px 7px rgba(0,0,0,0.7))"
+            d="M239.1,137.5 L267.5,139.7 L267.5,160.3 L239.1,162.5
+               A90,90 0 0 1 233.5,183.7 L257.0,199.9 L246.7,217.7 L220.9,205.4
+               A90,90 0 0 1 205.4,220.9 L217.7,246.7 L199.9,257.0 L183.7,233.5
+               A90,90 0 0 1 162.5,239.1 L160.3,267.5 L139.7,267.5 L137.5,239.1
+               A90,90 0 0 1 116.3,233.5 L100.1,257.0 L82.3,246.7 L94.6,220.9
+               A90,90 0 0 1 79.1,205.4 L53.3,217.7 L43.0,199.9 L66.5,183.7
+               A90,90 0 0 1 60.9,162.5 L32.5,160.3 L32.5,139.7 L60.9,137.5
+               A90,90 0 0 1 66.5,116.3 L43.0,100.1 L53.3,82.3 L79.1,94.6
+               A90,90 0 0 1 94.6,79.1 L82.3,53.3 L100.1,43.0 L116.3,66.5
+               A90,90 0 0 1 137.5,60.9 L139.7,32.5 L160.3,32.5 L162.5,60.9
+               A90,90 0 0 1 183.7,66.5 L199.9,43.0 L217.7,53.3 L205.4,79.1
+               A90,90 0 0 1 220.9,94.6 L246.7,82.3 L257.0,100.1 L233.5,116.3
+               A90,90 0 0 1 239.1,137.5 Z
+               M185,150 A35,35 0 1 0 115,150 A35,35 0 1 0 185,150 Z"/>
+          <!-- BJK 3D — camada sombra profunda -->
+          <text x="155" y="156" text-anchor="middle" dominant-baseline="central"
+                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
+                fill="#2a0000">BJK</text>
+          <!-- BJK 3D — camada intermediária -->
+          <text x="152" y="153" text-anchor="middle" dominant-baseline="central"
+                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
+                fill="#991a00">BJK</text>
+          <!-- BJK 3D — camada topo (laranja vivo) -->
+          <text x="150" y="150" text-anchor="middle" dominant-baseline="central"
+                font-family="'Arial Black',Impact,sans-serif" font-weight="900" font-size="85"
+                fill="#ff4400">BJK</text>
+        </svg>
+      </div>
       <h1 class="splash-titulo">Cartão Ponto BJK</h1>
       <p class="splash-subtitulo">Sistema de Controle de Ponto</p>
       <div class="splash-divisor"></div>
