@@ -972,6 +972,15 @@
       </div>
       <p id="totalHorasResumo"></p>
       <p id="totalExtrasResumo"></p>
+      <div id="calculadoraValorHora" style="margin:10px 0;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #c5d8f5;">
+        <div style="font-size:0.88em;color:#2a6eb6;font-weight:bold;margin-bottom:6px;">Calcular valor a receber</div>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-size:0.88em;color:#555;">R$</span>
+          <input type="number" id="inputValorHora" placeholder="0,00" min="0" step="0.01" style="width:90px;padding:5px 8px;border:1px solid #b0c4de;border-radius:6px;font-size:0.95em;" />
+          <span style="font-size:0.88em;color:#555;">por hora</span>
+        </div>
+        <p id="resultadoValorTotal" style="margin:7px 0 0;font-size:0.95em;color:#1b5e20;font-weight:bold;min-height:1.3em;"></p>
+      </div>
       <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
       <div style="display:flex;gap:8px;margin-top:6px;">
         <button id="btnExportarCSV" style="background:#1565c0;flex:1;margin-top:0;">Exportar CSV</button>
@@ -2119,6 +2128,7 @@
     // ============================
     let usuarioEditando = null;
     let _relatorioUserId = null;
+    let _relatorioTotalMinGeral = 0;
     let _relatorioAno = 0;
     let _relatorioMes = 0; // 0-11
 
@@ -2476,6 +2486,8 @@
       const agora = new Date();
       _relatorioAno = agora.getFullYear();
       _relatorioMes = agora.getMonth();
+      const valorSalvo = localStorage.getItem(`bjk_valor_hora_${id}`) || "";
+      document.getElementById("inputValorHora").value = valorSalvo;
       renderRelatorio();
       document.getElementById("modalRelatorio").classList.add("ativo");
     }
@@ -2597,6 +2609,9 @@
         totalExtrasGeral > 0
           ? `Total de horas extras em ${NOMES_MESES[mes]}: ${formatarMin(totalExtrasGeral)}`
           : `Nenhuma hora extra em ${NOMES_MESES[mes]}.`;
+
+      _relatorioTotalMinGeral = totalMinGeral;
+      _atualizarCalculadoraValorHora();
     }
 
     function abrirBatidasDia(numDia) {
@@ -2717,6 +2732,24 @@
 
     document.getElementById("btnFecharRelatorio").addEventListener("click", () => {
       document.getElementById("modalRelatorio").classList.remove("ativo");
+    });
+
+    function _atualizarCalculadoraValorHora() {
+      const valorHora = parseFloat(document.getElementById("inputValorHora").value);
+      const resultEl = document.getElementById("resultadoValorTotal");
+      if (!valorHora || valorHora <= 0 || _relatorioTotalMinGeral <= 0) {
+        resultEl.textContent = "";
+        return;
+      }
+      const totalHoras = _relatorioTotalMinGeral / 60;
+      const totalValor = totalHoras * valorHora;
+      resultEl.textContent = `Valor a receber: R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+
+    document.getElementById("inputValorHora").addEventListener("input", () => {
+      _atualizarCalculadoraValorHora();
+      const val = document.getElementById("inputValorHora").value;
+      if (_relatorioUserId) localStorage.setItem(`bjk_valor_hora_${_relatorioUserId}`, val);
     });
 
     document.getElementById("btnCompartilharRelatorio").addEventListener("click", async () => {
