@@ -1243,6 +1243,19 @@
       <button id="btnCancelarBioCadastro">Cancelar</button>
     </div>
   </div>
+  <!-- Modal: Foto do Funcionário (admin) -->
+  <div class="modal-overlay" id="modalFotoAdmin">
+    <div class="modal-box" style="text-align:center;max-width:320px;width:96vw;">
+      <h2 style="color:#1565c0;margin-bottom:8px;">Foto do Funcionário</h2>
+      <p id="fotoAdminNome" style="font-size:0.9em;color:#555;margin-bottom:14px;"></p>
+      <div id="fotoAdminPreview" style="width:100px;height:100px;border-radius:50%;background:#dce8f7;border:3px solid #2a6eb6;margin:0 auto 14px;overflow:hidden;display:flex;align-items:center;justify-content:center;font-size:36px;font-weight:bold;color:#2a6eb6;"></div>
+      <input type="file" id="inputFotoAdmin" accept="image/*" style="display:none;" />
+      <button id="btnEscolherFotoAdmin" style="background:#1565c0;margin-bottom:6px;">Escolher / Tirar foto</button>
+      <button id="btnRemoverFotoAdmin" style="background:#c62828;margin-bottom:6px;">Remover foto</button>
+      <button id="btnFecharFotoAdmin" style="background:#888;">Fechar</button>
+    </div>
+  </div>
+
   <canvas id="bioCadastroCanvas" style="display:none"></canvas>
 
   <script>
@@ -2207,10 +2220,21 @@
         c.height = video.videoHeight;
         c.getContext("2d").drawImage(video, 0, 0);
 
+        // Captura foto de perfil quadrada comprimida (200×200, JPEG 0.55)
+        const _fpTmp = document.createElement("canvas");
+        _fpTmp.width = 200; _fpTmp.height = 200;
+        const _fpCtx = _fpTmp.getContext("2d");
+        const _fpSize = Math.min(video.videoWidth, video.videoHeight);
+        const _fpSx = (video.videoWidth - _fpSize) / 2;
+        const _fpSy = (video.videoHeight - _fpSize) / 2;
+        _fpCtx.drawImage(video, _fpSx, _fpSy, _fpSize, _fpSize, 0, 0, 200, 200);
+        const fotoProfile = _fpTmp.toDataURL("image/jpeg", 0.55);
+
         const novoUsuarioBio = {
           id: Date.now(),
           ...dadosCadastroPendente,
           faceDescriptors: descritores,
+          fotoProfile,
         };
         usuarios.push(novoUsuarioBio);
         localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
@@ -2338,6 +2362,9 @@
         const btnCalculo = !ehAdmin
           ? `<button class="btn-calculo" onclick="abrirBaseCalculo(${u.id})">Cálculo</button>`
           : '';
+        const btnFoto = !ehAdmin
+          ? `<button style="background:#1565c0;" onclick="abrirModalFotoAdmin(${u.id})">Foto</button>`
+          : '';
         return `
           <div class="admin-user-card">
             <div class="user-name">${escaparHTML(u.nome)}${badge}</div>
@@ -2346,6 +2373,7 @@
               <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
               <button class="btn-relatorio" onclick="abrirRelatorio(${u.id})">Relatório</button>
               ${btnCalculo}
+              ${btnFoto}
               ${btnExcluir}
             </div>
           </div>`;
@@ -3338,9 +3366,14 @@
       <h1>Base de Cálculo Salarial — ${NOMES_MESES[_bcMes]} ${_bcAno}</h1>
       <p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
     </div>
-    <div style="text-align:right">
-      <strong style="font-size:13px;color:#e65100;">${escaparHTML(u.nome)}</strong><br>
-      <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      ${u.fotoProfile
+        ? `<img src="${u.fotoProfile}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #e65100;flex-shrink:0;" />`
+        : `<div style="width:64px;height:64px;border-radius:50%;background:#fff3e0;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:#e65100;flex-shrink:0;">${escaparHTML((u.nome||'?')[0]).toUpperCase()}</div>`}
+      <div style="text-align:right">
+        <strong style="font-size:13px;color:#e65100;">${escaparHTML(u.nome)}</strong><br>
+        <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+      </div>
     </div>
   </div>
   <div class="info">
@@ -3684,9 +3717,14 @@
       <h1>Relatório de Ponto — ${NOMES_MESES[mes]} ${ano}</h1>
       <p>Gerado em ${dataGeracao}</p>
     </div>
-    <div style="text-align:right;">
-      <strong style="font-size:13px;color:#2a6eb6;">${escaparHTML(u.nome)}</strong><br>
-      <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+    <div style="display:flex;align-items:center;gap:10px;">
+      ${u.fotoProfile
+        ? `<img src="${u.fotoProfile}" style="width:64px;height:64px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;flex-shrink:0;" />`
+        : `<div style="width:64px;height:64px;border-radius:50%;background:#dce8f7;display:flex;align-items:center;justify-content:center;font-size:24px;font-weight:bold;color:#2a6eb6;flex-shrink:0;">${escaparHTML((u.nome||'?')[0]).toUpperCase()}</div>`}
+      <div style="text-align:right;">
+        <strong style="font-size:13px;color:#2a6eb6;">${escaparHTML(u.nome)}</strong><br>
+        <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+      </div>
     </div>
   </div>
 
@@ -3827,6 +3865,84 @@
       document.getElementById("adminStatus").textContent = "";
       pararDashboard();
       realizarLogout();
+    });
+
+    // ============================
+    // FOTO DO FUNCIONÁRIO (admin)
+    // ============================
+    let _fotoAdminUserId = null;
+
+    function abrirModalFotoAdmin(userId) {
+      _fotoAdminUserId = userId;
+      const u = usuarios.find(u => String(u.id) === String(userId));
+      if (!u) return;
+      document.getElementById("fotoAdminNome").textContent = u.nome;
+      const preview = document.getElementById("fotoAdminPreview");
+      const btnRemover = document.getElementById("btnRemoverFotoAdmin");
+      if (u.fotoProfile) {
+        preview.innerHTML = `<img src="${u.fotoProfile}" style="width:100%;height:100%;object-fit:cover;" />`;
+        btnRemover.style.display = "block";
+      } else {
+        preview.textContent = (u.nome || "?")[0].toUpperCase();
+        btnRemover.style.display = "none";
+      }
+      document.getElementById("modalFotoAdmin").classList.add("ativo");
+    }
+
+    document.getElementById("btnFecharFotoAdmin").addEventListener("click", () => {
+      document.getElementById("modalFotoAdmin").classList.remove("ativo");
+      _fotoAdminUserId = null;
+    });
+
+    document.getElementById("btnEscolherFotoAdmin").addEventListener("click", () => {
+      document.getElementById("inputFotoAdmin").click();
+    });
+
+    document.getElementById("inputFotoAdmin").addEventListener("change", (e) => {
+      const file = e.target.files[0];
+      if (!file || !_fotoAdminUserId) return;
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = async () => {
+          const tmp = document.createElement("canvas");
+          tmp.width = 200; tmp.height = 200;
+          const ctx = tmp.getContext("2d");
+          const size = Math.min(img.width, img.height);
+          const sx = (img.width - size) / 2;
+          const sy = (img.height - size) / 2;
+          ctx.drawImage(img, sx, sy, size, size, 0, 0, 200, 200);
+          const fotoProfile = tmp.toDataURL("image/jpeg", 0.55);
+          const u = usuarios.find(u => String(u.id) === String(_fotoAdminUserId));
+          if (!u) return;
+          u.fotoProfile = fotoProfile;
+          localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+          await db.collection("usuarios").doc(String(u.id)).update({ fotoProfile })
+            .catch(err => console.warn("Firestore foto:", err));
+          const preview = document.getElementById("fotoAdminPreview");
+          preview.innerHTML = `<img src="${fotoProfile}" style="width:100%;height:100%;object-fit:cover;" />`;
+          document.getElementById("btnRemoverFotoAdmin").style.display = "block";
+          renderAdminUsers();
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+      e.target.value = "";
+    });
+
+    document.getElementById("btnRemoverFotoAdmin").addEventListener("click", async () => {
+      if (!_fotoAdminUserId) return;
+      const u = usuarios.find(u => String(u.id) === String(_fotoAdminUserId));
+      if (!u) return;
+      delete u.fotoProfile;
+      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      await db.collection("usuarios").doc(String(u.id))
+        .update({ fotoProfile: firebase.firestore.FieldValue.delete() })
+        .catch(err => console.warn("Firestore remover foto:", err));
+      const preview = document.getElementById("fotoAdminPreview");
+      preview.textContent = (u.nome || "?")[0].toUpperCase();
+      document.getElementById("btnRemoverFotoAdmin").style.display = "none";
+      renderAdminUsers();
     });
 
     document.getElementById("btnSairApp").addEventListener("click", async () => {
