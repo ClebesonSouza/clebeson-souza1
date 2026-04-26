@@ -1143,7 +1143,12 @@
         <div id="bcResultado" style="min-height:1.4em;padding-top:10px;border-top:2px solid #f0c090;line-height:1.5;"></div>
       </div>
 
-      <button id="bcBtnFechar" style="background:#888;margin-top:10px;">Fechar</button>
+      <button id="bcBtnCompartilhar" style="background:#25d366;margin-top:10px;">Compartilhar</button>
+      <div style="display:flex;gap:8px;margin-top:6px;">
+        <button id="bcBtnExportarCSV" style="background:#1565c0;flex:1;margin-top:0;">Exportar CSV</button>
+        <button id="bcBtnExportarPDF" style="background:#c62828;flex:1;margin-top:0;">Exportar PDF</button>
+      </div>
+      <button id="bcBtnFechar" style="background:#888;margin-top:6px;">Fechar</button>
     </div>
   </div>
 
@@ -3070,6 +3075,300 @@
 
     document.getElementById("bcBtnFechar").addEventListener("click", () => {
       document.getElementById("modalBaseCalculo").classList.remove("ativo");
+    });
+
+    // ============================
+    // COMPARTILHAR BASE DE CÁLCULO
+    // ============================
+    document.getElementById("bcBtnCompartilhar").addEventListener("click", async () => {
+      const u = usuarios.find(u => String(u.id) === String(_bcUserId));
+      if (!u || !_bcTotais) return;
+
+      const btn = document.getElementById("bcBtnCompartilhar");
+      btn.disabled = true;
+      btn.textContent = "Gerando imagem...";
+
+      const valorHora  = parseFloat(document.getElementById("bcInputValorHora").value) || 0;
+      const modo       = document.querySelector('input[name="bcModo"]:checked').value;
+      const temValor   = valorHora > 0;
+      const { minNormais, minExtras50, minExtras60, minExtras100, totalMin } = _bcTotais;
+
+      const vNorm  = (minNormais  / 60) * valorHora;
+      const v50    = (minExtras50 / 60) * valorHora * 1.5;
+      const v60    = (minExtras60 / 60) * valorHora * 1.6;
+      const v100   = (minExtras100/ 60) * valorHora * 2.0;
+      const totalValor = modo === "simples"
+        ? (totalMin / 60) * valorHora
+        : vNorm + v50 + v60 + v100;
+
+      // Linhas do detalhamento (diferenciado)
+      const detLinhas = [];
+      if (modo === "diferenciado") {
+        if (minNormais  > 0) detLinhas.push(["Horas normais",         formatarMin(minNormais),   temValor ? `R$${_bcFmt2(valorHora)}`       : "", temValor ? `R$${_bcFmt2(vNorm)}` : ""]);
+        if (minExtras50 > 0) detLinhas.push(["Extras dia útil (+50%)",formatarMin(minExtras50),  temValor ? `R$${_bcFmt2(valorHora * 1.5)}` : "", temValor ? `R$${_bcFmt2(v50)}`   : ""]);
+        if (minExtras60 > 0) detLinhas.push(["Sáb após 12h (+60%)",   formatarMin(minExtras60),  temValor ? `R$${_bcFmt2(valorHora * 1.6)}` : "", temValor ? `R$${_bcFmt2(v60)}`   : ""]);
+        if (minExtras100> 0) detLinhas.push(["Dom/Feriados (+100%)",   formatarMin(minExtras100), temValor ? `R$${_bcFmt2(valorHora * 2)}`   : "", temValor ? `R$${_bcFmt2(v100)}`  : ""]);
+      }
+
+      const LARGURA  = 560;
+      const HEADER_H = 72;
+      const INFO_H   = 38;
+      const COL_H    = 26;
+      const LINHA_H  = 30;
+      const TOTAL_H  = 52;
+      const FOOTER_H = 30;
+      const nLinhas  = modo === "diferenciado" ? detLinhas.length : 1;
+      const alturaTotal = HEADER_H + INFO_H + (modo === "diferenciado" ? COL_H : 0) + nLinhas * LINHA_H + TOTAL_H + FOOTER_H;
+
+      const c = document.createElement("canvas");
+      c.width = LARGURA; c.height = alturaTotal;
+      const cx = c.getContext("2d");
+
+      cx.fillStyle = "#fafafa";
+      cx.fillRect(0, 0, LARGURA, alturaTotal);
+
+      // Cabeçalho laranja
+      cx.fillStyle = "#e65100";
+      cx.fillRect(0, 0, LARGURA, HEADER_H);
+      cx.fillStyle = "#fff";
+      cx.font = "bold 15px Arial"; cx.textAlign = "left";
+      cx.fillText("Cartão Ponto BJK — Base de Cálculo Salarial", 14, 26);
+      cx.font = "13px Arial";
+      cx.fillText(u.nome, 14, 48);
+      cx.font = "11px Arial"; cx.fillStyle = "rgba(255,255,255,0.8)";
+      cx.fillText(`${NOMES_MESES[_bcMes]} ${_bcAno}  |  ${modo === "simples" ? "Modo Simples" : "Modo Diferenciado"}`, 14, 66);
+
+      // Painel de totais
+      let curY = HEADER_H;
+      cx.fillStyle = "#f5f5f5";
+      cx.fillRect(0, curY, LARGURA, INFO_H);
+      cx.fillStyle = "#444"; cx.font = "12px Arial"; cx.textAlign = "left";
+      cx.fillText(`Total trabalhado: ${formatarMin(totalMin)}`, 14, curY + 15);
+      if (_bcTotais.totalExtras > 0) {
+        cx.fillStyle = "#e65100"; cx.font = "11px Arial";
+        cx.fillText(`Horas extras: ${formatarMin(_bcTotais.totalExtras)}`, 14, curY + 30);
+      }
+      curY += INFO_H;
+
+      if (modo === "diferenciado") {
+        // Cabeçalho da tabela
+        cx.fillStyle = "#bf360c";
+        cx.fillRect(0, curY, LARGURA, COL_H);
+        cx.fillStyle = "#fff"; cx.font = "bold 10px Arial";
+        cx.textAlign = "left";  cx.fillText("Categoria", 14, curY + 17);
+        cx.textAlign = "right"; cx.fillText("Horas", 220, curY + 17);
+        cx.fillText("Valor/h", 340, curY + 17);
+        cx.fillText("Subtotal", 546, curY + 17);
+        curY += COL_H;
+
+        detLinhas.forEach((l, i) => {
+          cx.fillStyle = i % 2 === 0 ? "#fff8f0" : "#fff";
+          cx.fillRect(0, curY, LARGURA, LINHA_H);
+          cx.fillStyle = "#333"; cx.font = "11px Arial"; cx.textAlign = "left";
+          cx.fillText(l[0], 14, curY + LINHA_H / 2 + 4);
+          cx.fillStyle = "#555"; cx.textAlign = "right";
+          cx.fillText(l[1], 220, curY + LINHA_H / 2 + 4);
+          cx.fillText(l[2], 340, curY + LINHA_H / 2 + 4);
+          cx.fillStyle = "#2e7d32"; cx.font = "bold 11px Arial";
+          cx.fillText(l[3], 546, curY + LINHA_H / 2 + 4);
+          curY += LINHA_H;
+        });
+      } else {
+        cx.fillStyle = "#fff8f0";
+        cx.fillRect(0, curY, LARGURA, LINHA_H);
+        cx.fillStyle = "#333"; cx.font = "11px Arial"; cx.textAlign = "left";
+        cx.fillText(`Total: ${formatarMin(totalMin)}`, 14, curY + LINHA_H / 2 + 4);
+        if (temValor) {
+          cx.fillStyle = "#555"; cx.textAlign = "right";
+          cx.fillText(`R$${_bcFmt2(valorHora)}/h`, 546, curY + LINHA_H / 2 + 4);
+        }
+        curY += LINHA_H;
+      }
+
+      // Rodapé total
+      cx.fillStyle = "#e65100";
+      cx.fillRect(0, curY, LARGURA, TOTAL_H);
+      cx.fillStyle = "#fff"; cx.font = "bold 13px Arial"; cx.textAlign = "left";
+      cx.fillText("Total a receber:", 14, curY + 22);
+      if (temValor) {
+        cx.font = "bold 18px Arial"; cx.textAlign = "right";
+        cx.fillText(`R$ ${_bcFmt2(totalValor)}`, 546, curY + 24);
+      } else {
+        cx.font = "11px Arial"; cx.fillStyle = "rgba(255,255,255,0.7)"; cx.textAlign = "right";
+        cx.fillText("Insira o valor/hora para calcular", 546, curY + 22);
+      }
+      cx.fillStyle = "rgba(255,255,255,0.6)"; cx.font = "10px Arial"; cx.textAlign = "left";
+      cx.fillText(`${NOMES_MESES[_bcMes]} ${_bcAno}`, 14, curY + 42);
+      curY += TOTAL_H;
+
+      // Footer
+      cx.fillStyle = "#eee";
+      cx.fillRect(0, curY, LARGURA, FOOTER_H);
+      cx.fillStyle = "#888"; cx.font = "10px Arial"; cx.textAlign = "center";
+      cx.fillText(`Gerado em ${new Date().toLocaleDateString("pt-BR")} | Cartão Ponto BJK`, LARGURA / 2, curY + 18);
+
+      btn.disabled = false;
+      btn.textContent = "Compartilhar";
+
+      await compartilharOuBaixar(c, `base-calculo-${u.nome.replace(/\s+/g,"-")}-${NOMES_MESES[_bcMes]}-${_bcAno}.png`);
+    });
+
+    // ============================
+    // EXPORTAR CSV - BASE DE CÁLCULO
+    // ============================
+    document.getElementById("bcBtnExportarCSV").addEventListener("click", () => {
+      const u = usuarios.find(u => String(u.id) === String(_bcUserId));
+      if (!u || !_bcTotais) return;
+
+      const valorHora = parseFloat(document.getElementById("bcInputValorHora").value) || 0;
+      const modo      = document.querySelector('input[name="bcModo"]:checked').value;
+      const temValor  = valorHora > 0;
+      const { minNormais, minExtras50, minExtras60, minExtras100, totalMin } = _bcTotais;
+      const vNorm = (minNormais  / 60) * valorHora;
+      const v50   = (minExtras50 / 60) * valorHora * 1.5;
+      const v60   = (minExtras60 / 60) * valorHora * 1.6;
+      const v100  = (minExtras100/ 60) * valorHora * 2.0;
+
+      const linhas = [
+        ["Funcionário", u.nome],
+        ["Mês/Ano", `${NOMES_MESES[_bcMes]} ${_bcAno}`],
+        ["Modo de cálculo", modo === "simples" ? "Simples" : "Diferenciado"],
+        ["Total trabalhado", formatarMin(totalMin)],
+        [],
+        ["Categoria", "Horas", "Valor/hora", "Subtotal"],
+      ];
+
+      if (modo === "simples") {
+        linhas.push(["Todas as horas", formatarMin(totalMin),
+          temValor ? `R$ ${_bcFmt2(valorHora)}` : "—",
+          temValor ? `R$ ${_bcFmt2((totalMin / 60) * valorHora)}` : "—"]);
+      } else {
+        if (minNormais  > 0) linhas.push(["Horas normais",          formatarMin(minNormais),   temValor ? `R$ ${_bcFmt2(valorHora)}`       : "—", temValor ? `R$ ${_bcFmt2(vNorm)}` : "—"]);
+        if (minExtras50 > 0) linhas.push(["Extras dia útil (+50%)", formatarMin(minExtras50),  temValor ? `R$ ${_bcFmt2(valorHora * 1.5)}` : "—", temValor ? `R$ ${_bcFmt2(v50)}`   : "—"]);
+        if (minExtras60 > 0) linhas.push(["Sábado após 12h (+60%)",  formatarMin(minExtras60),  temValor ? `R$ ${_bcFmt2(valorHora * 1.6)}` : "—", temValor ? `R$ ${_bcFmt2(v60)}`   : "—"]);
+        if (minExtras100> 0) linhas.push(["Dom/Feriados (+100%)",    formatarMin(minExtras100), temValor ? `R$ ${_bcFmt2(valorHora * 2)}`   : "—", temValor ? `R$ ${_bcFmt2(v100)}`  : "—"]);
+        linhas.push([]);
+        const total = temValor ? vNorm + v50 + v60 + v100 : null;
+        linhas.push(["TOTAL A RECEBER", "", "", temValor ? `R$ ${_bcFmt2(total)}` : "—"]);
+      }
+
+      const bom = "﻿";
+      const csv = bom + linhas.map(r => r.map(cel => `"${String(cel ?? "").replace(/"/g,'""')}"`).join(";")).join("\r\n");
+      const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `base-calculo-${u.nome.replace(/\s+/g,"-")}-${NOMES_MESES[_bcMes]}-${_bcAno}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // ============================
+    // EXPORTAR PDF - BASE DE CÁLCULO
+    // ============================
+    document.getElementById("bcBtnExportarPDF").addEventListener("click", () => {
+      const u = usuarios.find(u => String(u.id) === String(_bcUserId));
+      if (!u || !_bcTotais) return;
+
+      const valorHora  = parseFloat(document.getElementById("bcInputValorHora").value) || 0;
+      const modo       = document.querySelector('input[name="bcModo"]:checked').value;
+      const temValor   = valorHora > 0;
+      const { minNormais, minExtras50, minExtras60, minExtras100, totalMin, totalExtras } = _bcTotais;
+      const vNorm  = (minNormais  / 60) * valorHora;
+      const v50    = (minExtras50 / 60) * valorHora * 1.5;
+      const v60    = (minExtras60 / 60) * valorHora * 1.6;
+      const v100   = (minExtras100/ 60) * valorHora * 2.0;
+      const totalValor = modo === "simples" ? (totalMin / 60) * valorHora : vNorm + v50 + v60 + v100;
+
+      let corpoTabela = "";
+      if (modo === "simples") {
+        corpoTabela = `<tr>
+          <td>Todas as horas</td>
+          <td style="text-align:center;">${formatarMin(totalMin)}</td>
+          <td style="text-align:right;">${temValor ? `R$ ${_bcFmt2(valorHora)}` : "—"}</td>
+          <td style="text-align:right;font-weight:bold;color:#2e7d32;">${temValor ? `R$ ${_bcFmt2((totalMin / 60) * valorHora)}` : "—"}</td>
+        </tr>`;
+      } else {
+        const linhas = [];
+        if (minNormais  > 0) linhas.push(["Horas normais",          formatarMin(minNormais),   temValor ? `R$ ${_bcFmt2(valorHora)}`       : "—", temValor ? `R$ ${_bcFmt2(vNorm)}` : "—"]);
+        if (minExtras50 > 0) linhas.push(["Extras dia útil (+50%)", formatarMin(minExtras50),  temValor ? `R$ ${_bcFmt2(valorHora * 1.5)}` : "—", temValor ? `R$ ${_bcFmt2(v50)}`   : "—"]);
+        if (minExtras60 > 0) linhas.push(["Sábado após 12h (+60%)", formatarMin(minExtras60),  temValor ? `R$ ${_bcFmt2(valorHora * 1.6)}` : "—", temValor ? `R$ ${_bcFmt2(v60)}`   : "—"]);
+        if (minExtras100> 0) linhas.push(["Dom/Feriados (+100%)",   formatarMin(minExtras100), temValor ? `R$ ${_bcFmt2(valorHora * 2)}`   : "—", temValor ? `R$ ${_bcFmt2(v100)}`  : "—"]);
+        corpoTabela = linhas.map(l => `<tr>
+          <td>${l[0]}</td>
+          <td style="text-align:center;">${l[1]}</td>
+          <td style="text-align:right;">${l[2]}</td>
+          <td style="text-align:right;font-weight:bold;color:#2e7d32;">${l[3]}</td>
+        </tr>`).join("");
+      }
+
+      const html = `<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8"/>
+  <title>Base de Cálculo — ${escaparHTML(u.nome)} — ${NOMES_MESES[_bcMes]} ${_bcAno}</title>
+  <style>
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{font-family:Arial,sans-serif;font-size:12px;color:#222;padding:24px}
+    .cabecalho{border-bottom:3px solid #e65100;padding-bottom:12px;margin-bottom:16px;display:flex;justify-content:space-between;align-items:flex-start}
+    .cabecalho h1{font-size:17px;color:#e65100;margin-bottom:4px}
+    .cabecalho p{font-size:11px;color:#555;margin-top:2px}
+    .info{display:flex;gap:20px;margin-bottom:16px;background:#f5f5f5;border-radius:6px;padding:10px 14px;flex-wrap:wrap}
+    .info .item strong{display:block;font-size:10px;color:#888;text-transform:uppercase;margin-bottom:2px}
+    .info .item span{font-size:13px;font-weight:bold;color:#333}
+    table{width:100%;border-collapse:collapse;margin-bottom:16px}
+    thead th{background:#e65100;color:#fff;padding:8px 10px;font-size:11px;text-align:left}
+    thead th:not(:first-child){text-align:right}
+    td{padding:8px 10px;border-bottom:1px solid #eee;font-size:12px}
+    .rodape{border-top:3px solid #e65100;padding-top:12px;display:flex;justify-content:space-between;align-items:center}
+    .rodape .label{font-size:14px;color:#555}
+    .rodape .valor{font-size:20px;font-weight:bold;color:#1b5e20}
+    .assinatura{margin-top:50px;display:flex;gap:40px}
+    .assinatura .linha{flex:1;border-top:1px solid #333;text-align:center;padding-top:4px;font-size:10px;color:#555}
+    @media print{body{padding:12px} @page{margin:15mm;size:A4}}
+  </style>
+</head>
+<body>
+  <div class="cabecalho">
+    <div>
+      <h1>Base de Cálculo Salarial — ${NOMES_MESES[_bcMes]} ${_bcAno}</h1>
+      <p>Gerado em ${new Date().toLocaleDateString("pt-BR")}</p>
+    </div>
+    <div style="text-align:right">
+      <strong style="font-size:13px;color:#e65100;">${escaparHTML(u.nome)}</strong><br>
+      <span style="color:#555;">${escaparHTML(u.cargo || "")}</span>
+    </div>
+  </div>
+  <div class="info">
+    <div class="item"><strong>Total trabalhado</strong><span>${formatarMin(totalMin)}</span></div>
+    <div class="item"><strong>Horas extras</strong><span>${totalExtras > 0 ? formatarMin(totalExtras) : "—"}</span></div>
+    <div class="item"><strong>Modo</strong><span>${modo === "simples" ? "Simples" : "Diferenciado"}</span></div>
+    ${temValor ? `<div class="item"><strong>Valor por hora</strong><span>R$ ${_bcFmt2(valorHora)}</span></div>` : ""}
+  </div>
+  <table>
+    <thead><tr><th>Categoria</th><th style="text-align:right">Horas</th><th style="text-align:right">Valor/hora</th><th style="text-align:right">Subtotal</th></tr></thead>
+    <tbody>${corpoTabela}</tbody>
+  </table>
+  <div class="rodape">
+    <span class="label">Total a receber em ${NOMES_MESES[_bcMes]} ${_bcAno}</span>
+    <span class="valor">${temValor ? `R$ ${_bcFmt2(totalValor)}` : "—"}</span>
+  </div>
+  <div class="assinatura">
+    <div class="linha">Assinatura do Funcionário</div>
+    <div class="linha">Assinatura do Responsável</div>
+  </div>
+</body></html>`;
+
+      const janela = window.open("", "_blank", "width=800,height=700");
+      if (!janela) {
+        confirmar("O navegador bloqueou a abertura da janela.\nPermita pop-ups para este site e tente novamente.", { btnTexto: "OK" });
+        return;
+      }
+      janela.document.write(html);
+      janela.document.close();
+      janela.onload = () => janela.print();
     });
 
     document.getElementById("btnCompartilharRelatorio").addEventListener("click", async () => {
