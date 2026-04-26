@@ -1098,7 +1098,7 @@
 
   <!-- MODAL BASE DE CÁLCULO SALARIAL -->
   <div class="modal-overlay" id="modalBaseCalculo">
-    <div class="modal-box" style="text-align:left;max-width:440px;width:96vw;">
+    <div class="modal-box" style="text-align:left;max-width:460px;width:96vw;">
       <h2 style="text-align:center;color:#e65100;margin-bottom:4px;">Base de Cálculo Salarial</h2>
       <p id="bcNomeFuncionario" style="text-align:center;font-size:1em;font-weight:bold;color:#333;margin-bottom:10px;"></p>
 
@@ -1113,6 +1113,18 @@
         <div id="bcTotalExtras" style="font-size:0.88em;color:#666;">—</div>
       </div>
 
+      <div style="margin-bottom:12px;background:#f5f5f5;border-radius:8px;padding:10px 14px;border:1px solid #ddd;">
+        <div style="font-size:0.85em;font-weight:bold;color:#555;margin-bottom:8px;">Modo de cálculo</div>
+        <label style="display:flex;align-items:center;gap:8px;margin-bottom:6px;cursor:pointer;font-size:0.88em;color:#333;">
+          <input type="radio" name="bcModo" id="bcModoSimples" value="simples" checked />
+          Simples — todas as horas × valor/hora
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:0.88em;color:#333;">
+          <input type="radio" name="bcModo" id="bcModoDiferenciado" value="diferenciado" />
+          Diferenciado — extras, sábados, domingos e feriados
+        </label>
+      </div>
+
       <div style="background:#fff8f0;border-radius:8px;padding:12px 14px;border:1px solid #f0c090;">
         <div style="font-size:0.9em;color:#e65100;font-weight:bold;margin-bottom:10px;">Calcular valor a receber</div>
         <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
@@ -1120,7 +1132,8 @@
           <input type="number" id="bcInputValorHora" placeholder="0,00" min="0" step="0.01"
             style="flex:1;padding:7px 10px;border:1px solid #e0b080;border-radius:6px;font-size:1em;" />
         </div>
-        <div id="bcResultado" style="font-size:1.05em;color:#1b5e20;font-weight:bold;min-height:1.4em;padding-top:8px;border-top:1px dashed #e0b080;"></div>
+        <div id="bcDetalhamento" style="font-size:0.82em;color:#555;line-height:1.7;margin-bottom:6px;display:none;"></div>
+        <div id="bcResultado" style="font-size:1.05em;color:#1b5e20;font-weight:bold;min-height:1.4em;padding-top:8px;border-top:1px dashed #e0b080;line-height:1.5;"></div>
       </div>
 
       <button id="bcBtnFechar" style="background:#888;margin-top:10px;">Fechar</button>
@@ -2883,11 +2896,11 @@
     let _bcUserId = null;
     let _bcAno = 0;
     let _bcMes = 0;
-    let _bcTotalMinGeral = 0;
+    let _bcTotais = null;
 
     function _calcularTotaisDoMes(userId, ano, mes) {
       const u = usuarios.find(u => String(u.id) === String(userId));
-      if (!u) return { totalMin: 0, totalExtras: 0 };
+      if (!u) return { totalMin: 0, totalExtras: 0, minNormais: 0, minExtras50: 0, minExtras60: 0, minExtras100: 0 };
 
       const jornadaMin = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
       const diasNoMes = new Date(ano, mes + 1, 0).getDate();
@@ -2898,8 +2911,8 @@
         return dt.getFullYear() === ano && dt.getMonth() === mes;
       });
 
-      let totalMin = 0;
-      let totalExtras = 0;
+      let totalMin = 0, totalExtras = 0;
+      let minNormais = 0, minExtras50 = 0, minExtras60 = 0, minExtras100 = 0;
 
       for (let numDia = 1; numDia <= diasNoMes; numDia++) {
         const bDia = batidasMes
@@ -2910,9 +2923,40 @@
         const { totalMin: minDia, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef, jornadaMin);
         totalMin += minDia;
         totalExtras += extrasMin;
+
+        if (ehFeriado(dataRef) || diaSemana === 0) {
+          // Domingo ou feriado: tudo a +100%
+          minExtras100 += minDia;
+        } else if (diaSemana === 6) {
+          // Sábado: antes das 12h = normal, após 12h = +60%
+          const CORTE = 12 * 60;
+          const entsOrd = bDia.filter(b => b.tipo === "entrada")
+            .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+          const saisOrd = bDia.filter(b => b.tipo === "saida")
+            .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+          const pares = Math.min(entsOrd.length, saisOrd.length);
+          for (let i = 0; i < pares; i++) {
+            const entDt = new Date(entsOrd[i].data_hora);
+            const saiDt = new Date(saisOrd[i].data_hora);
+            const entMin = entDt.getHours() * 60 + entDt.getMinutes();
+            const saiMin = saiDt.getHours() * 60 + saiDt.getMinutes();
+            if (saiMin <= CORTE) {
+              minNormais += saiMin - entMin;
+            } else if (entMin >= CORTE) {
+              minExtras60 += saiMin - entMin;
+            } else {
+              minNormais += CORTE - entMin;
+              minExtras60 += saiMin - CORTE;
+            }
+          }
+        } else {
+          // Seg–Sex: dentro da jornada = normal, além = +50%
+          minNormais  += Math.min(minDia, jornadaMin);
+          minExtras50 += Math.max(0, minDia - jornadaMin);
+        }
       }
 
-      return { totalMin, totalExtras };
+      return { totalMin, totalExtras, minNormais, minExtras50, minExtras60, minExtras100 };
     }
 
     function abrirBaseCalculo(userId) {
@@ -2927,35 +2971,61 @@
       const valorSalvo = localStorage.getItem(`bjk_valor_hora_${userId}`) || "";
       document.getElementById("bcInputValorHora").value = valorSalvo;
 
+      document.getElementById("bcModoSimples").checked = true;
       _renderBaseCalculo();
       document.getElementById("modalBaseCalculo").classList.add("ativo");
     }
 
     function _renderBaseCalculo() {
-      const { totalMin, totalExtras } = _calcularTotaisDoMes(_bcUserId, _bcAno, _bcMes);
-      _bcTotalMinGeral = totalMin;
+      _bcTotais = _calcularTotaisDoMes(_bcUserId, _bcAno, _bcMes);
 
       document.getElementById("bcMesAno").textContent = `${NOMES_MESES[_bcMes]} ${_bcAno}`;
-      document.getElementById("bcTotalHoras").textContent = totalMin > 0
-        ? `Total trabalhado: ${formatarMin(totalMin)}`
+      document.getElementById("bcTotalHoras").textContent = _bcTotais.totalMin > 0
+        ? `Total trabalhado: ${formatarMin(_bcTotais.totalMin)}`
         : `Nenhuma hora registrada em ${NOMES_MESES[_bcMes]}.`;
-      document.getElementById("bcTotalExtras").textContent = totalExtras > 0
-        ? `Horas extras: ${formatarMin(totalExtras)}`
+      document.getElementById("bcTotalExtras").textContent = _bcTotais.totalExtras > 0
+        ? `Horas extras: ${formatarMin(_bcTotais.totalExtras)}`
         : "Sem horas extras.";
 
       _calcularValorBaseCalculo();
     }
 
+    const _bcFmt2 = v => v.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
     function _calcularValorBaseCalculo() {
       const valorHora = parseFloat(document.getElementById("bcInputValorHora").value);
-      const resultEl = document.getElementById("bcResultado");
-      if (!valorHora || valorHora <= 0 || _bcTotalMinGeral <= 0) {
-        resultEl.textContent = "";
+      const resultEl  = document.getElementById("bcResultado");
+      const detEl     = document.getElementById("bcDetalhamento");
+      const modo = document.querySelector('input[name="bcModo"]:checked').value;
+
+      if (!valorHora || valorHora <= 0 || !_bcTotais || _bcTotais.totalMin <= 0) {
+        resultEl.innerHTML = "";
+        detEl.style.display = "none";
         return;
       }
-      const totalHoras = _bcTotalMinGeral / 60;
-      const totalValor = totalHoras * valorHora;
-      resultEl.textContent = `Valor a receber: R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+      if (modo === "simples") {
+        detEl.style.display = "none";
+        const total = (_bcTotais.totalMin / 60) * valorHora;
+        resultEl.textContent = `Valor a receber: R$ ${_bcFmt2(total)}`;
+      } else {
+        const { minNormais, minExtras50, minExtras60, minExtras100 } = _bcTotais;
+        const vNorm  = (minNormais  / 60) * valorHora;
+        const v50    = (minExtras50 / 60) * valorHora * 1.5;
+        const v60    = (minExtras60 / 60) * valorHora * 1.6;
+        const v100   = (minExtras100/ 60) * valorHora * 2.0;
+        const total  = vNorm + v50 + v60 + v100;
+
+        const linhas = [];
+        if (minNormais  > 0) linhas.push(`Horas normais: ${formatarMin(minNormais)} × R$${_bcFmt2(valorHora)} = <b>R$ ${_bcFmt2(vNorm)}</b>`);
+        if (minExtras50 > 0) linhas.push(`Extras dia útil (+50%): ${formatarMin(minExtras50)} × R$${_bcFmt2(valorHora * 1.5)} = <b>R$ ${_bcFmt2(v50)}</b>`);
+        if (minExtras60 > 0) linhas.push(`Sáb após 12h (+60%): ${formatarMin(minExtras60)} × R$${_bcFmt2(valorHora * 1.6)} = <b>R$ ${_bcFmt2(v60)}</b>`);
+        if (minExtras100> 0) linhas.push(`Dom/Feriados (+100%): ${formatarMin(minExtras100)} × R$${_bcFmt2(valorHora * 2)} = <b>R$ ${_bcFmt2(v100)}</b>`);
+
+        detEl.style.display = linhas.length > 0 ? "block" : "none";
+        detEl.innerHTML = linhas.join("<br>");
+        resultEl.innerHTML = `<span style="font-size:0.85em;font-weight:normal;color:#555;">Total a receber:</span><br>R$ ${_bcFmt2(total)}`;
+      }
     }
 
     document.getElementById("bcBtnMesAnterior").addEventListener("click", () => {
@@ -2973,6 +3043,10 @@
       const val = document.getElementById("bcInputValorHora").value;
       if (_bcUserId) localStorage.setItem(`bjk_valor_hora_${_bcUserId}`, val);
     });
+
+    document.querySelectorAll('input[name="bcModo"]').forEach(r =>
+      r.addEventListener("change", _calcularValorBaseCalculo)
+    );
 
     document.getElementById("bcBtnFechar").addEventListener("click", () => {
       document.getElementById("modalBaseCalculo").classList.remove("ativo");
