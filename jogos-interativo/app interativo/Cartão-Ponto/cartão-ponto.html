@@ -17,16 +17,18 @@
       color: #333;
     }
 
-    /* SPLASH SCREEN */
+    /* ============================================================
+       SPLASH SCREEN — PONTUALIZE
+    ============================================================ */
     #splashScreen {
       position: fixed;
       inset: 0;
-      background: #ffffff;
+      background: radial-gradient(ellipse at 50% 40%, #eaf3ff 0%, #ffffff 65%);
       display: flex;
       align-items: center;
       justify-content: center;
       z-index: 9999;
-      transition: opacity 0.6s ease, visibility 0.6s ease;
+      transition: opacity 0.7s ease, visibility 0.7s ease;
     }
     #splashScreen.splash-saindo {
       opacity: 0;
@@ -34,160 +36,110 @@
     }
     .splash-conteudo {
       text-align: center;
-      color: #fff;
-      padding: 32px 24px;
-      animation: splashEntrada 0.7s ease;
+      padding: 32px 20px;
+      animation: splashEntrada 0.85s cubic-bezier(0.22, 1, 0.36, 1);
     }
     @keyframes splashEntrada {
-      from { opacity: 0; transform: translateY(24px); }
-      to   { opacity: 1; transform: translateY(0); }
+      from { opacity: 0; transform: translateY(30px) scale(0.94); }
+      to   { opacity: 1; transform: translateY(0)    scale(1);    }
     }
-    .splash-icone {
-      margin-bottom: 14px;
-      line-height: 1;
-    }
-    .splash-icone svg {
-      filter: drop-shadow(0 8px 24px rgba(0,0,0,0.6));
-    }
-    .splash-titulo {
-      font-size: 2em;
-      font-weight: bold;
-      letter-spacing: 1px;
-      text-shadow: 0 2px 8px rgba(0,0,0,0.25);
-      margin-bottom: 6px;
-    }
-    .splash-subtitulo {
-      font-size: 1em;
-      opacity: 0.85;
-      margin-bottom: 24px;
-    }
-    .splash-divisor {
-      width: 60px;
-      height: 2px;
-      background: rgba(255,255,255,0.5);
-      margin: 0 auto 20px;
-      border-radius: 2px;
-    }
-    .splash-dev {
-      font-size: 0.8em;
-      opacity: 0.7;
-      margin-bottom: 4px;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    .splash-dev-nome {
-      font-size: 1.15em;
-      font-weight: bold;
-      opacity: 0.95;
-      margin-bottom: 32px;
-    }
-    .splash-spinner {
-      width: 32px;
-      height: 32px;
-      border: 3px solid rgba(42,110,182,0.2);
-      border-top-color: #2a6eb6;
-      border-radius: 50%;
-      animation: girar 0.8s linear infinite;
-      margin: 24px auto 0;
-    }
-    /* === LOGO PONTUALIZE (CSS) === */
+
+    /* --- linha superior: relógio + CARTÃO / DE PONTO --- */
     .splash-logo-row {
       display: flex;
       align-items: center;
       justify-content: center;
-      gap: 18px;
-      margin-bottom: 6px;
+      gap: clamp(10px, 3.5vw, 20px);
+      margin-bottom: 4px;
     }
-    .splash-watch-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
+
+    /* relógio SVG */
+    .splash-watch-svg {
       flex-shrink: 0;
+      width:  clamp(74px, 20vw, 108px);
+      height: auto;
+      filter:
+        drop-shadow(0  6px 14px rgba(10, 30,130,0.32))
+        drop-shadow(0 -1px  4px rgba(255,255,255,0.7));
     }
-    .splash-watch-crown {
-      width: 24px;
-      height: 14px;
-      background: linear-gradient(180deg, #d8e2ee 0%, #8898b8 100%);
-      border-radius: 5px 5px 2px 2px;
-      margin-bottom: -3px;
-      box-shadow: 0 -1px 4px rgba(0,0,0,0.12);
-      position: relative;
-      z-index: 1;
-    }
-    .splash-watch-body {
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      background: linear-gradient(140deg, #2563eb 0%, #1e40af 55%, #1e3a8a 100%);
-      box-shadow: 0 0 0 6px #3b82f6, 0 6px 20px rgba(30,58,138,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .splash-watch-inner {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.07);
-    }
-    .splash-watch-check {
-      font-size: 42px;
-      font-weight: 900;
-      color: #00c4d8;
-      line-height: 1;
-      margin-top: 4px;
-    }
+
+    /* coluna de texto à direita do relógio */
     .splash-brand-col {
       display: flex;
       flex-direction: column;
       align-items: flex-start;
-      line-height: 1;
+      gap: 3px;
     }
+
+    /* "CARTÃO" — prata 3D com extrusão em 7 camadas */
     .splash-brand-cartao {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 2.2em;
+      font-family: 'Arial Black', 'Franklin Gothic Heavy', Impact, sans-serif;
+      font-size: clamp(1.65rem, 7vw, 2.75rem);
       font-weight: 900;
-      letter-spacing: 3px;
-      color: #c8d4de;
+      letter-spacing: 0.10em;
+      line-height: 1;
+      color: #c6d2de;
       text-shadow:
-        1px 1px 0 #a8b8c4,
-        2px 2px 0 #8898a8,
-        3px 3px 0 #647888,
-        4px 4px 10px rgba(0,0,0,0.18);
-      margin-bottom: 2px;
+        1px  1px 0 #b0bfcc,
+        2px  2px 0 #96aabb,
+        3px  3px 0 #7c95a8,
+        4px  4px 0 #628095,
+        5px  5px 0 #486b82,
+        6px  6px 0 #2e566f,
+        0    9px 20px rgba(0, 0, 0, 0.20);
     }
+
+    /* "DE PONTO" — azul sólido com brilho suave */
     .splash-brand-deponto {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 1.45em;
+      font-family: 'Arial Black', 'Franklin Gothic Heavy', Impact, sans-serif;
+      font-size: clamp(1.15rem, 5vw, 1.85rem);
       font-weight: 900;
-      letter-spacing: 2px;
-      color: #1a6fe8;
+      letter-spacing: 0.07em;
       line-height: 1;
-    }
-    .splash-pontualize {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 3.1em;
-      font-weight: 900;
-      letter-spacing: 4px;
-      color: #c8d4de;
+      color: #1565c0;
       text-shadow:
-        1px 1px 0 #a8b8c4,
-        2px 2px 0 #8898a8,
-        3px 3px 0 #647888,
-        4px 4px 12px rgba(0,0,0,0.18);
-      line-height: 1;
-      margin-top: 2px;
+        0  2px  8px rgba(21,101,192,0.25),
+        0  4px 16px rgba(21,101,192,0.12);
     }
+
+    /* "PONTUALIZE" — prata 3D grande, mesma extrusão */
+    .splash-pontualize {
+      font-family: 'Arial Black', 'Franklin Gothic Heavy', Impact, sans-serif;
+      font-size: clamp(1.85rem, 9.2vw, 3.5rem);
+      font-weight: 900;
+      letter-spacing: 0.10em;
+      line-height: 1;
+      white-space: nowrap;
+      color: #c6d2de;
+      text-shadow:
+        1px  1px 0 #b0bfcc,
+        2px  2px 0 #96aabb,
+        3px  3px 0 #7c95a8,
+        4px  4px 0 #628095,
+        5px  5px 0 #486b82,
+        6px  6px 0 #2e566f,
+        0   10px 22px rgba(0, 0, 0, 0.20);
+      margin-top: 6px;
+    }
+
+    /* crédito do desenvolvedor */
     .splash-dev-label {
-      font-size: 0.92em;
-      color: #8898b0;
+      font-size: clamp(0.72rem, 2.5vw, 0.88rem);
+      color: #8298b4;
+      letter-spacing: 0.05em;
+      margin-top: 16px;
       font-style: italic;
-      letter-spacing: 0.4px;
-      margin-top: 10px;
+    }
+
+    /* spinner de carregamento */
+    .splash-spinner {
+      width: 28px;
+      height: 28px;
+      border: 3px solid rgba(42,110,182,0.15);
+      border-top-color: #2a6eb6;
+      border-radius: 50%;
+      animation: girar 0.85s linear infinite;
+      margin: 20px auto 0;
     }
     @keyframes girar {
       to { transform: rotate(360deg); }
@@ -775,26 +727,97 @@
   <!-- SPLASH SCREEN -->
   <div id="splashScreen">
     <div class="splash-conteudo">
-      <!-- Linha: relógio + CARTÃO DE PONTO -->
+
+      <!-- ── Linha superior: relógio SVG + CARTÃO / DE PONTO ── -->
       <div class="splash-logo-row">
-        <div class="splash-watch-wrap">
-          <div class="splash-watch-crown"></div>
-          <div class="splash-watch-body">
-            <div class="splash-watch-inner">
-              <span class="splash-watch-check">✓</span>
-            </div>
-          </div>
-        </div>
+
+        <!-- Relógio cronômetro com gradientes e checkmark cyan -->
+        <svg class="splash-watch-svg"
+             xmlns="http://www.w3.org/2000/svg"
+             viewBox="0 0 100 118"
+             aria-hidden="true">
+          <defs>
+            <!-- Anel azul metálico (destaque radial no canto superior esq.) -->
+            <radialGradient id="spRing" cx="36%" cy="26%" r="68%">
+              <stop offset="0%"   stop-color="#5c8eff"/>
+              <stop offset="30%"  stop-color="#2a5de8"/>
+              <stop offset="65%"  stop-color="#1438b8"/>
+              <stop offset="100%" stop-color="#081278"/>
+            </radialGradient>
+            <!-- Área interna branca com leve gradiente azulado -->
+            <radialGradient id="spInner" cx="36%" cy="26%" r="64%">
+              <stop offset="0%"   stop-color="#ffffff"/>
+              <stop offset="85%"  stop-color="#eaf2ff"/>
+              <stop offset="100%" stop-color="#d8e8ff"/>
+            </radialGradient>
+            <!-- Coroa metálica (gradiente prata) -->
+            <linearGradient id="spCrown" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#e8f0f8"/>
+              <stop offset="45%"  stop-color="#aabccc"/>
+              <stop offset="100%" stop-color="#5c7088"/>
+            </linearGradient>
+            <!-- Brilho diagonal para o anel -->
+            <linearGradient id="spShine" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%"   stop-color="rgba(255,255,255,0.28)"/>
+              <stop offset="50%"  stop-color="rgba(255,255,255,0)"/>
+              <stop offset="100%" stop-color="rgba(0,0,0,0.10)"/>
+            </linearGradient>
+          </defs>
+
+          <!-- Coroa / botão topo -->
+          <rect x="37" y="2" width="26" height="16" rx="6"
+                fill="url(#spCrown)"/>
+          <!-- Entalhe inferior da coroa (profundidade) -->
+          <rect x="41" y="14" width="18" height="4" rx="1"
+                fill="rgba(0,0,0,0.18)"/>
+
+          <!-- Anel externo (sombra/profundidade) -->
+          <circle cx="50" cy="67" r="49" fill="#040c3a"/>
+          <!-- Anel principal com gradiente radial -->
+          <circle cx="50" cy="67" r="45.5" fill="url(#spRing)"/>
+          <!-- Camada de brilho diagonal sobre o anel -->
+          <circle cx="50" cy="67" r="45.5" fill="url(#spShine)"/>
+          <!-- Arco de reflexo no canto superior esquerdo -->
+          <path d="M20 45 A32 32 0 0 1 55 20"
+                stroke="rgba(255,255,255,0.26)" stroke-width="5"
+                fill="none" stroke-linecap="round"/>
+
+          <!-- Círculo interno branco -->
+          <circle cx="50" cy="67" r="33.5" fill="url(#spInner)"/>
+          <!-- Borda interna sutil -->
+          <circle cx="50" cy="67" r="33.5" fill="none"
+                  stroke="rgba(20,56,180,0.10)" stroke-width="2"/>
+
+          <!-- Brilho do checkmark (halo) -->
+          <path d="M28 68 L43 84 L74 51"
+                stroke="rgba(0,200,224,0.22)" stroke-width="16"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <!-- Checkmark cyan (camada de suavização) -->
+          <path d="M28 68 L43 84 L74 51"
+                stroke="rgba(0,210,232,0.55)" stroke-width="10"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+          <!-- Checkmark cyan principal -->
+          <path d="M28 68 L43 84 L74 51"
+                stroke="#00cce0" stroke-width="7"
+                stroke-linecap="round" stroke-linejoin="round" fill="none"/>
+        </svg>
+
+        <!-- Textos à direita do relógio -->
         <div class="splash-brand-col">
           <div class="splash-brand-cartao">CARTÃO</div>
           <div class="splash-brand-deponto">DE PONTO</div>
         </div>
       </div>
-      <!-- PONTUALIZE -->
+
+      <!-- ── PONTUALIZE ── -->
       <div class="splash-pontualize">PONTUALIZE</div>
-      <!-- Desenvolvedor -->
+
+      <!-- ── Crédito ── -->
       <div class="splash-dev-label">Desenvolvedor Clebeson Souza</div>
+
+      <!-- ── Spinner de carregamento ── -->
       <div class="splash-spinner"></div>
+
     </div>
   </div>
 
