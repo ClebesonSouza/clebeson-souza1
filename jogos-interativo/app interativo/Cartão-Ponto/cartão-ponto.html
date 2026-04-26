@@ -21,7 +21,7 @@
     #splashScreen {
       position: fixed;
       inset: 0;
-      background: #ffffff;
+      background: linear-gradient(160deg, #1a237e 0%, #2a6eb6 60%, #00897b 100%);
       display: flex;
       align-items: center;
       justify-content: center;
@@ -84,110 +84,11 @@
     .splash-spinner {
       width: 32px;
       height: 32px;
-      border: 3px solid rgba(42,110,182,0.2);
-      border-top-color: #2a6eb6;
+      border: 3px solid rgba(255,255,255,0.3);
+      border-top-color: #fff;
       border-radius: 50%;
       animation: girar 0.8s linear infinite;
-      margin: 24px auto 0;
-    }
-    /* === LOGO PONTUALIZE (CSS) === */
-    .splash-logo-row {
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 18px;
-      margin-bottom: 6px;
-    }
-    .splash-watch-wrap {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      flex-shrink: 0;
-    }
-    .splash-watch-crown {
-      width: 24px;
-      height: 14px;
-      background: linear-gradient(180deg, #d8e2ee 0%, #8898b8 100%);
-      border-radius: 5px 5px 2px 2px;
-      margin-bottom: -3px;
-      box-shadow: 0 -1px 4px rgba(0,0,0,0.12);
-      position: relative;
-      z-index: 1;
-    }
-    .splash-watch-body {
-      width: 92px;
-      height: 92px;
-      border-radius: 50%;
-      background: linear-gradient(140deg, #2563eb 0%, #1e40af 55%, #1e3a8a 100%);
-      box-shadow: 0 0 0 6px #3b82f6, 0 6px 20px rgba(30,58,138,0.4);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-    .splash-watch-inner {
-      width: 68px;
-      height: 68px;
-      border-radius: 50%;
-      background: #ffffff;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      box-shadow: inset 0 2px 6px rgba(0,0,0,0.07);
-    }
-    .splash-watch-check {
-      font-size: 42px;
-      font-weight: 900;
-      color: #00c4d8;
-      line-height: 1;
-      margin-top: 4px;
-    }
-    .splash-brand-col {
-      display: flex;
-      flex-direction: column;
-      align-items: flex-start;
-      line-height: 1;
-    }
-    .splash-brand-cartao {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 2.2em;
-      font-weight: 900;
-      letter-spacing: 3px;
-      color: #c8d4de;
-      text-shadow:
-        1px 1px 0 #a8b8c4,
-        2px 2px 0 #8898a8,
-        3px 3px 0 #647888,
-        4px 4px 10px rgba(0,0,0,0.18);
-      margin-bottom: 2px;
-    }
-    .splash-brand-deponto {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 1.45em;
-      font-weight: 900;
-      letter-spacing: 2px;
-      color: #1a6fe8;
-      line-height: 1;
-    }
-    .splash-pontualize {
-      font-family: 'Arial Black', 'Impact', sans-serif;
-      font-size: 3.1em;
-      font-weight: 900;
-      letter-spacing: 4px;
-      color: #c8d4de;
-      text-shadow:
-        1px 1px 0 #a8b8c4,
-        2px 2px 0 #8898a8,
-        3px 3px 0 #647888,
-        4px 4px 12px rgba(0,0,0,0.18);
-      line-height: 1;
-      margin-top: 2px;
-    }
-    .splash-dev-label {
-      font-size: 0.92em;
-      color: #8898b0;
-      font-style: italic;
-      letter-spacing: 0.4px;
-      margin-top: 10px;
+      margin: 0 auto;
     }
     @keyframes girar {
       to { transform: rotate(360deg); }
@@ -775,25 +676,32 @@
   <!-- SPLASH SCREEN -->
   <div id="splashScreen">
     <div class="splash-conteudo">
-      <!-- Linha: relógio + CARTÃO DE PONTO -->
-      <div class="splash-logo-row">
-        <div class="splash-watch-wrap">
-          <div class="splash-watch-crown"></div>
-          <div class="splash-watch-body">
-            <div class="splash-watch-inner">
-              <span class="splash-watch-check">✓</span>
-            </div>
-          </div>
-        </div>
-        <div class="splash-brand-col">
-          <div class="splash-brand-cartao">CARTÃO</div>
-          <div class="splash-brand-deponto">DE PONTO</div>
-        </div>
+      <div class="splash-icone">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 160" width="260" height="140">
+          <defs>
+            <linearGradient id="bjkGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%"   stop-color="#ff7700"/>
+              <stop offset="40%"  stop-color="#ff4400"/>
+              <stop offset="100%" stop-color="#bb1a00"/>
+            </linearGradient>
+          </defs>
+          <text x="158" y="88" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#080000">BJK</text>
+          <text x="157" y="87" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#1a0000">BJK</text>
+          <text x="156" y="86" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#330000">BJK</text>
+          <text x="155" y="85" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#550000">BJK</text>
+          <text x="154" y="84" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#771100">BJK</text>
+          <text x="153" y="83" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#992200">BJK</text>
+          <text x="152" y="82" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#bb3300">BJK</text>
+          <text x="151" y="81" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110" fill="#dd4400">BJK</text>
+          <text x="150" y="80" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="110"
+                fill="url(#bjkGrad)" stroke="#000" stroke-width="2.5" paint-order="stroke fill">BJK</text>
+        </svg>
       </div>
-      <!-- PONTUALIZE -->
-      <div class="splash-pontualize">PONTUALIZE</div>
-      <!-- Desenvolvedor -->
-      <div class="splash-dev-label">Desenvolvedor Clebeson Souza</div>
+      <h1 class="splash-titulo">Cartão Ponto BJK</h1>
+      <p class="splash-subtitulo">Sistema de Controle de Ponto</p>
+      <div class="splash-divisor"></div>
+      <p class="splash-dev">Desenvolvido por</p>
+      <p class="splash-dev-nome">Clebeson Souza</p>
       <div class="splash-spinner"></div>
     </div>
   </div>
