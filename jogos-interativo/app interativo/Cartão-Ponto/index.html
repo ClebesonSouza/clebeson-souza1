@@ -513,9 +513,11 @@
       max-width: 680px;
       width: 96vw;
       text-align: left;
-      padding: 16px 14px; /* menos que os 20px padrão — mais espaço para a tabela */
+      padding: 16px 14px;
+      max-height: 90vh;
+      overflow-y: auto;
     }
-    .relatorio-scroll { max-height: 60vh; overflow-y: auto; overflow-x: hidden; }
+    .relatorio-scroll { overflow-x: hidden; }
     .relatorio-resumo { font-size: 0.85em; color: #555; margin-top: 6px; }
     .rel-nav {
       display: flex; align-items: center; justify-content: center;
@@ -1098,7 +1100,7 @@
 
   <!-- MODAL BASE DE CÁLCULO SALARIAL -->
   <div class="modal-overlay" id="modalBaseCalculo">
-    <div class="modal-box" style="text-align:left;max-width:460px;width:96vw;">
+    <div class="modal-box" style="text-align:left;max-width:460px;width:96vw;max-height:90vh;overflow-y:auto;">
       <h2 style="text-align:center;color:#e65100;margin-bottom:4px;">Base de Cálculo Salarial</h2>
       <p id="bcNomeFuncionario" style="text-align:center;font-size:1em;font-weight:bold;color:#333;margin-bottom:10px;"></p>
 
