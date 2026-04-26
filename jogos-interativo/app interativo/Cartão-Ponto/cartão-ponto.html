@@ -442,11 +442,11 @@
       color: #2a6eb6;
     }
     .btn-compartilhar {
-      background: #25d366;
+      background: #2a6eb6;
       margin-top: 10px;
     }
     .btn-compartilhar:hover {
-      background: #1da851;
+      background: #1a5296;
     }
     #listaCartoes {
       display: flex;
@@ -3157,8 +3157,8 @@
       cx.fillStyle = "#fafafa";
       cx.fillRect(0, 0, LARGURA, alturaTotal);
 
-      // Cabeçalho laranja
-      cx.fillStyle = "#e65100";
+      // Cabeçalho azul
+      cx.fillStyle = "#2a6eb6";
       cx.fillRect(0, 0, LARGURA, HEADER_H);
       cx.fillStyle = "#fff";
       cx.font = "bold 15px Arial"; cx.textAlign = "left";
@@ -3175,14 +3175,14 @@
       cx.fillStyle = "#444"; cx.font = "12px Arial"; cx.textAlign = "left";
       cx.fillText(`Total trabalhado: ${formatarMin(totalMin)}`, 14, curY + 15);
       if (_bcTotais.totalExtras > 0) {
-        cx.fillStyle = "#e65100"; cx.font = "11px Arial";
+        cx.fillStyle = "#2a6eb6"; cx.font = "11px Arial";
         cx.fillText(`Horas extras: ${formatarMin(_bcTotais.totalExtras)}`, 14, curY + 30);
       }
       curY += INFO_H;
 
       if (modo === "diferenciado") {
         // Cabeçalho da tabela
-        cx.fillStyle = "#bf360c";
+        cx.fillStyle = "#1a5296";
         cx.fillRect(0, curY, LARGURA, COL_H);
         cx.fillStyle = "#fff"; cx.font = "bold 10px Arial";
         cx.textAlign = "left";  cx.fillText("Categoria", 14, curY + 17);
@@ -3192,7 +3192,7 @@
         curY += COL_H;
 
         detLinhas.forEach((l, i) => {
-          cx.fillStyle = i % 2 === 0 ? "#fff8f0" : "#fff";
+          cx.fillStyle = i % 2 === 0 ? "#f0f5fb" : "#fff";
           cx.fillRect(0, curY, LARGURA, LINHA_H);
           cx.fillStyle = "#333"; cx.font = "11px Arial"; cx.textAlign = "left";
           cx.fillText(l[0], 14, curY + LINHA_H / 2 + 4);
@@ -3204,7 +3204,7 @@
           curY += LINHA_H;
         });
       } else {
-        cx.fillStyle = "#fff8f0";
+        cx.fillStyle = "#f0f5fb";
         cx.fillRect(0, curY, LARGURA, LINHA_H);
         cx.fillStyle = "#333"; cx.font = "11px Arial"; cx.textAlign = "left";
         cx.fillText(`Total: ${formatarMin(totalMin)}`, 14, curY + LINHA_H / 2 + 4);
@@ -3216,7 +3216,7 @@
       }
 
       // Rodapé total
-      cx.fillStyle = "#e65100";
+      cx.fillStyle = "#2a6eb6";
       cx.fillRect(0, curY, LARGURA, TOTAL_H);
       cx.fillStyle = "#fff"; cx.font = "bold 13px Arial"; cx.textAlign = "left";
       cx.fillText("Total a receber:", 14, curY + 22);
