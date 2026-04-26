@@ -4413,7 +4413,16 @@
         return;
       }
 
-      const descriptorAtual = await obterDescriptor(video);
+      let descriptorAtual;
+      try {
+        descriptorAtual = await obterDescriptor(video);
+      } catch (err) {
+        mostrarMensagemPonto("Erro ao processar imagem. Tente novamente.", "erro");
+        btn.disabled = false;
+        btn.textContent = "Capturar manualmente";
+        return;
+      }
+
       if (!descriptorAtual) {
         mostrarMensagemPonto("Nenhum rosto detectado. Ajuste a posição e tente novamente.", "erro");
         btn.disabled = false;
@@ -4440,7 +4449,17 @@
         return;
       }
 
-      if (!rostoCompativel(descsCadastrados, descriptorAtual)) {
+      let compativel;
+      try {
+        compativel = rostoCompativel(descsCadastrados, descriptorAtual);
+      } catch (err) {
+        mostrarMensagemPonto("Erro na verificação biométrica. Tente novamente.", "erro");
+        btn.disabled = false;
+        btn.textContent = "Capturar manualmente";
+        return;
+      }
+
+      if (!compativel) {
         mostrarMensagemPonto("Rosto não reconhecido. Tente novamente com melhor iluminação.", "erro");
         btn.disabled = false;
         btn.textContent = "Capturar manualmente";
@@ -4448,7 +4467,9 @@
       }
 
       // Rosto validado — registra ponto
-      const bioCanvas = document.getElementById("bioCanvas");
+      let bioCanvas;
+      try {
+        bioCanvas = document.getElementById("bioCanvas");
       bioCanvas.width = video.videoWidth;
       bioCanvas.height = video.videoHeight;
       bioCanvas.getContext("2d").drawImage(video, 0, 0);
@@ -4603,15 +4624,21 @@
         }
       }
 
-      // FIX #4: reseta assinatura e canvas para proxima batida
-      assinaturaAtual = null;
-      desenharPlaceholder();
-      document.getElementById("batidaStatus").textContent = "";
+        // FIX #4: reseta assinatura e canvas para proxima batida
+        assinaturaAtual = null;
+        desenharPlaceholder();
+        document.getElementById("batidaStatus").textContent = "";
 
-      btn.disabled = false;
-      btn.textContent = "Capturar manualmente";
-      fecharBiometria();
-      atualizarBotoesBatida();
+        btn.disabled = false;
+        btn.textContent = "Capturar manualmente";
+        fecharBiometria();
+        atualizarBotoesBatida();
+      } catch (err) {
+        console.error("Erro ao registrar batida:", err);
+        mostrarMensagemPonto("Erro inesperado ao registrar ponto. Tente novamente.", "erro");
+        btn.disabled = false;
+        btn.textContent = "Capturar manualmente";
+      }
     });
 
     // Botões de batida definem o tipo e mostram feedback inline (sem alert)
