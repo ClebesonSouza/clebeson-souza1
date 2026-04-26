@@ -504,6 +504,8 @@
     .btn-excluir:hover { background: #b71c1c; }
     .btn-relatorio { background: #00897b; }
     .btn-relatorio:hover { background: #00695c; }
+    .btn-calculo { background: #e65100; }
+    .btn-calculo:hover { background: #bf360c; }
     #btnSairAdmin { background: #888; margin-top: 16px; }
 
     /* ===== MODAL RELATÓRIO ===== */
@@ -878,6 +880,7 @@
         <div id="listaCartoes"></div>
         <button id="btnCompartilharTodos">Compartilhar todos os comprovantes</button>
         <button id="btnMeuRelatorio" style="background:#00897b;margin-top:10px;">Ver meu relatório de ponto</button>
+        <button id="btnBaseCalculo" style="background:#e65100;margin-top:6px;">Base de Cálculo Salarial</button>
         <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
@@ -1084,21 +1087,43 @@
       </div>
       <p id="totalHorasResumo"></p>
       <p id="totalExtrasResumo"></p>
-      <div id="calculadoraValorHora" style="margin:10px 0;padding:10px 12px;background:#f0f7ff;border-radius:8px;border:1px solid #c5d8f5;">
-        <div style="font-size:0.88em;color:#2a6eb6;font-weight:bold;margin-bottom:6px;">Calcular valor a receber</div>
-        <div style="display:flex;align-items:center;gap:8px;">
-          <span style="font-size:0.88em;color:#555;">R$</span>
-          <input type="number" id="inputValorHora" placeholder="0,00" min="0" step="0.01" style="width:90px;padding:5px 8px;border:1px solid #b0c4de;border-radius:6px;font-size:0.95em;" />
-          <span style="font-size:0.88em;color:#555;">por hora</span>
-        </div>
-        <p id="resultadoValorTotal" style="margin:7px 0 0;font-size:0.95em;color:#1b5e20;font-weight:bold;min-height:1.3em;"></p>
-      </div>
       <button id="btnCompartilharRelatorio" style="background:#25d366;margin-top:10px;">Compartilhar relatório</button>
       <div style="display:flex;gap:8px;margin-top:6px;">
         <button id="btnExportarCSV" style="background:#1565c0;flex:1;margin-top:0;">Exportar CSV</button>
         <button id="btnExportarPDF" style="background:#c62828;flex:1;margin-top:0;">Exportar PDF</button>
       </div>
       <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
+    </div>
+  </div>
+
+  <!-- MODAL BASE DE CÁLCULO SALARIAL -->
+  <div class="modal-overlay" id="modalBaseCalculo">
+    <div class="modal-box" style="text-align:left;max-width:440px;width:96vw;">
+      <h2 style="text-align:center;color:#e65100;margin-bottom:4px;">Base de Cálculo Salarial</h2>
+      <p id="bcNomeFuncionario" style="text-align:center;font-size:1em;font-weight:bold;color:#333;margin-bottom:10px;"></p>
+
+      <div class="rel-nav" style="margin-bottom:14px;">
+        <button id="bcBtnMesAnterior">&#9664;</button>
+        <span id="bcMesAno" style="font-weight:bold;">—</span>
+        <button id="bcBtnProximoMes">&#9654;</button>
+      </div>
+
+      <div style="background:#f8f9fa;border-radius:8px;padding:12px 14px;margin-bottom:12px;border:1px solid #e0e0e0;">
+        <div id="bcTotalHoras" style="font-size:0.95em;color:#333;margin-bottom:4px;">—</div>
+        <div id="bcTotalExtras" style="font-size:0.88em;color:#666;">—</div>
+      </div>
+
+      <div style="background:#fff8f0;border-radius:8px;padding:12px 14px;border:1px solid #f0c090;">
+        <div style="font-size:0.9em;color:#e65100;font-weight:bold;margin-bottom:10px;">Calcular valor a receber</div>
+        <div style="display:flex;align-items:center;gap:8px;margin-bottom:10px;">
+          <label style="font-size:0.88em;color:#555;white-space:nowrap;margin:0;">Valor por hora (R$)</label>
+          <input type="number" id="bcInputValorHora" placeholder="0,00" min="0" step="0.01"
+            style="flex:1;padding:7px 10px;border:1px solid #e0b080;border-radius:6px;font-size:1em;" />
+        </div>
+        <div id="bcResultado" style="font-size:1.05em;color:#1b5e20;font-weight:bold;min-height:1.4em;padding-top:8px;border-top:1px dashed #e0b080;"></div>
+      </div>
+
+      <button id="bcBtnFechar" style="background:#888;margin-top:10px;">Fechar</button>
     </div>
   </div>
 
@@ -2283,6 +2308,9 @@
         const btnExcluir = podeDeletar
           ? `<button class="btn-excluir" onclick="excluirUsuario(${u.id})">Excluir</button>`
           : `<button class="btn-excluir" disabled style="opacity:0.4;cursor:not-allowed;">Você</button>`;
+        const btnCalculo = !ehAdmin
+          ? `<button class="btn-calculo" onclick="abrirBaseCalculo(${u.id})">Cálculo</button>`
+          : '';
         return `
           <div class="admin-user-card">
             <div class="user-name">${escaparHTML(u.nome)}${badge}</div>
@@ -2290,6 +2318,7 @@
             <div class="admin-user-actions">
               <button class="btn-editar" onclick="abrirEdicao(${u.id})">Editar</button>
               <button class="btn-relatorio" onclick="abrirRelatorio(${u.id})">Relatório</button>
+              ${btnCalculo}
               ${btnExcluir}
             </div>
           </div>`;
@@ -2603,8 +2632,6 @@
       const agora = new Date();
       _relatorioAno = agora.getFullYear();
       _relatorioMes = agora.getMonth();
-      const valorSalvo = localStorage.getItem(`bjk_valor_hora_${id}`) || "";
-      document.getElementById("inputValorHora").value = valorSalvo;
       renderRelatorio();
       document.getElementById("modalRelatorio").classList.add("ativo");
     }
@@ -2728,7 +2755,6 @@
           : `Nenhuma hora extra em ${NOMES_MESES[mes]}.`;
 
       _relatorioTotalMinGeral = totalMinGeral;
-      _atualizarCalculadoraValorHora();
     }
 
     function abrirBatidasDia(numDia) {
@@ -2851,22 +2877,105 @@
       document.getElementById("modalRelatorio").classList.remove("ativo");
     });
 
-    function _atualizarCalculadoraValorHora() {
-      const valorHora = parseFloat(document.getElementById("inputValorHora").value);
-      const resultEl = document.getElementById("resultadoValorTotal");
-      if (!valorHora || valorHora <= 0 || _relatorioTotalMinGeral <= 0) {
+    // ============================
+    // BASE DE CÁLCULO SALARIAL
+    // ============================
+    let _bcUserId = null;
+    let _bcAno = 0;
+    let _bcMes = 0;
+    let _bcTotalMinGeral = 0;
+
+    function _calcularTotaisDoMes(userId, ano, mes) {
+      const u = usuarios.find(u => String(u.id) === String(userId));
+      if (!u) return { totalMin: 0, totalExtras: 0 };
+
+      const jornadaMin = u.jornadaHoras != null ? u.jornadaHoras * 60 : JORNADA_MIN;
+      const diasNoMes = new Date(ano, mes + 1, 0).getDate();
+
+      const batidasMes = batidas.filter(b => {
+        if (!_matchUsuarioBatida(b, u)) return false;
+        const dt = new Date(b.data_hora);
+        return dt.getFullYear() === ano && dt.getMonth() === mes;
+      });
+
+      let totalMin = 0;
+      let totalExtras = 0;
+
+      for (let numDia = 1; numDia <= diasNoMes; numDia++) {
+        const bDia = batidasMes
+          .filter(b => new Date(b.data_hora).getDate() === numDia)
+          .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+        const dataRef = new Date(ano, mes, numDia);
+        const diaSemana = dataRef.getDay();
+        const { totalMin: minDia, extrasMin } = distribuirBatidas(bDia, diaSemana, dataRef, jornadaMin);
+        totalMin += minDia;
+        totalExtras += extrasMin;
+      }
+
+      return { totalMin, totalExtras };
+    }
+
+    function abrirBaseCalculo(userId) {
+      _bcUserId = userId;
+      const agora = new Date();
+      _bcAno = agora.getFullYear();
+      _bcMes = agora.getMonth();
+
+      const u = usuarios.find(u => String(u.id) === String(userId));
+      document.getElementById("bcNomeFuncionario").textContent = u ? u.nome : "—";
+
+      const valorSalvo = localStorage.getItem(`bjk_valor_hora_${userId}`) || "";
+      document.getElementById("bcInputValorHora").value = valorSalvo;
+
+      _renderBaseCalculo();
+      document.getElementById("modalBaseCalculo").classList.add("ativo");
+    }
+
+    function _renderBaseCalculo() {
+      const { totalMin, totalExtras } = _calcularTotaisDoMes(_bcUserId, _bcAno, _bcMes);
+      _bcTotalMinGeral = totalMin;
+
+      document.getElementById("bcMesAno").textContent = `${NOMES_MESES[_bcMes]} ${_bcAno}`;
+      document.getElementById("bcTotalHoras").textContent = totalMin > 0
+        ? `Total trabalhado: ${formatarMin(totalMin)}`
+        : `Nenhuma hora registrada em ${NOMES_MESES[_bcMes]}.`;
+      document.getElementById("bcTotalExtras").textContent = totalExtras > 0
+        ? `Horas extras: ${formatarMin(totalExtras)}`
+        : "Sem horas extras.";
+
+      _calcularValorBaseCalculo();
+    }
+
+    function _calcularValorBaseCalculo() {
+      const valorHora = parseFloat(document.getElementById("bcInputValorHora").value);
+      const resultEl = document.getElementById("bcResultado");
+      if (!valorHora || valorHora <= 0 || _bcTotalMinGeral <= 0) {
         resultEl.textContent = "";
         return;
       }
-      const totalHoras = _relatorioTotalMinGeral / 60;
+      const totalHoras = _bcTotalMinGeral / 60;
       const totalValor = totalHoras * valorHora;
       resultEl.textContent = `Valor a receber: R$ ${totalValor.toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     }
 
-    document.getElementById("inputValorHora").addEventListener("input", () => {
-      _atualizarCalculadoraValorHora();
-      const val = document.getElementById("inputValorHora").value;
-      if (_relatorioUserId) localStorage.setItem(`bjk_valor_hora_${_relatorioUserId}`, val);
+    document.getElementById("bcBtnMesAnterior").addEventListener("click", () => {
+      if (_bcMes === 0) { _bcMes = 11; _bcAno--; } else { _bcMes--; }
+      _renderBaseCalculo();
+    });
+
+    document.getElementById("bcBtnProximoMes").addEventListener("click", () => {
+      if (_bcMes === 11) { _bcMes = 0; _bcAno++; } else { _bcMes++; }
+      _renderBaseCalculo();
+    });
+
+    document.getElementById("bcInputValorHora").addEventListener("input", () => {
+      _calcularValorBaseCalculo();
+      const val = document.getElementById("bcInputValorHora").value;
+      if (_bcUserId) localStorage.setItem(`bjk_valor_hora_${_bcUserId}`, val);
+    });
+
+    document.getElementById("bcBtnFechar").addEventListener("click", () => {
+      document.getElementById("modalBaseCalculo").classList.remove("ativo");
     });
 
     document.getElementById("btnCompartilharRelatorio").addEventListener("click", async () => {
@@ -3334,6 +3443,11 @@
     document.getElementById("btnMeuRelatorio").addEventListener("click", () => {
       if (!usuarioLogado) return;
       abrirRelatorio(usuarioLogado.id);
+    });
+
+    document.getElementById("btnBaseCalculo").addEventListener("click", () => {
+      if (!usuarioLogado) return;
+      abrirBaseCalculo(usuarioLogado.id);
     });
 
     document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
