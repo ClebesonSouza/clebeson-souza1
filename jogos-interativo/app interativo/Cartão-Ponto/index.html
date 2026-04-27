@@ -884,6 +884,7 @@
         <button id="btnCompartilharTodos">Compartilhar todos os comprovantes</button>
         <button id="btnMeuRelatorio" style="background:#00897b;margin-top:10px;">Ver meu relatório de ponto</button>
         <button id="btnBaseCalculo" style="background:#e65100;margin-top:6px;">Base de Cálculo Salarial</button>
+        <button id="btnCadastrarBioProprio" style="background:#f57c00;margin-top:10px;display:none;">Cadastrar biometria facial</button>
         <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
@@ -1231,7 +1232,7 @@
   <!-- MODAL BIOMETRIA CADASTRO -->
   <div class="modal-overlay" id="modalBiometriaCadastro">
     <div class="modal-box">
-      <h2>Foto de Cadastro</h2>
+      <h2 id="bioCadastroTitulo">Foto de Cadastro</h2>
       <div class="bio-container">
         <video id="bioCadastroVideo" autoplay playsinline muted></video>
         <div class="bio-circulo" id="circuloCadastro"></div>
@@ -2063,6 +2064,7 @@
     }
 
     let dadosCadastroPendente = null;
+    let _bioModo = 'novo'; // 'novo' | 'editar' | 'proprio'
     let streamCadastro = null;
 
     function salvarUsuarios() {
@@ -2113,51 +2115,10 @@
 
       const senhaHash = await hashSenha(senha);
       dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, cargo, telefone, nascimento };
-
-      const statusEl = document.getElementById("statusBioCadastro");
       const btnCadastrar = e.target.querySelector("button[type=submit]");
-
-      statusEl.textContent = modelosCarregados ? "Pronto." : "Aguardando modelos de reconhecimento...";
-      statusEl.style.color = "#555";
       if (btnCadastrar) btnCadastrar.disabled = true;
-
-      try {
-        await carregarModelos();
-      } catch (err) {
-        if (btnCadastrar) btnCadastrar.disabled = false;
-        dadosCadastroPendente = null;
-        erroEl.textContent = "Não foi possível carregar o reconhecimento facial. Verifique sua conexão e tente novamente, ou clique em 'Pular' após abrir a câmera.";
-        return;
-      }
-
+      await abrirModalBioCadastro('novo');
       if (btnCadastrar) btnCadastrar.disabled = false;
-      document.getElementById("modalBiometriaCadastro").classList.add("ativo");
-      statusEl.textContent = "Posicione seu rosto ou clique em Pular para cadastrar sem biometria.";
-
-      document.getElementById("circuloCadastro").classList.remove("detectado");
-      document.getElementById("guiasCadastro").classList.remove("detectado");
-      document.getElementById("labelCadastro").textContent = "Posicione o rosto no oval";
-
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
-        .then((stream) => {
-          streamCadastro = stream;
-          const video = document.getElementById("bioCadastroVideo");
-          video.srcObject = stream;
-          video.onloadedmetadata = () => {
-            _stopAutoCadastro = iniciarAutoCaptura(
-              video,
-              document.getElementById("circuloCadastro"),
-              document.getElementById("labelCadastro"),
-              () => document.getElementById("btnCapturarCadastro").click()
-            );
-          };
-        })
-        .catch(() => {
-          // Câmera indisponível — usuário ainda pode pular a biometria
-          const s = document.getElementById("statusBioCadastro");
-          s.textContent = "Câmera indisponível. Clique em 'Pular' para cadastrar sem biometria.";
-          s.style.color = "orange";
-        });
     });
 
     let _stopAutoCadastro = null;
@@ -2173,9 +2134,54 @@
       dadosCadastroPendente = null;
     }
 
+    async function abrirModalBioCadastro(modo) {
+      _bioModo = modo;
+      const titulos = { novo: 'Foto de Cadastro', editar: 'Recadastrar Biometria', proprio: 'Cadastrar sua Biometria' };
+      document.getElementById("bioCadastroTitulo").textContent = titulos[modo] || 'Biometria Facial';
+      document.getElementById("btnPularBiometria").style.display = modo === 'novo' ? "" : "none";
+      document.getElementById("circuloCadastro").classList.remove("detectado");
+      document.getElementById("guiasCadastro").classList.remove("detectado");
+      document.getElementById("labelCadastro").textContent = "Posicione o rosto no oval";
+      const statusEl = document.getElementById("statusBioCadastro");
+      statusEl.style.color = "#555";
+      statusEl.textContent = modelosCarregados ? "Posicione seu rosto no oval." : "Carregando reconhecimento facial...";
+      document.getElementById("modalBiometriaCadastro").classList.add("ativo");
+      try {
+        await carregarModelos();
+      } catch (err) {
+        statusEl.textContent = "Não foi possível carregar o reconhecimento facial. Verifique sua conexão.";
+        statusEl.style.color = "red";
+        return;
+      }
+      statusEl.textContent = "Posicione seu rosto no oval.";
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
+        .then((stream) => {
+          streamCadastro = stream;
+          const video = document.getElementById("bioCadastroVideo");
+          video.srcObject = stream;
+          video.play().catch(() => {});
+          video.onloadedmetadata = () => {
+            video.play().catch(() => {});
+            _stopAutoCadastro = iniciarAutoCaptura(
+              video,
+              document.getElementById("circuloCadastro"),
+              document.getElementById("labelCadastro"),
+              () => document.getElementById("btnCapturarCadastro").click()
+            );
+          };
+        })
+        .catch(() => {
+          statusEl.textContent = modo === 'novo'
+            ? "Câmera indisponível. Clique em 'Pular' para cadastrar sem biometria."
+            : "Câmera indisponível. Verifique as permissões e tente novamente.";
+          statusEl.style.color = "orange";
+        });
+    }
+
     document.getElementById("btnCancelarBioCadastro").addEventListener("click", fecharBiometriaCadastro);
 
     document.getElementById("btnPularBiometria").addEventListener("click", () => {
+      if (_bioModo !== 'novo') { fecharBiometriaCadastro(); return; }
       if (!dadosCadastroPendente) return;
       const dados = { ...dadosCadastroPendente };
       fecharBiometriaCadastro();
@@ -2233,31 +2239,58 @@
         _fpCtx.drawImage(video, _fpSx, _fpSy, _fpSize, _fpSize, 0, 0, 200, 200);
         const fotoProfile = _fpTmp.toDataURL("image/jpeg", 0.55);
 
-        const novoUsuarioBio = {
-          id: Date.now(),
-          ...dadosCadastroPendente,
-          faceDescriptors: descritores,
-          fotoProfile,
-        };
-        usuarios.push(novoUsuarioBio);
-        localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
-        _salvarUsuarioFirestore(novoUsuarioBio);
+        if (_bioModo === 'editar') {
+          // Atualiza funcionário que está sendo editado pelo admin
+          usuarioEditando.faceDescriptors = descritores;
+          usuarioEditando.fotoProfile = fotoProfile;
+          const idx = usuarios.findIndex(u => String(u.id) === String(usuarioEditando.id));
+          if (idx !== -1) { usuarios[idx] = { ...usuarioEditando }; localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios)); }
+          _salvarUsuarioFirestore(usuarioEditando);
+          statusEl.textContent = "Biometria recadastrada com sucesso!";
+          statusEl.style.color = "green";
+          const btnBio = document.getElementById("btnResetarBiometria");
+          btnBio.textContent = "Resetar e Recadastrar biometria";
+          btnBio.style.background = "#f57c00";
+          setTimeout(() => fecharBiometriaCadastro(), 1400);
 
-        statusEl.textContent = "Rosto cadastrado com sucesso! (3 amostras)";
-        statusEl.style.color = "green";
+        } else if (_bioModo === 'proprio') {
+          // Funcionário cadastrando a própria biometria dentro do app
+          usuarioLogado.faceDescriptors = descritores;
+          usuarioLogado.fotoProfile = fotoProfile;
+          const idx = usuarios.findIndex(u => String(u.id) === String(usuarioLogado.id));
+          if (idx !== -1) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios)); }
+          _salvarUsuarioFirestore(usuarioLogado);
+          statusEl.textContent = "Biometria cadastrada com sucesso!";
+          statusEl.style.color = "green";
+          document.getElementById("btnCadastrarBioProprio").style.display = "none";
+          setTimeout(() => fecharBiometriaCadastro(), 1400);
 
-        setTimeout(() => {
-          const dados = dadosCadastroPendente ? { ...dadosCadastroPendente } : null;
-          fecharBiometriaCadastro();
-          mudarTela("loginScreen");
-          const erroEl = document.getElementById("erroCadastro");
-          erroEl.className = "sucesso";
-          erroEl.textContent = "Cadastro realizado com sucesso!";
-          if (dados) {
-            const inputEmail = document.querySelector("#loginForm input[name=email]");
-            if (inputEmail) inputEmail.value = dados.email;
-          }
-        }, 1200);
+        } else {
+          // Modo 'novo' — cria o usuário com biometria
+          const novoUsuarioBio = {
+            id: Date.now(),
+            ...dadosCadastroPendente,
+            faceDescriptors: descritores,
+            fotoProfile,
+          };
+          usuarios.push(novoUsuarioBio);
+          localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+          _salvarUsuarioFirestore(novoUsuarioBio);
+          statusEl.textContent = "Rosto cadastrado com sucesso! (3 amostras)";
+          statusEl.style.color = "green";
+          setTimeout(() => {
+            const dados = dadosCadastroPendente ? { ...dadosCadastroPendente } : null;
+            fecharBiometriaCadastro();
+            mudarTela("loginScreen");
+            const erroEl = document.getElementById("erroCadastro");
+            erroEl.className = "sucesso";
+            erroEl.textContent = "Cadastro realizado com sucesso!";
+            if (dados) {
+              const inputEmail = document.querySelector("#loginForm input[name=email]");
+              if (inputEmail) inputEmail.value = dados.email;
+            }
+          }, 1200);
+        }
 
       } catch (err) {
         statusEl.textContent = "Erro ao processar rosto. Tente novamente.";
@@ -2301,6 +2334,10 @@
       limparBloqueio(email);
       salvarUltimoEmail(email);
       usuarioLogado = user;
+
+      // Mostra botão de cadastro biométrico se o funcionário ainda não tem biometria
+      document.getElementById("btnCadastrarBioProprio").style.display =
+        (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
 
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
@@ -2497,6 +2534,10 @@
         document.getElementById("editGeoLat").value = u.geoLat != null ? u.geoLat : "";
         document.getElementById("editGeoLng").value = u.geoLng != null ? u.geoLng : "";
         document.getElementById("editGeoRaio").value = u.geoRaio != null ? u.geoRaio : "";
+        const temBio = !!(u.faceDescriptors || u.faceDescriptor);
+        const btnBio = document.getElementById("btnResetarBiometria");
+        btnBio.textContent = temBio ? "Resetar e Recadastrar biometria" : "Cadastrar biometria";
+        btnBio.style.background = temBio ? "#f57c00" : "#2a6eb6";
       }
       document.getElementById("editJornadaGroup").style.display = mostrar(!ehAdmin);
 
@@ -3782,13 +3823,14 @@
 
     document.getElementById("btnResetarBiometria").addEventListener("click", async () => {
       if (!usuarioEditando) return;
-      const ok = await confirmar("Resetar a biometria deste funcionário?\nEle precisará recadastrar o rosto.");
-      if (!ok) return;
-      usuarioEditando.faceDescriptor = null;
-      usuarioEditando.faceDescriptors = null;
-      const s = document.getElementById("editStatus");
-      s.textContent = "Biometria resetada. Clique em Salvar para confirmar.";
-      s.style.color = "orange";
+      const temBio = !!(usuarioEditando.faceDescriptors || usuarioEditando.faceDescriptor);
+      if (temBio) {
+        const ok = await confirmar(`Resetar a biometria de ${usuarioEditando.nome} e recadastrar agora?`);
+        if (!ok) return;
+        usuarioEditando.faceDescriptor = null;
+        usuarioEditando.faceDescriptors = null;
+      }
+      await abrirModalBioCadastro('editar');
     });
 
     document.getElementById("btnSalvarEdicao").addEventListener("click", async () => {
@@ -3962,6 +4004,10 @@
     document.getElementById("btnBaseCalculo").addEventListener("click", () => {
       if (!usuarioLogado) return;
       abrirBaseCalculo(usuarioLogado.id);
+    });
+
+    document.getElementById("btnCadastrarBioProprio").addEventListener("click", async () => {
+      await abrirModalBioCadastro('proprio');
     });
 
     document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
@@ -4362,12 +4408,14 @@
       document.getElementById("guiasPonto").classList.remove("detectado");
       document.getElementById("labelPonto").textContent = "Posicione o rosto no oval";
 
-      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user" }, audio: false })
+      navigator.mediaDevices.getUserMedia({ video: { facingMode: "user", width: { ideal: 1280 }, height: { ideal: 720 } }, audio: false })
         .then((stream) => {
           streamAtivo = stream;
           const video = document.getElementById("bioVideo");
           video.srcObject = stream;
+          video.play().catch(() => {});
           video.onloadedmetadata = () => {
+            video.play().catch(() => {});
             _stopAutoPonto = iniciarAutoCaptura(
               video,
               document.getElementById("circuloPonto"),
