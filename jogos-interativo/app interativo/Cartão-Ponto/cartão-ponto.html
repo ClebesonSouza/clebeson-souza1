@@ -683,27 +683,27 @@
   <div id="splashScreen">
     <div class="splash-conteudo">
       <div class="splash-icone">
-        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 66" width="292" height="64">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 300 50" width="292" height="48">
           <defs>
-            <!-- Gradiente chrome: branco puro no topo, azul-gelo embaixo -->
             <linearGradient id="ptzGrad" x1="0%" y1="0%" x2="0%" y2="100%">
               <stop offset="0%"   stop-color="#ffffff"/>
-              <stop offset="40%"  stop-color="#e4f0ff"/>
-              <stop offset="100%" stop-color="#a8ccee"/>
+              <stop offset="60%"  stop-color="#b8d8ff"/>
+              <stop offset="100%" stop-color="#7aaee8"/>
             </linearGradient>
+            <filter id="blueglow" x="-10%" y="-30%" width="120%" height="160%">
+              <feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="rgba(0,80,200,0.45)"/>
+            </filter>
           </defs>
-          <!-- 8 camadas de sombra azul-escura criando extrusão 3D -->
-          <text x="158" y="51" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#00000a">Cartão Ponto</text>
-          <text x="157" y="50" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#04001a">Cartão Ponto</text>
-          <text x="156" y="49" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#080030">Cartão Ponto</text>
-          <text x="155" y="48" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#0c0848">Cartão Ponto</text>
-          <text x="154" y="47" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#101060">Cartão Ponto</text>
-          <text x="153" y="46" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#141878">Cartão Ponto</text>
-          <text x="152" y="45" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#182090">Cartão Ponto</text>
-          <text x="151" y="44" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50" fill="#1c28a8">Cartão Ponto</text>
-          <!-- Face: gradiente chrome branco -->
-          <text x="150" y="43" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="50"
-                fill="url(#ptzGrad)">Cartão Ponto</text>
+          <text x="158" y="39" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#00000a">Cartão Ponto</text>
+          <text x="157" y="38" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#04001a">Cartão Ponto</text>
+          <text x="156" y="37" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#080030">Cartão Ponto</text>
+          <text x="155" y="36" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#0c0848">Cartão Ponto</text>
+          <text x="154" y="35" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#101060">Cartão Ponto</text>
+          <text x="153" y="34" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#141878">Cartão Ponto</text>
+          <text x="152" y="33" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#182090">Cartão Ponto</text>
+          <text x="151" y="32" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36" fill="#1c28a8">Cartão Ponto</text>
+          <text x="150" y="31" text-anchor="middle" dominant-baseline="central" font-family="Impact,'Arial Black',sans-serif" font-size="36"
+                fill="url(#ptzGrad)" filter="url(#blueglow)">Cartão Ponto</text>
         </svg>
       </div>
       <h1 class="splash-titulo">Pontualize</h1>
