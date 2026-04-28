@@ -2,8 +2,15 @@
 <html lang="pt-BR">
 <head>
   <meta charset="UTF-8" />
-  <title>Cartão Ponto BJK</title>
+  <title>Pontualize — Cartão Ponto</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#2a6eb6" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="Pontualize" />
+  <link rel="manifest" href="manifest.json" />
+  <link rel="apple-touch-icon" href="icons/icon.svg" />
   <style>
     * {
       box-sizing: border-box;
@@ -5139,6 +5146,16 @@
     document.getElementById("btnCancelarEdicaoBatida").addEventListener("click", () => {
       document.getElementById("modalEditarBatida").classList.remove("ativo");
     });
+  </script>
+
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./service-worker.js')
+          .then(reg => console.log('[SW] registrado:', reg.scope))
+          .catch(err => console.warn('[SW] erro ao registrar:', err));
+      });
+    }
   </script>
 </body>
 </html>
