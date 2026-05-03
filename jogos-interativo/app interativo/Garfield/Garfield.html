@@ -76,6 +76,20 @@
       border:1px solid rgba(255,215,0,.45);
       padding:8px 16px;border-radius:50px;
       box-shadow:0 0 14px rgba(255,215,0,.15);
+      transition:box-shadow .3s, border-color .3s;
+    }
+    #balance-box.win-glow{
+      border-color:rgba(255,230,0,.95);
+      animation:firefly 1.4s ease-in-out infinite;
+    }
+    @keyframes firefly{
+      0%  {box-shadow:0 0 6px rgba(255,215,0,.2),0 0 0 rgba(255,255,180,0)}
+      18% {box-shadow:0 0 22px rgba(255,230,0,.95),0 0 40px rgba(255,255,120,.35)}
+      32% {box-shadow:0 0 5px rgba(255,215,0,.15),0 0 0 rgba(255,255,180,0)}
+      55% {box-shadow:0 0 30px rgba(255,240,0,1),0 0 55px rgba(255,255,150,.45)}
+      72% {box-shadow:0 0 8px rgba(255,215,0,.25),0 0 0 rgba(255,255,180,0)}
+      88% {box-shadow:0 0 18px rgba(255,225,0,.8),0 0 30px rgba(255,255,120,.25)}
+      100%{box-shadow:0 0 6px rgba(255,215,0,.2),0 0 0 rgba(255,255,180,0)}
     }
     #balance-val{font-size:1.1rem;font-weight:900;color:var(--gold);letter-spacing:1px}
 
@@ -178,33 +192,53 @@
     .sym-orange::before {background:linear-gradient(135deg,#2e0e00,#5c1c00);border-color:rgba(255,110,40,.35)}
     .sym-star::before   {background:linear-gradient(135deg,#001020,#001e35);border-color:rgba(80,210,255,.35)}
 
-    /* Símbolo vencedor — glow externo + radiância interna */
-    .sym-win::before{animation:symGlow .38s ease-in-out 4}
+    /* Símbolo vencedor — glow contínuo estilo vagalume */
+    .sym-win::before{
+      animation:symFirefly 1.4s ease-in-out infinite;
+    }
     .sym-tiger.sym-win::before  {box-shadow:0 0 24px rgba(255,130,0,.9),inset 0 0 12px rgba(255,160,0,.25);border-color:rgba(255,160,0,.95)}
     .sym-diamond.sym-win::before{box-shadow:0 0 24px rgba(80,160,255,.9),inset 0 0 12px rgba(120,190,255,.25);border-color:rgba(120,190,255,.95)}
     .sym-gold.sym-win::before   {box-shadow:0 0 24px rgba(255,210,0,.9),inset 0 0 12px rgba(255,230,80,.25);border-color:rgba(255,230,80,.95)}
     .sym-bell.sym-win::before   {box-shadow:0 0 24px rgba(170,90,255,.9),inset 0 0 12px rgba(200,130,255,.25);border-color:rgba(200,130,255,.95)}
     .sym-orange.sym-win::before {box-shadow:0 0 24px rgba(255,110,40,.9),inset 0 0 12px rgba(255,150,80,.25);border-color:rgba(255,150,80,.95)}
     .sym-star.sym-win::before   {box-shadow:0 0 24px rgba(80,210,255,.9),inset 0 0 12px rgba(140,230,255,.25);border-color:rgba(140,230,255,.95)}
-    @keyframes symGlow{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+    @keyframes symFirefly{
+      0%  {opacity:.2;transform:scale(1)}
+      18% {opacity:1; transform:scale(1.08)}
+      32% {opacity:.15;transform:scale(1)}
+      55% {opacity:1; transform:scale(1.12)}
+      72% {opacity:.2;transform:scale(1)}
+      88% {opacity:.9;transform:scale(1.06)}
+      100%{opacity:.2;transform:scale(1)}
+    }
 
-    /* Luz radial interna (::after) */
+    /* Luz radial interna — vagalume */
     .sym-win::after{
       content:'';position:absolute;inset:5px 7px;border-radius:13px;
       z-index:0;pointer-events:none;
-      animation:innerRadiance .8s ease-in-out infinite alternate;
+      animation:symFirefly 1.4s ease-in-out infinite;
     }
-    .sym-tiger.sym-win::after  {background:radial-gradient(circle at 50% 40%,rgba(255,160,60,.45) 0%,transparent 65%)}
-    .sym-diamond.sym-win::after{background:radial-gradient(circle at 50% 40%,rgba(100,180,255,.45) 0%,transparent 65%)}
-    .sym-gold.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(255,230,80,.45) 0%,transparent 65%)}
-    .sym-bell.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(200,130,255,.45) 0%,transparent 65%)}
-    .sym-orange.sym-win::after {background:radial-gradient(circle at 50% 40%,rgba(255,150,80,.45) 0%,transparent 65%)}
-    .sym-star.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(140,230,255,.45) 0%,transparent 65%)}
-    @keyframes innerRadiance{0%{opacity:.3}100%{opacity:1}}
+    .sym-tiger.sym-win::after  {background:radial-gradient(circle at 50% 40%,rgba(255,160,60,.55) 0%,transparent 65%)}
+    .sym-diamond.sym-win::after{background:radial-gradient(circle at 50% 40%,rgba(100,180,255,.55) 0%,transparent 65%)}
+    .sym-gold.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(255,230,80,.55) 0%,transparent 65%)}
+    .sym-bell.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(200,130,255,.55) 0%,transparent 65%)}
+    .sym-orange.sym-win::after {background:radial-gradient(circle at 50% 40%,rgba(255,150,80,.55) 0%,transparent 65%)}
+    .sym-star.sym-win::after   {background:radial-gradient(circle at 50% 40%,rgba(140,230,255,.55) 0%,transparent 65%)}
 
-    /* Emoji salta no acerto */
-    .sym-win span{animation:emojiPop .38s ease-in-out 4;filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1.3)}
-    @keyframes emojiPop{0%,100%{transform:scale(1)}50%{transform:scale(1.2)}}
+    /* Emoji pulsa junto — vagalume */
+    .sym-win span{
+      animation:emojiFirefly 1.4s ease-in-out infinite;
+      filter:drop-shadow(0 2px 8px rgba(0,0,0,.7));
+    }
+    @keyframes emojiFirefly{
+      0%  {transform:scale(1);   filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1)}
+      18% {transform:scale(1.14);filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1.5)}
+      32% {transform:scale(1);   filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(.9)}
+      55% {transform:scale(1.18);filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1.6)}
+      72% {transform:scale(1);   filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1)}
+      88% {transform:scale(1.1); filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1.4)}
+      100%{transform:scale(1);   filter:drop-shadow(0 2px 8px rgba(0,0,0,.7)) brightness(1)}
+    }
 
     /* FAIXA CENTRAL ILUMINADA */
     #reels-wrap::after{
@@ -897,7 +931,8 @@ function spin(){
 
   const btn = document.getElementById('spin-btn');
   btn.disabled = true;
-  btn.textContent = '⏳ Girando...';
+  btn.innerHTML = '<span class="spin-icon">⏳</span><span class="spin-label">GIRANDO</span>';
+  document.getElementById('balance-box').classList.remove('win-glow');
 
   document.querySelectorAll('.reel').forEach(r=>r.classList.remove('win'));
   document.querySelectorAll('.sym-win').forEach(s=>s.classList.remove('sym-win'));
@@ -947,7 +982,7 @@ function spin(){
     checkWin(results);
     G.spinning = false;
     btn.disabled = false;
-    btn.innerHTML = '🎰 GIRAR';
+    btn.innerHTML = '<span class="spin-icon">🎰</span><span class="spin-label">GIRAR</span>';
     save();
     renderHistory();
   }, delays[2] + 120);
@@ -1018,6 +1053,7 @@ function checkWin(results){
     G.balance = parseFloat((G.balance + ganho).toFixed(2));
     if(G.balance > G.maxBalance){ G.maxBalance = G.balance; updateJackpot(); }
     document.querySelectorAll('.reel').forEach(r=>r.classList.add('win'));
+    document.getElementById('balance-box').classList.add('win-glow');
     showWin(totalMult, ganho, isJP);
     const sndVitoria = new Audio('sons/som-de-vitoria.mp4');
     sndVitoria.play().catch(()=>{});
