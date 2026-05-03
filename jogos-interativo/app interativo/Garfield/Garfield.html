@@ -709,6 +709,7 @@
       <button class="bbtn" id="bonus-btn" onclick="bonusDiario()">🎁 Bônus Diário</button>
       <button class="bbtn" onclick="abrirDeposito()" style="color:#4d9fff;border-color:rgba(77,160,255,.3)">💳 Depósito</button>
       <button class="bbtn" onclick="saque()" style="color:#4dff91;border-color:rgba(77,255,145,.3)">💸 Saque</button>
+      <button class="bbtn" onclick="resetGame()" style="color:#ff6b6b;border-color:rgba(255,80,80,.3)">🔄 Reset</button>
     </div>
   </div>
 
@@ -861,7 +862,7 @@
 
 <script>
 const SYMS = [
-  {id:'tiger',  e:'🐯', w:3,  p2:2,  p3:20},
+  {id:'tiger',  e:'🐯', w:7,  p2:2,  p3:20},
   {id:'diamond',e:'💎', w:6,  p2:1.5,p3:8 },
   {id:'gold',   e:'💰', w:10, p2:1,  p3:4 },
   {id:'bell',   e:'🔔', w:13, p2:0,  p3:2 },
@@ -1016,6 +1017,7 @@ function checkWin(results){
 
   let totalMult = 0;
   let isJP = false;
+  const winPositions = [];
 
   lines.forEach(line => {
     const [a,b,c] = line.syms;
@@ -1031,10 +1033,7 @@ function checkWin(results){
     if(m > 0){
       totalMult += m;
       document.getElementById(line.el).classList.add('lit');
-      line.pos.forEach(([ri, row]) => {
-        const symEl = document.getElementById(`strip-${ri}`).querySelectorAll('.sym')[PRE + row];
-        if(symEl) symEl.classList.add('sym-win');
-      });
+      winPositions.push(...line.pos);
     }
   });
 
@@ -1049,6 +1048,10 @@ function checkWin(results){
     if(G.balance > G.maxBalance){ G.maxBalance = G.balance; updateJackpot(); }
     document.querySelectorAll('.reel').forEach(r=>r.classList.add('win'));
     document.getElementById('balance-box').classList.add('win-glow');
+    winPositions.forEach(([ri, row]) => {
+      const symEl = document.getElementById(`strip-${ri}`).querySelectorAll('.sym')[PRE + row];
+      if(symEl) symEl.classList.add('sym-win');
+    });
     showWin(totalMult, ganho, isJP);
     const sndVitoria = new Audio('sons/som-de-vitoria.mp4');
     sndVitoria.play().catch(()=>{});
@@ -1260,6 +1263,26 @@ function toast(msg){
 
 function save(){
   localStorage.setItem('gafild', JSON.stringify({b:G.balance, i:G.bidx, h:G.history.slice(0,10), sa:G.semAcerto, mx:G.maxBalance}));
+}
+
+function resetGame(){
+  if(!confirm('Tem certeza que deseja resetar o jogo? Todo o saldo e histórico serão perdidos.')) return;
+  localStorage.removeItem('gafild');
+  localStorage.removeItem('gafild_bonus');
+  G.balance = 100; G.bidx = 0; G.bet = BETS[0];
+  G.history = []; G.semAcerto = 0; G.maxBalance = 100;
+  document.getElementById('balance-box').classList.remove('win-glow');
+  document.querySelectorAll('.reel').forEach(r=>r.classList.remove('win'));
+  document.querySelectorAll('.sym-win').forEach(s=>s.classList.remove('sym-win'));
+  document.getElementById('win-line').classList.remove('lit');
+  document.querySelectorAll('.dline').forEach(l=>l.classList.remove('lit'));
+  document.getElementById('win-overlay').classList.add('hide');
+  for(let i=0;i<3;i++) fillStatic(i);
+  updateUI();
+  updateJackpot();
+  renderHistory();
+  atualizarBonusBtn();
+  toast('🔄 Jogo resetado! Saldo: R$ 100,00');
 }
 
 /* ── PARTICLES ── */
