@@ -709,7 +709,6 @@
       <button class="bbtn" id="bonus-btn" onclick="bonusDiario()">🎁 Bônus Diário</button>
       <button class="bbtn" onclick="abrirDeposito()" style="color:#4d9fff;border-color:rgba(77,160,255,.3)">💳 Depósito</button>
       <button class="bbtn" onclick="saque()" style="color:#4dff91;border-color:rgba(77,255,145,.3)">💸 Saque</button>
-      <button class="bbtn" onclick="resetGame()" style="color:#ff6b6b;border-color:rgba(255,80,80,.3)">🔄 Reset</button>
     </div>
   </div>
 
@@ -1263,26 +1262,6 @@ function toast(msg){
 
 function save(){
   localStorage.setItem('gafild', JSON.stringify({b:G.balance, i:G.bidx, h:G.history.slice(0,10), sa:G.semAcerto, mx:G.maxBalance}));
-}
-
-function resetGame(){
-  if(!confirm('Tem certeza que deseja resetar o jogo? Todo o saldo e histórico serão perdidos.')) return;
-  localStorage.removeItem('gafild');
-  localStorage.removeItem('gafild_bonus');
-  G.balance = 100; G.bidx = 0; G.bet = BETS[0];
-  G.history = []; G.semAcerto = 0; G.maxBalance = 100;
-  document.getElementById('balance-box').classList.remove('win-glow');
-  document.querySelectorAll('.reel').forEach(r=>r.classList.remove('win'));
-  document.querySelectorAll('.sym-win').forEach(s=>s.classList.remove('sym-win'));
-  document.getElementById('win-line').classList.remove('lit');
-  document.querySelectorAll('.dline').forEach(l=>l.classList.remove('lit'));
-  document.getElementById('win-overlay').classList.add('hide');
-  for(let i=0;i<3;i++) fillStatic(i);
-  updateUI();
-  updateJackpot();
-  renderHistory();
-  atualizarBonusBtn();
-  toast('🔄 Jogo resetado! Saldo: R$ 100,00');
 }
 
 /* ── PARTICLES ── */
