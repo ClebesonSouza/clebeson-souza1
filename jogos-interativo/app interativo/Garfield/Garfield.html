@@ -285,24 +285,39 @@
     #bet-val{font-size:1.2rem;font-weight:900;color:var(--gold);text-shadow:0 0 10px rgba(255,215,0,.3)}
 
     #spin-btn{
-      width:100%;padding:12px;border:none;border-radius:18px;
-      background:linear-gradient(135deg,#b35000,#FF8C00,#FFD700,#FF8C00);
-      background-size:200% auto;
-      color:#000;font-size:1.1rem;font-weight:900;
-      cursor:pointer;letter-spacing:4px;transition:.2s;
-      box-shadow:0 6px 28px rgba(255,120,0,.5),0 2px 0 rgba(255,255,255,.2) inset;
+      width:136px;height:136px;padding:0;border:none;border-radius:50%;
+      background:radial-gradient(circle at 35% 35%,#FFE066,#FF8C00 55%,#b35000);
+      color:#1a0000;
+      cursor:pointer;transition:.2s;
+      display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;
+      box-shadow:
+        0 0 0 5px rgba(255,180,0,.25),
+        0 0 0 9px rgba(255,120,0,.12),
+        0 8px 32px rgba(255,120,0,.6),
+        inset 0 3px 0 rgba(255,255,255,.35),
+        inset 0 -3px 0 rgba(0,0,0,.2);
       animation:btnIdle 2.5s ease-in-out infinite;
+      position:relative;
+    }
+    #spin-btn .spin-icon{font-size:2rem;line-height:1;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3))}
+    #spin-btn .spin-label{
+      font-family:'Orbitron',sans-serif;
+      font-size:.62rem;font-weight:900;letter-spacing:3px;
+      color:#1a0000;text-shadow:0 1px 0 rgba(255,255,255,.4);
     }
     @keyframes btnIdle{
-      0%,100%{box-shadow:0 6px 28px rgba(255,120,0,.5);background-position:0% center}
-      50%{box-shadow:0 6px 40px rgba(255,200,0,.7);background-position:100% center}
+      0%,100%{box-shadow:0 0 0 5px rgba(255,180,0,.25),0 0 0 9px rgba(255,120,0,.12),0 8px 32px rgba(255,120,0,.6),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.2)}
+      50%{box-shadow:0 0 0 7px rgba(255,215,0,.4),0 0 0 13px rgba(255,140,0,.15),0 10px 48px rgba(255,200,0,.8),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.2)}
     }
-    #spin-btn:hover{transform:translateY(-3px);box-shadow:0 10px 36px rgba(255,140,0,.65);animation:none;background-position:100% center}
-    #spin-btn:active{transform:translateY(1px);box-shadow:0 2px 10px rgba(255,120,0,.3)}
+    #spin-btn:hover{transform:scale(1.07);animation:none;
+      box-shadow:0 0 0 7px rgba(255,215,0,.45),0 0 0 13px rgba(255,140,0,.18),0 12px 48px rgba(255,180,0,.75),inset 0 3px 0 rgba(255,255,255,.35),inset 0 -3px 0 rgba(0,0,0,.2)}
+    #spin-btn:active{transform:scale(.95);
+      box-shadow:0 0 0 4px rgba(255,180,0,.2),0 4px 16px rgba(255,120,0,.4),inset 0 2px 0 rgba(255,255,255,.2),inset 0 -2px 0 rgba(0,0,0,.3)}
     #spin-btn:disabled{
-      background:linear-gradient(135deg,#2a2a2a,#3a3a3a);color:#555;
-      cursor:not-allowed;box-shadow:none;transform:none;animation:none;
+      background:radial-gradient(circle at 35% 35%,#444,#2a2a2a);
+      color:#555;cursor:not-allowed;box-shadow:none;transform:none;animation:none;
     }
+    #spin-btn:disabled .spin-label{color:#555}
 
     /* BOTTOM BUTTONS */
     #bottom-row{display:flex;gap:8px}
@@ -656,7 +671,10 @@
       </div>
       <button class="bctrl" onclick="changeBet(1)">+</button>
     </div>
-    <button id="spin-btn" onclick="spin()">🎰 GIRAR</button>
+    <button id="spin-btn" onclick="spin()">
+      <span class="spin-icon">🎰</span>
+      <span class="spin-label">GIRAR</span>
+    </button>
     <div id="bottom-row">
       <button class="bbtn" onclick="openPaytable()">📊 Pagamentos</button>
       <button class="bbtn" id="bonus-btn" onclick="bonusDiario()">🎁 Bônus Diário</button>
@@ -814,12 +832,12 @@
 
 <script>
 const SYMS = [
-  {id:'tiger',  e:'🐯', w:1,  p2:2,  p3:20},
-  {id:'diamond',e:'💎', w:3,  p2:1.5,p3:8 },
-  {id:'gold',   e:'💰', w:6,  p2:1,  p3:4 },
-  {id:'bell',   e:'🔔', w:10, p2:0,  p3:2 },
+  {id:'tiger',  e:'🐯', w:3,  p2:2,  p3:20},
+  {id:'diamond',e:'💎', w:6,  p2:1.5,p3:8 },
+  {id:'gold',   e:'💰', w:10, p2:1,  p3:4 },
+  {id:'bell',   e:'🔔', w:13, p2:0,  p3:2 },
   {id:'orange', e:'🍊', w:14, p2:0.5,p3:1.5},
-  {id:'star',   e:'⭐', w:16, p2:0.5,p3:1.2},
+  {id:'star',   e:'⭐', w:14, p2:0.5,p3:1.2},
 ];
 const TOTAL_W = SYMS.reduce((a,s)=>a+s.w,0);
 const BETS = [0.40, 0.50, 0.70, 1.00, 4.00, 5.00, 10.00, 50.00, 100.00];
@@ -861,6 +879,14 @@ function rndSym(){
   return SYMS[SYMS.length-1];
 }
 
+function rndSymP2(){
+  const eligible = SYMS.filter(s=>s.p2>0);
+  const tw = eligible.reduce((a,s)=>a+s.w,0);
+  let r = Math.random()*tw;
+  for(const s of eligible){ r-=s.w; if(r<=0) return s; }
+  return eligible[eligible.length-1];
+}
+
 /* ── SPIN ── */
 function spin(){
   if(G.spinning) return;
@@ -879,10 +905,24 @@ function spin(){
   document.querySelectorAll('.dline').forEach(l=>l.classList.remove('lit'));
   document.getElementById('win-overlay').classList.add('hide');
 
-  const gold = SYMS[2];
-  const results = G.semAcerto >= 50
-    ? [ [rndSym(), gold, rndSym()], [rndSym(), gold, rndSym()], [rndSym(), gold, rndSym()] ]
-    : Array.from({length:3}, ()=>[rndSym(),rndSym(),rndSym()]);
+  let results;
+  if(G.semAcerto >= 12){
+    // garante acerto: 3 iguais na linha central
+    const winSym = rndSymP2();
+    results = [
+      [rndSym(), winSym, rndSym()],
+      [rndSym(), winSym, rndSym()],
+      [rndSym(), winSym, rndSym()],
+    ];
+  } else if(G.semAcerto >= 5 && Math.random() < 0.50){
+    // boost parcial: 2 primeiros rolos iguais no centro (quase-acerto vira acerto)
+    const boostSym = rndSymP2();
+    results = Array.from({length:3}, ()=>[rndSym(),rndSym(),rndSym()]);
+    results[0][1] = boostSym;
+    results[1][1] = boostSym;
+  } else {
+    results = Array.from({length:3}, ()=>[rndSym(),rndSym(),rndSym()]);
+  }
 
   updateUI();
 
