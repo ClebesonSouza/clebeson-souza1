@@ -3440,16 +3440,19 @@ function update(){
     for(var bbi=p8BabyBees.length-1;bbi>=0;bbi--){
       var bb=p8BabyBees[bbi];
       if(bb.life>500){
-        // Fase de saída explosiva da colmeia
+        // Saída explosiva da colmeia (~100 frames)
         bb.x+=bb.vx;bb.y+=bb.vy;bb.vy+=0.03;bb.vx*=0.98;
+        bb.life--;
       }else{
         // Seguir e orbitar o personagem
         bb.orbitAngle+=0.055;
         var btx=pl.x+pl.w/2+Math.cos(bb.orbitAngle)*30;
         var bty=pl.y+pl.h/2+Math.sin(bb.orbitAngle)*18-10;
         bb.x+=(btx-bb.x)*0.09;bb.y+=(bty-bb.y)*0.09;
+        // Durante 'done': vida congelada — abelhinhas acompanham até o fim da fase
+        if(p8HiveState!=='done') bb.life--;
       }
-      bb.life--;bb.alpha=Math.min(1,bb.life/50);
+      bb.alpha=Math.min(1,bb.life/50);
       if(bb.life<=0)p8BabyBees.splice(bbi,1);
     }
     // Máquina de estados da colmeia
@@ -3471,7 +3474,7 @@ function update(){
           p8HiveState='hatching';p8HiveTimer=0;
           for(var bbi2=0;bbi2<12;bbi2++){
             var bba=Math.PI/2+((bbi2/12)-0.5)*Math.PI*1.5;
-            p8BabyBees.push({x:p8HiveEntrX+p8HiveEntrW/2,y:p8HiveEntrY,vx:Math.cos(bba)*3.5,vy:-Math.abs(Math.sin(bba))*5-1,life:1800,alpha:1,orbitAngle:bba});
+            p8BabyBees.push({x:p8HiveEntrX+p8HiveEntrW/2,y:p8HiveEntrY,vx:Math.cos(bba)*3.5,vy:-Math.abs(Math.sin(bba))*5-1,life:600,alpha:1,orbitAngle:bba});
           }
         }
       }else if(p8HiveState==='hatching'){
@@ -6986,7 +6989,7 @@ function drawHive8Interior(){
   // === CONTADOR DE DEPÓSITO (1.5s) ===
   if(p8HiveState==='inside'){
     var dp=Math.min(1,p8HiveTimer/90),sl=((1-dp)*1.5).toFixed(1);
-    var ax=CW/2,ay=qy+30*sc,ar=18;
+    var ax=CW/2,ay=qy+36,ar=18;
     ctx.strokeStyle='rgba(80,40,0,0.55)';ctx.lineWidth=6;
     ctx.beginPath();ctx.arc(ax,ay,ar,-Math.PI/2,Math.PI*1.5,false);ctx.stroke();
     var dcg=ctx.createLinearGradient(ax-ar,ay,ax+ar,ay);
