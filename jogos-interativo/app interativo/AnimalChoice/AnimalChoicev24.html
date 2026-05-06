@@ -3444,11 +3444,12 @@ function update(){
         bb.x+=bb.vx;bb.y+=bb.vy;bb.vy+=0.03;bb.vx*=0.98;
         bb.life--;
       }else{
-        // Seguir e orbitar o personagem
-        bb.orbitAngle+=0.055;
-        var btx=pl.x+pl.w/2+Math.cos(bb.orbitAngle)*30;
-        var bty=pl.y+pl.h/2+Math.sin(bb.orbitAngle)*18-10;
-        bb.x+=(btx-bb.x)*0.09;bb.y+=(bty-bb.y)*0.09;
+        // Seguir em fila atrás do personagem
+        var bbSpacing=20;
+        var bbWave=Math.sin(Date.now()/180+bb.idx*0.65)*6;
+        var btx=pl.x+pl.w/2-pl.facing*(bb.idx+1)*bbSpacing;
+        var bty=pl.y+pl.h/2+bbWave-6;
+        bb.x+=(btx-bb.x)*0.10;bb.y+=(bty-bb.y)*0.10;
         // Durante 'done': vida congelada — abelhinhas acompanham até o fim da fase
         if(p8HiveState!=='done') bb.life--;
       }
@@ -3474,7 +3475,7 @@ function update(){
           p8HiveState='hatching';p8HiveTimer=0;
           for(var bbi2=0;bbi2<12;bbi2++){
             var bba=Math.PI/2+((bbi2/12)-0.5)*Math.PI*1.5;
-            p8BabyBees.push({x:p8HiveEntrX+p8HiveEntrW/2,y:p8HiveEntrY,vx:Math.cos(bba)*3.5,vy:-Math.abs(Math.sin(bba))*5-1,life:600,alpha:1,orbitAngle:bba});
+            p8BabyBees.push({x:p8HiveEntrX+p8HiveEntrW/2,y:p8HiveEntrY,vx:Math.cos(bba)*3.5,vy:-Math.abs(Math.sin(bba))*5-1,life:600,alpha:1,idx:bbi2});
           }
         }
       }else if(p8HiveState==='hatching'){
@@ -6132,6 +6133,7 @@ function drawP3UnlockStars(){
 }
 function drawPlayer(){
   if(phase===6&&metamorphState!=='none'&&metamorphState!=='done') return;
+  if(phase===8&&p8HiveState==='inside') return; // desenhada dentro da colmeia
   if(deathAnim>0) return; // não desenha player durante animação de morte
   // Piscar durante invencibilidade — oculta a cada 6 frames
   if(invincible>0 && Math.floor(invincible/6)%2===0) return;
@@ -6512,9 +6514,10 @@ function drawP8Flowers(){
     ctx.beginPath();ctx.moveTo(bbsx+2,bb.y-6);ctx.lineTo(bbsx+2,bb.y+6);ctx.stroke();
     ctx.restore();
     ctx.strokeStyle='rgba(60,30,0,0.50)';ctx.lineWidth=1;ctx.beginPath();ctx.ellipse(bbsx,bb.y,8,5,0,0,Math.PI*2);ctx.stroke();
-    // Olho
-    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(bbsx+5,bb.y-1,1.5,0,Math.PI*2);ctx.fill();
-    ctx.fillStyle='rgba(255,255,255,0.8)';ctx.beginPath();ctx.arc(bbsx+5.5,bb.y-1.5,0.7,0,Math.PI*2);ctx.fill();
+    // Olho — vira na direção do personagem
+    var bbf=pl.facing;
+    ctx.fillStyle='#111';ctx.beginPath();ctx.arc(bbsx+5*bbf,bb.y-1,1.5,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,0.8)';ctx.beginPath();ctx.arc(bbsx+5.5*bbf,bb.y-1.5,0.7,0,Math.PI*2);ctx.fill();
     ctx.restore();
   }
   // Colmeia exterior — oval pendurada em árvore (como colmeia natural)
@@ -6920,6 +6923,62 @@ function drawHive8Interior(){
       }
       ctx.restore();
     }
+  }
+
+  // === ABELHA JOGADORA: voa e deposita néctar nos hexagonais ===
+  if(p8HiveState==='inside'){
+    var plTime=Date.now()/80;
+    var hf0=p8HexFilled;
+    var dep2=Math.min(2,10-hf0);
+    var hp0=hexPos[Math.min(hf0,9)];
+    var hp1=hexPos[Math.min(hf0+(dep2>=2?1:0),9)];
+    var entX=108,entY=192;
+    var pt=Math.min(1,p8HiveTimer/90);
+    var pbx,pby,pbFacing=1,fillProg0=0,fillProg1=0,atCell=false,atCellPos=null;
+    function eqB(t){return t<0.5?2*t*t:-1+(4-2*t)*t;}
+    if(dep2>=2){
+      if(pt<0.22){var e=eqB(pt/0.22);pbx=entX+(hp0.x-entX)*e;pby=entY+(hp0.y-entY)*e;pbFacing=1;}
+      else if(pt<0.42){pbx=hp0.x;pby=hp0.y+Math.sin(plTime*9)*2.5;pbFacing=1;fillProg0=(pt-0.22)/0.20;atCell=true;atCellPos=hp0;}
+      else if(pt<0.58){var e=eqB((pt-0.42)/0.16);pbx=hp0.x+(hp1.x-hp0.x)*e;pby=hp0.y+(hp1.y-hp0.y)*e;fillProg0=1;pbFacing=1;}
+      else if(pt<0.80){pbx=hp1.x;pby=hp1.y+Math.sin(plTime*9)*2.5;pbFacing=1;fillProg0=1;fillProg1=(pt-0.58)/0.22;atCell=true;atCellPos=hp1;}
+      else{var e=eqB((pt-0.80)/0.20);pbx=hp1.x+(entX-hp1.x)*e;pby=hp1.y+(entY-hp1.y)*e;fillProg0=1;fillProg1=1;pbFacing=-1;}
+    }else{
+      if(pt<0.30){var e=eqB(pt/0.30);pbx=entX+(hp0.x-entX)*e;pby=entY+(hp0.y-entY)*e;pbFacing=1;}
+      else if(pt<0.80){pbx=hp0.x;pby=hp0.y+Math.sin(plTime*9)*2.5;pbFacing=1;fillProg0=(pt-0.30)/0.50;atCell=true;atCellPos=hp0;}
+      else{var e=eqB((pt-0.80)/0.20);pbx=hp0.x+(entX-hp0.x)*e;pby=hp0.y+(entY-hp0.y)*e;fillProg0=1;pbFacing=-1;}
+    }
+    // Preenchimento dourado progressivo nos potes alvo
+    if(fillProg0>0){
+      ctx.save();ctx.globalAlpha=p8HiveAlpha*fillProg0*0.82;
+      var fg0=ctx.createRadialGradient(hp0.x,hp0.y,0,hp0.x,hp0.y,hR*0.92);
+      fg0.addColorStop(0,'rgba(255,215,0,0.92)');fg0.addColorStop(1,'rgba(255,130,0,0.04)');
+      ctx.fillStyle=fg0;ctx.beginPath();
+      for(var fgi=0;fgi<6;fgi++){var fga=Math.PI/6+fgi*Math.PI/3;if(fgi===0)ctx.moveTo(hp0.x+hR*Math.cos(fga),hp0.y+hR*Math.sin(fga));else ctx.lineTo(hp0.x+hR*Math.cos(fga),hp0.y+hR*Math.sin(fga));}
+      ctx.closePath();ctx.fill();ctx.restore();
+    }
+    if(dep2>=2&&fillProg1>0){
+      ctx.save();ctx.globalAlpha=p8HiveAlpha*fillProg1*0.82;
+      var fg1=ctx.createRadialGradient(hp1.x,hp1.y,0,hp1.x,hp1.y,hR*0.92);
+      fg1.addColorStop(0,'rgba(255,215,0,0.92)');fg1.addColorStop(1,'rgba(255,130,0,0.04)');
+      ctx.fillStyle=fg1;ctx.beginPath();
+      for(var fgi=0;fgi<6;fgi++){var fga=Math.PI/6+fgi*Math.PI/3;if(fgi===0)ctx.moveTo(hp1.x+hR*Math.cos(fga),hp1.y+hR*Math.sin(fga));else ctx.lineTo(hp1.x+hR*Math.cos(fga),hp1.y+hR*Math.sin(fga));}
+      ctx.closePath();ctx.fill();ctx.restore();
+    }
+    // Gotinhas de néctar ao depositar
+    if(atCell&&atCellPos&&Math.random()<0.55){
+      ctx.save();ctx.globalAlpha=p8HiveAlpha*(0.45+Math.random()*0.45);
+      ctx.fillStyle='#FFD700';
+      ctx.beginPath();ctx.arc(atCellPos.x+(Math.random()-0.5)*20,atCellPos.y+(Math.random()-0.5)*16,1.8+Math.random()*2.2,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+    }
+    // Glow de néctar ao redor da abelha
+    ctx.save();ctx.globalAlpha=p8HiveAlpha*0.52;
+    var plg=ctx.createRadialGradient(pbx,pby,2,pbx,pby,20);
+    plg.addColorStop(0,'rgba(255,235,0,0.90)');plg.addColorStop(1,'rgba(255,175,0,0)');
+    ctx.fillStyle=plg;ctx.beginPath();ctx.arc(pbx,pby,20,0,Math.PI*2);ctx.fill();
+    ctx.globalAlpha=1;ctx.restore();
+    // Abelha jogadora animada dentro da colmeia
+    drawBeeChar(pbx,pby,1.0,pbFacing,plTime,true);
   }
 
   // === ABELHA RAINHA ANIMADA (mesmo estilo do personagem) ===
