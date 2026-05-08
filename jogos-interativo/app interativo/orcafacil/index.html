@@ -1,0 +1,638 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <meta name="theme-color" content="#1a73e8" />
+  <meta name="mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="default" />
+  <meta name="apple-mobile-web-app-title" content="OrcaFácil" />
+  <title>OrçaFácil Industrial</title>
+  <link rel="manifest" href="manifest.json" />
+  <link rel="stylesheet" href="css/style.css" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+</head>
+<body>
+
+  <!-- ===== SPLASH ===== -->
+  <div id="screen-splash" class="screen active">
+    <div class="splash-content">
+      <div class="splash-logo">
+        <svg viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <rect width="80" height="80" rx="20" fill="#1a73e8"/>
+          <path d="M20 55 L20 30 L35 20 L60 20 L60 45 L45 55 Z" fill="white" opacity="0.2"/>
+          <path d="M22 52 L40 26 L58 52" stroke="white" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+          <line x1="30" y1="44" x2="50" y2="44" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          <line x1="34" y1="36" x2="46" y2="36" stroke="white" stroke-width="3" stroke-linecap="round"/>
+        </svg>
+      </div>
+      <h1 class="splash-title">OrçaFácil</h1>
+      <p class="splash-sub">Industrial</p>
+      <div class="splash-bar"><div class="splash-progress" id="splash-progress"></div></div>
+    </div>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="screen-dashboard" class="screen">
+    <header class="topbar">
+      <span class="topbar-title">OrcaFácil</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="navigate('clientes')">👤</button>
+        <button class="icon-btn" onclick="navigate('configuracoes')">⚙️</button>
+      </div>
+    </header>
+
+    <div class="content">
+      <div class="cards-grid">
+        <div class="card card-blue">
+          <span class="card-label">Total Orçado</span>
+          <span class="card-value" id="dash-total">R$ 0,00</span>
+        </div>
+        <div class="card card-green">
+          <span class="card-label">Aprovados</span>
+          <span class="card-value" id="dash-aprovados">R$ 0,00</span>
+        </div>
+        <div class="card card-yellow">
+          <span class="card-label">Pendentes</span>
+          <span class="card-value" id="dash-pendentes">0</span>
+        </div>
+        <div class="card card-red">
+          <span class="card-label">Recusados</span>
+          <span class="card-value" id="dash-recusados">0</span>
+        </div>
+      </div>
+
+      <div class="section-header">
+        <span>Orçamentos Recentes</span>
+        <div style="display:flex;gap:8px;align-items:center">
+          <button class="link-btn archived-btn" onclick="abrirArquivados()">📁 Arquivados</button>
+          <button class="link-btn" onclick="navigate('lista-orcamentos')">Ver todos</button>
+        </div>
+      </div>
+
+      <div id="lista-recentes" class="list-container">
+        <div class="empty-state">
+          <p>Nenhum orçamento ainda.</p>
+          <p>Clique em <strong>+ Novo</strong> para começar!</p>
+        </div>
+      </div>
+    </div>
+
+    <div class="bottom-bar">
+      <button class="btn-secondary" onclick="navigate('clientes')">👤 Clientes</button>
+      <button class="btn-primary fab" onclick="iniciarNovoOrcamento()">+ Novo</button>
+    </div>
+  </div>
+
+  <!-- ===== LISTA DE ORÇAMENTOS ===== -->
+  <div id="screen-lista-orcamentos" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title">Todos os Orçamentos</span>
+      <div class="topbar-actions">
+        <select id="filtro-status" class="select-inline" onchange="filtrarOrcamentos()">
+          <option value="">Ativos</option>
+          <option value="pendente">Pendente</option>
+          <option value="aprovado">Aprovado</option>
+          <option value="recusado">Recusado</option>
+          <option value="arquivado">Arquivados</option>
+        </select>
+      </div>
+    </header>
+    <div class="content">
+      <div id="lista-todos" class="list-container"></div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-primary full-width" onclick="iniciarNovoOrcamento()">+ Novo Orçamento</button>
+    </div>
+  </div>
+
+  <!-- ===== CLIENTES ===== -->
+  <div id="screen-clientes" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title">Clientes</span>
+      <button class="icon-btn" onclick="navigate('novo-cliente')">+</button>
+    </header>
+    <div class="content">
+      <input type="text" class="search-input" placeholder="🔍 Buscar cliente..." id="busca-cliente" oninput="filtrarClientes()" />
+      <div id="lista-clientes" class="list-container"></div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-primary full-width" onclick="navigate('novo-cliente')">+ Novo Cliente</button>
+    </div>
+  </div>
+
+  <!-- ===== NOVO / EDITAR CLIENTE ===== -->
+  <div id="screen-novo-cliente" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title" id="titulo-cliente-form">Novo Cliente</span>
+    </header>
+    <div class="content">
+      <input type="hidden" id="cliente-id" />
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" id="cliente-nome" placeholder="Nome completo" />
+      </div>
+      <div class="form-group">
+        <label>Empresa</label>
+        <input type="text" id="cliente-empresa" placeholder="Nome da empresa" />
+      </div>
+      <div class="form-group">
+        <label>Telefone</label>
+        <input type="tel" id="cliente-telefone" placeholder="(00) 00000-0000" />
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="cliente-email" placeholder="email@exemplo.com" />
+      </div>
+      <div class="form-group">
+        <label>Endereço</label>
+        <input type="text" id="cliente-endereco" placeholder="Rua, número, cidade" />
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-primary full-width" onclick="salvarCliente()">Salvar Cliente</button>
+    </div>
+  </div>
+
+  <!-- ===== ORÇAMENTO PASSO 1 ===== -->
+  <div id="screen-orc-1" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title">Novo Orçamento</span>
+      <span class="step-indicator">1 / 4</span>
+    </header>
+    <div class="content">
+      <div class="step-bar">
+        <div class="step active"></div>
+        <div class="step"></div>
+        <div class="step"></div>
+        <div class="step"></div>
+      </div>
+
+      <h2 class="section-title">Dados do Cliente</h2>
+
+      <div class="form-group">
+        <label>Selecionar Cliente Cadastrado</label>
+        <select id="orc-cliente-select" onchange="preencherClienteSelecionado()">
+          <option value="">-- Selecione ou preencha abaixo --</option>
+        </select>
+      </div>
+
+      <div class="divider-text">ou preencher manualmente</div>
+
+      <div class="form-group">
+        <label>Nome *</label>
+        <input type="text" id="orc-cliente-nome" placeholder="Nome do cliente" />
+      </div>
+      <div class="form-group">
+        <label>Empresa</label>
+        <input type="text" id="orc-cliente-empresa" placeholder="Nome da empresa" />
+      </div>
+      <div class="form-group">
+        <label>Telefone</label>
+        <input type="tel" id="orc-cliente-telefone" placeholder="(00) 00000-0000" />
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="orc-cliente-email" placeholder="email@exemplo.com" />
+      </div>
+
+      <h2 class="section-title" style="margin-top:24px">Tipo de Serviço</h2>
+
+      <div class="radio-group">
+        <label class="radio-card" id="card-tipo-completo">
+          <input type="radio" name="tipo-servico" value="completo" checked onchange="atualizarTipoServico()" />
+          <div class="radio-content">
+            <span class="radio-icon">🔧</span>
+            <span class="radio-label">Material + Mão de Obra</span>
+            <span class="radio-desc">Você fornece materiais e mão de obra</span>
+          </div>
+        </label>
+        <label class="radio-card" id="card-tipo-mao">
+          <input type="radio" name="tipo-servico" value="mao-de-obra" onchange="atualizarTipoServico()" />
+          <div class="radio-content">
+            <span class="radio-icon">👷</span>
+            <span class="radio-label">Apenas Mão de Obra</span>
+            <span class="radio-desc">Cliente fornece os materiais</span>
+          </div>
+        </label>
+      </div>
+
+      <div class="form-group" style="margin-top:20px">
+        <label>Validade do Orçamento</label>
+        <div class="input-with-suffix">
+          <input type="number" id="orc-validade" value="15" min="1" max="365" />
+          <span class="suffix">dias</span>
+        </div>
+      </div>
+
+      <div class="form-group">
+        <label>Descrição do Serviço</label>
+        <textarea id="orc-descricao" placeholder="Descreva brevemente o serviço..." rows="3"></textarea>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-primary full-width" onclick="irParaPasso2()">Próximo →</button>
+    </div>
+  </div>
+
+  <!-- ===== ORÇAMENTO PASSO 2 — MATERIAIS ===== -->
+  <div id="screen-orc-2" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="navigate('orc-1')">←</button>
+      <span class="topbar-title">Materiais</span>
+      <span class="step-indicator">2 / 4</span>
+    </header>
+    <div class="content">
+      <div class="step-bar">
+        <div class="step completed"></div>
+        <div class="step active"></div>
+        <div class="step"></div>
+        <div class="step"></div>
+      </div>
+
+      <div id="orc-2-sem-material" class="info-banner">
+        Serviço de mão de obra apenas — sem materiais nesta etapa.
+      </div>
+
+      <div id="orc-2-com-material">
+        <div class="add-item-form card-form">
+          <h3>Adicionar Material</h3>
+          <div class="form-group">
+            <label>Item *</label>
+            <input type="text" id="mat-item" placeholder="Ex: Tubo 1/2 polegada" />
+          </div>
+          <div class="form-row">
+            <div class="form-group half">
+              <label>Quantidade</label>
+              <input type="number" id="mat-qtd" placeholder="1" min="0.01" step="0.01" />
+            </div>
+            <div class="form-group half">
+              <label>Valor Unitário (R$)</label>
+              <input type="number" id="mat-valor" placeholder="0,00" min="0" step="0.01" />
+            </div>
+          </div>
+          <button id="btn-add-material" class="btn-secondary full-width" onclick="adicionarMaterial()">+ Adicionar</button>
+        </div>
+
+        <div class="section-header" style="margin-top:16px">
+          <span>Itens adicionados</span>
+        </div>
+        <div id="lista-materiais" class="items-list"></div>
+        <div class="subtotal-bar">
+          <span>Subtotal Materiais:</span>
+          <strong id="subtotal-materiais">R$ 0,00</strong>
+        </div>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-outline half-btn" onclick="navigate('orc-1')">← Voltar</button>
+      <button class="btn-primary half-btn" onclick="irParaPasso3()">Próximo →</button>
+    </div>
+  </div>
+
+  <!-- ===== ORÇAMENTO PASSO 3 — MÃO DE OBRA ===== -->
+  <div id="screen-orc-3" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="navigate('orc-2')">←</button>
+      <span class="topbar-title">Mão de Obra</span>
+      <span class="step-indicator">3 / 4</span>
+    </header>
+    <div class="content">
+      <div class="step-bar">
+        <div class="step completed"></div>
+        <div class="step completed"></div>
+        <div class="step active"></div>
+        <div class="step"></div>
+      </div>
+
+      <div class="add-item-form card-form">
+        <h3>Adicionar Mão de Obra</h3>
+        <div class="toggle-tabs">
+          <button class="tab-btn active" id="tab-horas" onclick="setTabMao('horas')">⏱ Por Horas</button>
+          <button class="tab-btn" id="tab-fixo" onclick="setTabMao('fixo')">💲 Valor Fixo</button>
+        </div>
+
+        <div id="mao-form-horas">
+          <div class="form-group">
+            <label>Descrição *</label>
+            <input type="text" id="mao-desc-h" placeholder="Ex: Montagem de estrutura" />
+          </div>
+          <div class="form-row">
+            <div class="form-group half">
+              <label id="label-mao-qty">Quantidade</label>
+              <div class="input-unit-row">
+                <input type="number" id="mao-horas" placeholder="0" min="0.5" step="0.5" />
+                <select id="mao-unidade" onchange="atualizarUnidadeMao()">
+                  <option value="horas">⏱ Horas</option>
+                  <option value="dias">📅 Dias</option>
+                  <option value="litros">🪣 Litros</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group half">
+              <label id="label-mao-valor">R$ por hora</label>
+              <input type="number" id="mao-valor-h" placeholder="0,00" min="0" step="0.01" />
+            </div>
+          </div>
+        </div>
+
+        <div id="mao-form-fixo" style="display:none">
+          <div class="form-group">
+            <label>Descrição *</label>
+            <input type="text" id="mao-desc-f" placeholder="Ex: Serviço de solda" />
+          </div>
+          <div class="form-group">
+            <label>Valor Total (R$)</label>
+            <input type="number" id="mao-valor-f" placeholder="0,00" min="0" step="0.01" />
+          </div>
+        </div>
+
+        <button id="btn-add-mao" class="btn-secondary full-width" onclick="adicionarMaoDeObra()">+ Adicionar</button>
+      </div>
+
+      <!-- Custos do Serviço -->
+      <div class="card-form custos-card">
+        <h3>Custos do Serviço</h3>
+
+        <!-- Trabalhadores -->
+        <div class="custo-linha">
+          <div class="custo-label">👷 Trabalhadores</div>
+          <div class="custo-inputs">
+            <input type="number" id="c-trab-qtd" placeholder="Trab." min="1" step="1" class="custo-input-qty" title="Número de trabalhadores" oninput="atualizarPreviewTrab()" />
+            <input type="number" id="c-trab-hpd" placeholder="H/dia" min="0.5" step="0.5" class="custo-input-qty" title="Horas por dia" oninput="atualizarPreviewTrab()" />
+            <div class="input-unit-row custo-valor-wrap">
+              <input type="number" id="c-trab-valor" placeholder="R$/hora" min="0" step="0.01" oninput="atualizarPreviewTrab()" />
+              <select id="c-trab-unidade">
+                <option value="dia">/ dia</option>
+                <option value="hora">/ hora</option>
+              </select>
+            </div>
+            <button class="custo-add-btn" onclick="adicionarCusto('trabalhadores')">+</button>
+          </div>
+          <div class="custo-formula" id="preview-trab">
+            <span>Fórmula: trabalhadores × horas/dia × R$/hora</span>
+          </div>
+        </div>
+
+        <!-- Combustível -->
+        <div class="custo-linha">
+          <div class="custo-label">⛽ Combustível</div>
+          <div class="custo-inputs">
+            <input type="number" id="c-comb-qtd" placeholder="Litros" min="0.1" step="0.1" class="custo-input-qty" />
+            <div class="input-unit-row custo-valor-wrap">
+              <input type="number" id="c-comb-valor" placeholder="R$ / litro" min="0" step="0.01" />
+              <select id="c-comb-unidade">
+                <option value="litro">/ litro</option>
+                <option value="abastec">/ abastec.</option>
+              </select>
+            </div>
+            <button class="custo-add-btn" onclick="adicionarCusto('combustivel')">+</button>
+          </div>
+        </div>
+
+        <!-- Diárias de Hotel -->
+        <div class="custo-linha">
+          <div class="custo-label">🏨 Diárias de Hotel</div>
+          <div class="custo-inputs">
+            <input type="number" id="c-hotel-qtd" placeholder="Qtd" min="1" step="1" class="custo-input-qty" />
+            <div class="input-unit-row custo-valor-wrap">
+              <input type="number" id="c-hotel-valor" placeholder="R$ / diária" min="0" step="0.01" />
+              <select id="c-hotel-unidade">
+                <option value="diária">/ diária</option>
+                <option value="semana">/ semana</option>
+              </select>
+            </div>
+            <button class="custo-add-btn" onclick="adicionarCusto('hotel')">+</button>
+          </div>
+        </div>
+
+        <!-- Refeições -->
+        <div class="custo-linha">
+          <div class="custo-label">🍽️ Refeições</div>
+          <div class="custo-inputs">
+            <input type="number" id="c-ref-qtd" placeholder="Qtd" min="1" step="1" class="custo-input-qty" />
+            <div class="input-unit-row custo-valor-wrap">
+              <input type="number" id="c-ref-valor" placeholder="R$ / refeição" min="0" step="0.01" />
+              <select id="c-ref-unidade">
+                <option value="refeição">/ refeição</option>
+                <option value="dia">/ dia</option>
+              </select>
+            </div>
+            <button class="custo-add-btn" onclick="adicionarCusto('refeicao')">+</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-header" style="margin-top:16px">
+        <span>Itens adicionados</span>
+      </div>
+      <div id="lista-mao-obra" class="items-list"></div>
+      <div class="subtotal-bar">
+        <span>Subtotal Mão de Obra:</span>
+        <strong id="subtotal-mao">R$ 0,00</strong>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-outline half-btn" onclick="navigate('orc-2')">← Voltar</button>
+      <button class="btn-primary half-btn" onclick="irParaPasso4()">Próximo →</button>
+    </div>
+  </div>
+
+  <!-- ===== ORÇAMENTO PASSO 4 — RESUMO ===== -->
+  <div id="screen-orc-4" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="navigate('orc-3')">←</button>
+      <span class="topbar-title">Finalizar</span>
+      <span class="step-indicator">4 / 4</span>
+    </header>
+    <div class="content">
+      <div class="step-bar">
+        <div class="step completed"></div>
+        <div class="step completed"></div>
+        <div class="step completed"></div>
+        <div class="step active"></div>
+      </div>
+
+      <div class="resumo-box">
+        <h3>Resumo do Orçamento</h3>
+        <div class="resumo-linha">
+          <span>Materiais</span>
+          <span id="res-materiais">R$ 0,00</span>
+        </div>
+        <div class="resumo-linha">
+          <span>Mão de Obra</span>
+          <span id="res-mao">R$ 0,00</span>
+        </div>
+        <div class="resumo-linha">
+          <span>Despesas Extras</span>
+          <input type="number" id="res-despesas" value="0" min="0" step="0.01" class="inline-input" oninput="calcularTotal()" />
+        </div>
+        <div class="resumo-linha subtotal">
+          <span>Subtotal</span>
+          <span id="res-subtotal">R$ 0,00</span>
+        </div>
+        <div class="resumo-linha">
+          <span>Margem de Lucro</span>
+          <div class="input-with-suffix inline">
+            <input type="number" id="res-lucro" value="20" min="0" max="100" step="0.5" class="inline-input" oninput="calcularTotal()" />
+            <span class="suffix">%</span>
+          </div>
+          <span id="res-lucro-valor">R$ 0,00</span>
+        </div>
+        <div class="resumo-linha total">
+          <span>TOTAL</span>
+          <span id="res-total">R$ 0,00</span>
+        </div>
+      </div>
+
+      <div class="form-group" style="margin-top:20px">
+        <label>Observações para o Cliente</label>
+        <textarea id="orc-obs-cliente" placeholder="Ex: Prazo de entrega 10 dias, pagamento 50% na entrada..." rows="3"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Notas Internas (não aparecem no PDF)</label>
+        <textarea id="orc-notas-internas" placeholder="Anotações particulares sobre o serviço..." rows="2"></textarea>
+      </div>
+      <div class="form-group">
+        <label>Forma de Pagamento</label>
+        <select id="orc-pagamento">
+          <option value="">-- Selecione --</option>
+          <option value="À vista">À vista</option>
+          <option value="50% entrada + 50% entrega">50% entrada + 50% entrega</option>
+          <option value="Parcelado 2x">Parcelado 2x</option>
+          <option value="Parcelado 3x">Parcelado 3x</option>
+          <option value="Boleto 30 dias">Boleto 30 dias</option>
+          <option value="Outro">Outro</option>
+        </select>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-outline half-btn" onclick="navigate('orc-3')">← Voltar</button>
+      <button class="btn-primary half-btn" onclick="salvarOrcamento()">💾 Salvar</button>
+    </div>
+  </div>
+
+  <!-- ===== VISUALIZAR ORÇAMENTO ===== -->
+  <div id="screen-visualizar" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title" id="vis-numero">ORC-001</span>
+      <div class="topbar-actions">
+        <button class="icon-btn" onclick="editarOrcamentoAtual()">✏️</button>
+        <button class="icon-btn" onclick="toggleMenuOrcamento()">⋮</button>
+      </div>
+    </header>
+
+    <div id="menu-orcamento" class="dropdown-menu" style="display:none">
+      <button onclick="duplicarOrcamento()">📋 Duplicar</button>
+      <button onclick="excluirOrcamento()" class="danger">🗑️ Excluir</button>
+    </div>
+
+    <div class="content">
+      <div class="status-bar">
+        <span>Status:</span>
+        <select id="vis-status" class="status-select" onchange="atualizarStatus()">
+          <option value="rascunho">📝 Rascunho</option>
+          <option value="pendente">🕐 Pendente</option>
+          <option value="aprovado">✅ Aprovado</option>
+          <option value="recusado">❌ Recusado</option>
+        </select>
+      </div>
+
+      <div id="preview-orcamento" class="orcamento-preview">
+        <!-- Conteúdo gerado por JS -->
+      </div>
+    </div>
+
+    <div class="bottom-bar-triple">
+      <button class="btn-action" onclick="gerarPDF()">📄 PDF</button>
+      <button class="btn-action" onclick="imprimirOrcamento()">🖨️ Imprimir</button>
+      <button class="btn-action btn-primary" onclick="compartilharOrcamento()">📤 Compartilhar</button>
+    </div>
+  </div>
+
+  <!-- ===== CONFIGURAÇÕES ===== -->
+  <div id="screen-configuracoes" class="screen">
+    <header class="topbar">
+      <button class="icon-btn" onclick="goBack()">←</button>
+      <span class="topbar-title">Configurações</span>
+    </header>
+    <div class="content">
+      <h2 class="section-title">Dados da Empresa</h2>
+      <div class="form-group">
+        <label>Nome da Empresa</label>
+        <input type="text" id="cfg-empresa" placeholder="Sua Empresa Ltda" />
+      </div>
+      <div class="form-group">
+        <label>CNPJ / CPF</label>
+        <input type="text" id="cfg-cnpj" placeholder="00.000.000/0000-00" />
+      </div>
+      <div class="form-group">
+        <label>Telefone</label>
+        <input type="tel" id="cfg-telefone" placeholder="(00) 00000-0000" />
+      </div>
+      <div class="form-group">
+        <label>E-mail</label>
+        <input type="email" id="cfg-email" placeholder="contato@empresa.com" />
+      </div>
+      <div class="form-group">
+        <label>Endereço</label>
+        <input type="text" id="cfg-endereco" placeholder="Rua, número, cidade - UF" />
+      </div>
+      <div class="form-group">
+        <label>Site</label>
+        <input type="text" id="cfg-site" placeholder="www.suaempresa.com.br" />
+      </div>
+
+      <h2 class="section-title" style="margin-top:24px">Padrões do Orçamento</h2>
+      <div class="form-group">
+        <label>Margem de Lucro Padrão (%)</label>
+        <input type="number" id="cfg-margem" value="20" min="0" max="100" />
+      </div>
+      <div class="form-group">
+        <label>Validade Padrão (dias)</label>
+        <input type="number" id="cfg-validade" value="15" min="1" />
+      </div>
+      <div class="form-group">
+        <label>Forma de Pagamento Padrão</label>
+        <input type="text" id="cfg-pagamento" placeholder="Ex: 50% entrada + 50% entrega" />
+      </div>
+      <div class="form-group">
+        <label>Observações Padrão</label>
+        <textarea id="cfg-obs" placeholder="Texto padrão que aparece em todos os orçamentos..." rows="3"></textarea>
+      </div>
+    </div>
+    <div class="bottom-bar">
+      <button class="btn-primary full-width" onclick="salvarConfiguracoes()">Salvar Configurações</button>
+    </div>
+  </div>
+
+  <!-- TOAST de notificação -->
+  <div id="toast" class="toast"></div>
+
+  <!-- Modal de Confirmação de Exclusão -->
+  <div id="modal-overlay" class="modal-overlay" onclick="fecharModalExcluir()">
+    <div class="modal-box" onclick="event.stopPropagation()">
+      <div class="modal-icon">🗑️</div>
+      <h3 class="modal-titulo">Excluir Orçamento</h3>
+      <p class="modal-msg" id="modal-msg">Tem certeza que deseja excluir este orçamento? Esta ação não pode ser desfeita.</p>
+      <div class="modal-actions">
+        <button class="modal-btn-cancelar" onclick="fecharModalExcluir()">Cancelar</button>
+        <button class="modal-btn-confirmar" id="modal-btn-confirmar">Sim, excluir</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Área de impressão -->
+  <div id="print-area" class="print-only"></div>
+
+  <script src="js/storage.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
