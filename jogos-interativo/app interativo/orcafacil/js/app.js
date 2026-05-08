@@ -1123,8 +1123,9 @@ function abrirModalExcluir(mensagem, onConfirmar) {
   modalCallback = onConfirmar;
   document.getElementById('modal-msg').innerHTML = mensagem;
   document.getElementById('modal-btn-confirmar').onclick = () => {
+    const cb = modalCallback;
     fecharModalExcluir();
-    if (modalCallback) modalCallback();
+    if (cb) cb();
   };
   document.getElementById('modal-overlay').classList.add('active');
 }
