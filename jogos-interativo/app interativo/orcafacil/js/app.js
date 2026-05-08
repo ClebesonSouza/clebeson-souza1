@@ -1,9 +1,11 @@
 // ===== ESTADO GLOBAL =====
-let orcamentoAtual = null;
-let orcamentoEditandoId = null;
-let screenHistory = [];
-let tabMaoAtiva = 'horas';
-let menuAberto = false;
+const State = {
+  orcamento: null,
+  editandoId: null,
+  screenHistory: [],
+  tabMao: 'horas',
+  menuAberto: false
+};
 
 // ===== UTILITÁRIOS =====
 function moeda(v) {
@@ -17,6 +19,9 @@ function fmtData(dateStr) {
 }
 
 function gerarId() {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID();
+  }
   return Date.now().toString(36) + Math.random().toString(36).slice(2);
 }
 
@@ -27,17 +32,55 @@ function showToast(msg, dur = 2500) {
   setTimeout(() => t.classList.remove('show'), dur);
 }
 
+// ===== VALIDAÇÃO VISUAL =====
+function mostrarErro(fieldId, msg) {
+  const el = document.getElementById(fieldId);
+  if (!el) return;
+  el.classList.add('input-error');
+  const grupo = el.closest('.form-group');
+  if (grupo) {
+    grupo.classList.add('has-error');
+    if (!grupo.querySelector('.field-error-msg')) {
+      const p = document.createElement('p');
+      p.className = 'field-error-msg';
+      p.textContent = msg;
+      grupo.appendChild(p);
+    }
+    el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  } else {
+    // Campo fora de .form-group (ex: res-lucro dentro de .resumo-linha)
+    showToast('⚠️ ' + msg);
+  }
+}
+
+function limparErro(fieldId) {
+  const el = document.getElementById(fieldId);
+  if (!el) return;
+  el.classList.remove('input-error');
+  const grupo = el.closest('.form-group');
+  if (!grupo) return;
+  grupo.classList.remove('has-error');
+  grupo.querySelector('.field-error-msg')?.remove();
+}
+
+function limparErros(...ids) {
+  ids.forEach(limparErro);
+}
+
+function deepCopy(obj) {
+  return JSON.parse(JSON.stringify(obj));
+}
+
 // ===== NAVEGAÇÃO =====
 function navigate(screenId) {
   const current = document.querySelector('.screen.active');
   if (current && current.id !== `screen-${screenId}`) {
-    screenHistory.push(current.id.replace('screen-', ''));
+    State.screenHistory.push(current.id.replace('screen-', ''));
     current.classList.remove('active');
   }
   const next = document.getElementById(`screen-${screenId}`);
   if (next) next.classList.add('active');
 
-  // Atualizar conteúdo das telas ao navegar
   if (screenId === 'dashboard') atualizarDashboard();
   if (screenId === 'clientes') renderizarClientes();
   if (screenId === 'lista-orcamentos') renderizarTodosOrcamentos();
@@ -51,8 +94,8 @@ function navigate(screenId) {
 }
 
 function goBack() {
-  if (screenHistory.length > 0) {
-    const prev = screenHistory.pop();
+  if (State.screenHistory.length > 0) {
+    const prev = State.screenHistory.pop();
     const current = document.querySelector('.screen.active');
     if (current) current.classList.remove('active');
     const back = document.getElementById(`screen-${prev}`);
@@ -69,11 +112,23 @@ function goBack() {
 // ===== SPLASH =====
 window.addEventListener('load', () => {
   if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    navigator.serviceWorker.register('sw.js')
+      .then(reg => {
+        // Notifica o usuário quando uma nova versão do app estiver disponível
+        reg.addEventListener('updatefound', () => {
+          const novo = reg.installing;
+          novo.addEventListener('statechange', () => {
+            if (novo.state === 'installed' && navigator.serviceWorker.controller) {
+              showToast('🔄 Nova versão disponível! Feche e reabra o app.', 5000);
+            }
+          });
+        });
+      })
+      .catch(() => {});
   }
   setTimeout(() => {
     navigate('dashboard');
-    screenHistory = [];
+    State.screenHistory = [];
   }, 2000);
 });
 
@@ -257,7 +312,7 @@ function confirmarExcluirCliente(id) {
 
 // ===== NOVO ORÇAMENTO =====
 function iniciarNovoOrcamento() {
-  orcamentoAtual = {
+  State.orcamento = {
     id: gerarId(),
     numero: `ORC-${String(Storage.proximoNumero()).padStart(3, '0')}`,
     status: 'pendente',
@@ -277,8 +332,11 @@ function iniciarNovoOrcamento() {
     notasInternas: '',
     pagamento: ''
   };
-  orcamentoEditandoId = null;
-  screenHistory = [];
+  State.editandoId = null;
+  State.screenHistory = [];
+  State.tabMao = 'horas';
+  editandoMaterialId = null;
+  editandoMaoId = null;
   navigate('orc-1');
 }
 
@@ -296,16 +354,20 @@ function prepararPasso1() {
     sel.appendChild(opt);
   });
 
-  if (orcamentoAtual) {
-    document.getElementById('orc-cliente-nome').value = orcamentoAtual.cliente.nome || '';
-    document.getElementById('orc-cliente-empresa').value = orcamentoAtual.cliente.empresa || '';
-    document.getElementById('orc-cliente-telefone').value = orcamentoAtual.cliente.telefone || '';
-    document.getElementById('orc-cliente-email').value = orcamentoAtual.cliente.email || '';
-    document.getElementById('orc-validade').value = orcamentoAtual.validade || cfg.validade || 15;
-    document.getElementById('orc-descricao').value = orcamentoAtual.descricao || '';
-    const tipo = orcamentoAtual.tipo || 'completo';
+  if (State.orcamento) {
+    document.getElementById('orc-cliente-nome').value = State.orcamento.cliente.nome || '';
+    document.getElementById('orc-cliente-empresa').value = State.orcamento.cliente.empresa || '';
+    document.getElementById('orc-cliente-telefone').value = State.orcamento.cliente.telefone || '';
+    document.getElementById('orc-cliente-email').value = State.orcamento.cliente.email || '';
+    document.getElementById('orc-validade').value = State.orcamento.validade || cfg.validade || 15;
+    document.getElementById('orc-descricao').value = State.orcamento.descricao || '';
+    const tipo = State.orcamento.tipo || 'completo';
     document.querySelector(`input[name="tipo-servico"][value="${tipo}"]`).checked = true;
   }
+
+  // Usar .oninput (propriedade) evita acúmulo de listeners a cada visita ao passo
+  document.getElementById('orc-cliente-nome').oninput = () => limparErro('orc-cliente-nome');
+  document.getElementById('orc-cliente-email').oninput = () => limparErro('orc-cliente-email');
 }
 
 function preencherClienteSelecionado() {
@@ -322,23 +384,41 @@ function preencherClienteSelecionado() {
 function atualizarTipoServico() {}
 
 function irParaPasso2() {
+  limparErros('orc-cliente-nome', 'orc-cliente-email');
+
   const nome = document.getElementById('orc-cliente-nome').value.trim();
-  if (!nome) { showToast('⚠️ Informe o nome do cliente'); return; }
-  orcamentoAtual.cliente = {
+  const email = document.getElementById('orc-cliente-email').value.trim();
+  let valido = true;
+
+  if (!nome) {
+    mostrarErro('orc-cliente-nome', 'Nome do cliente é obrigatório');
+    valido = false;
+  }
+
+  if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    mostrarErro('orc-cliente-email', 'E-mail inválido');
+    valido = false;
+  }
+
+  if (!valido) return;
+
+  State.orcamento.cliente = {
     nome,
     empresa: document.getElementById('orc-cliente-empresa').value.trim(),
     telefone: document.getElementById('orc-cliente-telefone').value.trim(),
-    email: document.getElementById('orc-cliente-email').value.trim()
+    email
   };
-  orcamentoAtual.tipo = document.querySelector('input[name="tipo-servico"]:checked').value;
-  orcamentoAtual.validade = parseInt(document.getElementById('orc-validade').value) || 15;
-  orcamentoAtual.descricao = document.getElementById('orc-descricao').value.trim();
+  State.orcamento.tipo = document.querySelector('input[name="tipo-servico"]:checked').value;
+  State.orcamento.validade = parseInt(document.getElementById('orc-validade').value) || 15;
+  State.orcamento.descricao = document.getElementById('orc-descricao').value.trim();
   navigate('orc-2');
 }
 
 // ---- PASSO 2 — MATERIAIS ----
 function prepararPasso2() {
-  const isMao = orcamentoAtual.tipo === 'mao-de-obra';
+  editandoMaterialId = null;
+  document.getElementById('btn-add-material').textContent = '+ Adicionar';
+  const isMao = State.orcamento.tipo === 'mao-de-obra';
   document.getElementById('orc-2-sem-material').style.display = isMao ? 'block' : 'none';
   document.getElementById('orc-2-com-material').style.display = isMao ? 'none' : 'block';
   renderizarMateriais();
@@ -347,20 +427,24 @@ function prepararPasso2() {
 let editandoMaterialId = null;
 
 function adicionarMaterial() {
+  limparErros('mat-item', 'mat-qtd', 'mat-valor');
   const item = document.getElementById('mat-item').value.trim();
   const qtd = parseFloat(document.getElementById('mat-qtd').value);
   const valor = parseFloat(document.getElementById('mat-valor').value);
-  if (!item) { showToast('⚠️ Informe o nome do item'); return; }
-  if (isNaN(qtd) || qtd <= 0) { showToast('⚠️ Informe a quantidade'); return; }
-  if (isNaN(valor) || valor < 0) { showToast('⚠️ Informe o valor unitário'); return; }
+  let valido = true;
+
+  if (!item) { mostrarErro('mat-item', 'Informe o nome do item'); valido = false; }
+  if (isNaN(qtd) || qtd <= 0) { mostrarErro('mat-qtd', 'Quantidade inválida'); valido = false; }
+  if (isNaN(valor) || valor < 0) { mostrarErro('mat-valor', 'Valor inválido'); valido = false; }
+  if (!valido) return;
 
   if (editandoMaterialId) {
-    const idx = orcamentoAtual.materiais.findIndex(m => m.id === editandoMaterialId);
-    if (idx >= 0) orcamentoAtual.materiais[idx] = { id: editandoMaterialId, item, qtd, valor, total: qtd * valor };
+    const idx = State.orcamento.materiais.findIndex(m => m.id === editandoMaterialId);
+    if (idx >= 0) State.orcamento.materiais[idx] = { id: editandoMaterialId, item, qtd, valor, total: qtd * valor };
     editandoMaterialId = null;
     document.getElementById('btn-add-material').textContent = '+ Adicionar';
   } else {
-    orcamentoAtual.materiais.push({ id: gerarId(), item, qtd, valor, total: qtd * valor });
+    State.orcamento.materiais.push({ id: gerarId(), item, qtd, valor, total: qtd * valor });
   }
 
   document.getElementById('mat-item').value = '';
@@ -371,7 +455,7 @@ function adicionarMaterial() {
 }
 
 function editarMaterial(id) {
-  const m = orcamentoAtual.materiais.find(m => m.id === id);
+  const m = State.orcamento.materiais.find(m => m.id === id);
   if (!m) return;
   editandoMaterialId = id;
   document.getElementById('mat-item').value = m.item;
@@ -383,7 +467,7 @@ function editarMaterial(id) {
 }
 
 function renderizarMateriais() {
-  const lista = orcamentoAtual.materiais;
+  const lista = State.orcamento.materiais;
   const container = document.getElementById('lista-materiais');
   if (lista.length === 0) {
     container.innerHTML = '<p style="color:var(--gray-400);font-size:14px;padding:8px 0">Nenhum material adicionado.</p>';
@@ -400,7 +484,7 @@ function renderizarMateriais() {
       </div>`).join('');
   }
   const sub = lista.reduce((s, m) => s + m.total, 0);
-  orcamentoAtual.subtotalMateriais = sub;
+  State.orcamento.subtotalMateriais = sub;
   document.getElementById('subtotal-materiais').textContent = moeda(sub);
 }
 
@@ -412,7 +496,7 @@ function removerMaterial(id) {
     document.getElementById('mat-qtd').value = '';
     document.getElementById('mat-valor').value = '';
   }
-  orcamentoAtual.materiais = orcamentoAtual.materiais.filter(m => m.id !== id);
+  State.orcamento.materiais = State.orcamento.materiais.filter(m => m.id !== id);
   renderizarMateriais();
 }
 
@@ -422,11 +506,14 @@ function irParaPasso3() {
 
 // ---- PASSO 3 — MÃO DE OBRA ----
 function prepararPasso3() {
+  editandoMaoId = null;
+  document.getElementById('btn-add-mao').textContent = '+ Adicionar';
+  setTabMao(State.tabMao);
   renderizarMaoDeObra();
 }
 
 function setTabMao(tab) {
-  tabMaoAtiva = tab;
+  State.tabMao = tab;
   document.getElementById('tab-horas').classList.toggle('active', tab === 'horas');
   document.getElementById('tab-fixo').classList.toggle('active', tab === 'fixo');
   document.getElementById('mao-form-horas').style.display = tab === 'horas' ? 'block' : 'none';
@@ -444,37 +531,43 @@ function atualizarUnidadeMao() {
 }
 
 function adicionarMaoDeObra() {
-  if (tabMaoAtiva === 'horas') {
+  if (State.tabMao === 'horas') {
+    limparErros('mao-desc-h', 'mao-horas', 'mao-valor-h');
     const desc = document.getElementById('mao-desc-h').value.trim();
     const qtd = parseFloat(document.getElementById('mao-horas').value);
     const valorU = parseFloat(document.getElementById('mao-valor-h').value);
     const unidade = document.getElementById('mao-unidade').value;
-    if (!desc) { showToast('⚠️ Informe a descrição'); return; }
-    if (isNaN(qtd) || qtd <= 0) { showToast(`⚠️ Informe a quantidade de ${unidade}`); return; }
-    if (isNaN(valorU) || valorU < 0) { showToast('⚠️ Informe o valor'); return; }
+    let valido = true;
+    if (!desc) { mostrarErro('mao-desc-h', 'Informe a descrição'); valido = false; }
+    if (isNaN(qtd) || qtd <= 0) { mostrarErro('mao-horas', `Informe a quantidade de ${unidade}`); valido = false; }
+    if (isNaN(valorU) || valorU < 0) { mostrarErro('mao-valor-h', 'Informe o valor'); valido = false; }
+    if (!valido) return;
     if (editandoMaoId) {
-      const idx = orcamentoAtual.maoDeObra.findIndex(m => m.id === editandoMaoId);
-      if (idx >= 0) orcamentoAtual.maoDeObra[idx] = { id: editandoMaoId, tipo: 'horas', unidade, desc, horas: qtd, valorH: valorU, total: qtd * valorU };
+      const idx = State.orcamento.maoDeObra.findIndex(m => m.id === editandoMaoId);
+      if (idx >= 0) State.orcamento.maoDeObra[idx] = { id: editandoMaoId, tipo: 'horas', unidade, desc, horas: qtd, valorH: valorU, total: qtd * valorU };
       editandoMaoId = null;
       document.getElementById('btn-add-mao').textContent = '+ Adicionar';
     } else {
-      orcamentoAtual.maoDeObra.push({ id: gerarId(), tipo: 'horas', unidade, desc, horas: qtd, valorH: valorU, total: qtd * valorU });
+      State.orcamento.maoDeObra.push({ id: gerarId(), tipo: 'horas', unidade, desc, horas: qtd, valorH: valorU, total: qtd * valorU });
     }
     document.getElementById('mao-desc-h').value = '';
     document.getElementById('mao-horas').value = '';
     document.getElementById('mao-valor-h').value = '';
   } else {
+    limparErros('mao-desc-f', 'mao-valor-f');
     const desc = document.getElementById('mao-desc-f').value.trim();
     const valor = parseFloat(document.getElementById('mao-valor-f').value);
-    if (!desc) { showToast('⚠️ Informe a descrição'); return; }
-    if (isNaN(valor) || valor < 0) { showToast('⚠️ Informe o valor'); return; }
+    let valido = true;
+    if (!desc) { mostrarErro('mao-desc-f', 'Informe a descrição'); valido = false; }
+    if (isNaN(valor) || valor < 0) { mostrarErro('mao-valor-f', 'Informe o valor'); valido = false; }
+    if (!valido) return;
     if (editandoMaoId) {
-      const idx = orcamentoAtual.maoDeObra.findIndex(m => m.id === editandoMaoId);
-      if (idx >= 0) orcamentoAtual.maoDeObra[idx] = { id: editandoMaoId, tipo: 'fixo', desc, total: valor };
+      const idx = State.orcamento.maoDeObra.findIndex(m => m.id === editandoMaoId);
+      if (idx >= 0) State.orcamento.maoDeObra[idx] = { id: editandoMaoId, tipo: 'fixo', desc, total: valor };
       editandoMaoId = null;
       document.getElementById('btn-add-mao').textContent = '+ Adicionar';
     } else {
-      orcamentoAtual.maoDeObra.push({ id: gerarId(), tipo: 'fixo', desc, total: valor });
+      State.orcamento.maoDeObra.push({ id: gerarId(), tipo: 'fixo', desc, total: valor });
     }
     document.getElementById('mao-desc-f').value = '';
     document.getElementById('mao-valor-f').value = '';
@@ -510,7 +603,7 @@ function adicionarCusto(categoria) {
     detalhe = null;
   }
 
-  orcamentoAtual.maoDeObra.push({
+  State.orcamento.maoDeObra.push({
     id: gerarId(),
     tipo: 'custo',
     categoria,
@@ -542,7 +635,7 @@ function atualizarPreviewTrab() {
 }
 
 function editarMaoDeObra(id) {
-  const m = orcamentoAtual.maoDeObra.find(m => m.id === id);
+  const m = State.orcamento.maoDeObra.find(m => m.id === id);
   if (!m) return;
   editandoMaoId = id;
   document.getElementById('btn-add-mao').textContent = '✔ Atualizar';
@@ -564,7 +657,7 @@ function editarMaoDeObra(id) {
 }
 
 function renderizarMaoDeObra() {
-  const lista = orcamentoAtual.maoDeObra;
+  const lista = State.orcamento.maoDeObra;
   const container = document.getElementById('lista-mao-obra');
   if (lista.length === 0) {
     container.innerHTML = '<p style="color:var(--gray-400);font-size:14px;padding:8px 0">Nenhum item adicionado.</p>';
@@ -585,12 +678,21 @@ function renderizarMaoDeObra() {
       </div>`).join('');
   }
   const sub = lista.reduce((s, m) => s + m.total, 0);
-  orcamentoAtual.subtotalMao = sub;
+  State.orcamento.subtotalMao = sub;
   document.getElementById('subtotal-mao').textContent = moeda(sub);
 }
 
 function removerMaoDeObra(id) {
-  orcamentoAtual.maoDeObra = orcamentoAtual.maoDeObra.filter(m => m.id !== id);
+  if (editandoMaoId === id) {
+    editandoMaoId = null;
+    document.getElementById('btn-add-mao').textContent = '+ Adicionar';
+    document.getElementById('mao-desc-h').value = '';
+    document.getElementById('mao-horas').value = '';
+    document.getElementById('mao-valor-h').value = '';
+    document.getElementById('mao-desc-f').value = '';
+    document.getElementById('mao-valor-f').value = '';
+  }
+  State.orcamento.maoDeObra = State.orcamento.maoDeObra.filter(m => m.id !== id);
   renderizarMaoDeObra();
 }
 
@@ -601,19 +703,19 @@ function irParaPasso4() {
 // ---- PASSO 4 — RESUMO ----
 function prepararPasso4() {
   const cfg = Storage.getConfig();
-  document.getElementById('res-materiais').textContent = moeda(orcamentoAtual.subtotalMateriais);
-  document.getElementById('res-mao').textContent = moeda(orcamentoAtual.subtotalMao);
-  document.getElementById('res-despesas').value = orcamentoAtual.despesas || 0;
-  document.getElementById('res-lucro').value = orcamentoAtual.margem ?? cfg.margem ?? 20;
-  document.getElementById('orc-obs-cliente').value = orcamentoAtual.obsCliente || cfg.obs || '';
-  document.getElementById('orc-notas-internas').value = orcamentoAtual.notasInternas || '';
-  document.getElementById('orc-pagamento').value = orcamentoAtual.pagamento || cfg.pagamento || '';
+  document.getElementById('res-materiais').textContent = moeda(State.orcamento.subtotalMateriais);
+  document.getElementById('res-mao').textContent = moeda(State.orcamento.subtotalMao);
+  document.getElementById('res-despesas').value = State.orcamento.despesas || 0;
+  document.getElementById('res-lucro').value = State.orcamento.margem ?? cfg.margem ?? 20;
+  document.getElementById('orc-obs-cliente').value = State.orcamento.obsCliente || cfg.obs || '';
+  document.getElementById('orc-notas-internas').value = State.orcamento.notasInternas || '';
+  document.getElementById('orc-pagamento').value = State.orcamento.pagamento || cfg.pagamento || '';
   calcularTotal();
 }
 
 function calcularTotal() {
-  const mat = orcamentoAtual.subtotalMateriais || 0;
-  const mao = orcamentoAtual.subtotalMao || 0;
+  const mat = State.orcamento.subtotalMateriais || 0;
+  const mao = State.orcamento.subtotalMao || 0;
   const desp = parseFloat(document.getElementById('res-despesas').value) || 0;
   const pct = parseFloat(document.getElementById('res-lucro').value) || 0;
   const sub = mat + mao + desp;
@@ -622,34 +724,49 @@ function calcularTotal() {
   document.getElementById('res-subtotal').textContent = moeda(sub);
   document.getElementById('res-lucro-valor').textContent = moeda(lucroValor);
   document.getElementById('res-total').textContent = moeda(total);
-  orcamentoAtual.despesas = desp;
-  orcamentoAtual.margem = pct;
-  orcamentoAtual.subtotal = sub;
-  orcamentoAtual.lucroValor = lucroValor;
-  orcamentoAtual.total = total;
+  State.orcamento.despesas = desp;
+  State.orcamento.margem = pct;
+  State.orcamento.subtotal = sub;
+  State.orcamento.lucroValor = lucroValor;
+  State.orcamento.total = total;
 }
 
 function salvarOrcamento() {
   calcularTotal();
-  orcamentoAtual.obsCliente = document.getElementById('orc-obs-cliente').value.trim();
-  orcamentoAtual.notasInternas = document.getElementById('orc-notas-internas').value.trim();
-  orcamentoAtual.pagamento = document.getElementById('orc-pagamento').value;
 
-  const dataValidade = new Date(orcamentoAtual.dataCriacao);
-  dataValidade.setDate(dataValidade.getDate() + orcamentoAtual.validade);
-  orcamentoAtual.dataValidade = dataValidade.toISOString();
+  const margem = parseFloat(document.getElementById('res-lucro').value);
+  if (isNaN(margem) || margem < 0 || margem > 100) {
+    mostrarErro('res-lucro', 'Margem deve ser entre 0 e 100');
+    return;
+  }
 
-  Storage.salvarOrcamento(orcamentoAtual);
+  if (State.orcamento.total === 0 &&
+      State.orcamento.materiais.length === 0 &&
+      State.orcamento.maoDeObra.length === 0) {
+    showToast('⚠️ Adicione pelo menos um material ou serviço antes de salvar');
+    return;
+  }
+
+  State.orcamento.obsCliente = document.getElementById('orc-obs-cliente').value.trim();
+  State.orcamento.notasInternas = document.getElementById('orc-notas-internas').value.trim();
+  State.orcamento.pagamento = document.getElementById('orc-pagamento').value;
+
+  const dataValidade = new Date(State.orcamento.dataCriacao);
+  dataValidade.setDate(dataValidade.getDate() + State.orcamento.validade);
+  State.orcamento.dataValidade = dataValidade.toISOString();
+
+  Storage.salvarOrcamento(State.orcamento);
   showToast('✅ Orçamento salvo!');
-  screenHistory = [];
-  abrirOrcamento(orcamentoAtual.id);
+  State.screenHistory = [];
+  abrirOrcamento(State.orcamento.id);
 }
 
 // ===== VISUALIZAR ORÇAMENTO =====
 function abrirOrcamento(id) {
   const o = Storage.getOrcamento(id);
   if (!o) return;
-  orcamentoAtual = o;
+  // Deep copy garante que visualização não interfere com estado de edição
+  State.orcamento = deepCopy(o);
   document.getElementById('vis-numero').textContent = o.numero;
   document.getElementById('vis-status').value = o.status;
   renderizarPreview(o);
@@ -737,35 +854,39 @@ function renderizarPreview(o) {
 }
 
 function atualizarStatus() {
-  if (!orcamentoAtual) return;
-  orcamentoAtual.status = document.getElementById('vis-status').value;
-  Storage.salvarOrcamento(orcamentoAtual);
+  if (!State.orcamento) return;
+  State.orcamento.status = document.getElementById('vis-status').value;
+  Storage.salvarOrcamento(State.orcamento);
   showToast('✅ Status atualizado');
 }
 
 function toggleMenuOrcamento() {
   const menu = document.getElementById('menu-orcamento');
-  menuAberto = !menuAberto;
-  menu.style.display = menuAberto ? 'block' : 'none';
+  State.menuAberto = !State.menuAberto;
+  menu.style.display = State.menuAberto ? 'block' : 'none';
 }
 
 function fecharMenuOrcamento() {
-  menuAberto = false;
+  State.menuAberto = false;
   const menu = document.getElementById('menu-orcamento');
   if (menu) menu.style.display = 'none';
 }
 
 function editarOrcamentoAtual() {
-  if (!orcamentoAtual) return;
-  orcamentoEditandoId = orcamentoAtual.id;
-  screenHistory = ['dashboard'];
+  if (!State.orcamento) return;
+  // Carrega cópia fresca do storage para evitar edição sobre estado de visualização
+  const fresco = Storage.getOrcamento(State.orcamento.id);
+  if (!fresco) return;
+  State.orcamento = deepCopy(fresco);
+  State.editandoId = fresco.id;
+  State.screenHistory = ['dashboard'];
   navigate('orc-1');
 }
 
 function duplicarOrcamento() {
   fecharMenuOrcamento();
-  if (!orcamentoAtual) return;
-  const novo = JSON.parse(JSON.stringify(orcamentoAtual));
+  if (!State.orcamento) return;
+  const novo = deepCopy(State.orcamento);
   novo.id = gerarId();
   novo.numero = `ORC-${String(Storage.proximoNumero()).padStart(3, '0')}`;
   novo.dataCriacao = new Date().toISOString();
@@ -780,14 +901,14 @@ function duplicarOrcamento() {
 
 function excluirOrcamento() {
   fecharMenuOrcamento();
-  if (!orcamentoAtual) return;
+  if (!State.orcamento) return;
   abrirModalExcluir(
-    `Tem certeza que deseja excluir o orçamento <strong>${orcamentoAtual.numero}</strong>? Esta ação não pode ser desfeita.`,
+    `Tem certeza que deseja excluir o orçamento <strong>${State.orcamento.numero}</strong>? Esta ação não pode ser desfeita.`,
     () => {
-      Storage.excluirOrcamento(orcamentoAtual.id);
-      orcamentoAtual = null;
+      Storage.excluirOrcamento(State.orcamento.id);
+      State.orcamento = null;
       showToast('🗑️ Orçamento excluído');
-      screenHistory = [];
+      State.screenHistory = [];
       navigate('dashboard');
     }
   );
@@ -795,11 +916,26 @@ function excluirOrcamento() {
 
 // ===== PDF =====
 function gerarPDF() {
-  if (!orcamentoAtual) return;
+  if (!State.orcamento) return;
+
+  if (!window.jspdf || !window.jspdf.jsPDF) {
+    showToast('⚠️ Biblioteca de PDF não carregou. Verifique sua conexão e recarregue a página.');
+    return;
+  }
+
+  try {
+    _gerarPDFInterno();
+  } catch (err) {
+    console.error('Erro ao gerar PDF:', err);
+    showToast('❌ Não foi possível gerar o PDF. Tente novamente.');
+  }
+}
+
+function _gerarPDFInterno() {
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({ unit: 'mm', format: 'a4' });
   const cfg = Storage.getConfig();
-  const o = orcamentoAtual;
+  const o = State.orcamento;
   const W = doc.internal.pageSize.getWidth();
 
   // Cabeçalho
@@ -918,8 +1054,8 @@ function imprimirOrcamento() {
 
 // ===== COMPARTILHAR =====
 async function compartilharOrcamento() {
-  if (!orcamentoAtual) return;
-  const o = orcamentoAtual;
+  if (!State.orcamento) return;
+  const o = State.orcamento;
   const cfg = Storage.getConfig();
   const texto = `*${o.numero}*\n` +
     `${cfg.empresa || 'Orçamento'}\n\n` +
@@ -1000,7 +1136,7 @@ function fecharModalExcluir() {
 
 // Fechar menu ao clicar fora
 document.addEventListener('click', (e) => {
-  if (menuAberto && !e.target.closest('#menu-orcamento') && !e.target.closest('.icon-btn')) {
+  if (State.menuAberto && !e.target.closest('#menu-orcamento') && !e.target.closest('.icon-btn')) {
     fecharMenuOrcamento();
   }
 });

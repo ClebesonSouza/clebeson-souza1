@@ -957,7 +957,74 @@ html, body {
   .print-only { display: block; }
 }
 
+/* ===== VALIDAÇÃO ===== */
+.input-error {
+  border-color: var(--red) !important;
+  background-color: var(--red-light) !important;
+}
+.form-group.has-error label {
+  color: var(--red);
+}
+.field-error-msg {
+  color: var(--red);
+  font-size: 12px;
+  font-weight: 500;
+  margin-top: 5px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.field-error-msg::before {
+  content: '⚠';
+  font-size: 11px;
+}
+
 /* ===== SCROLLBAR ===== */
 ::-webkit-scrollbar { width: 4px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: var(--gray-200); border-radius: 4px; }
+
+/* ===== DESKTOP / TABLET ===== */
+@media (min-width: 600px) {
+  :root {
+    --app-w: 480px;
+    --app-x: calc((100vw - 480px) / 2);
+  }
+
+  body {
+    background: #5c6bc0;
+    background-image: radial-gradient(circle at 20% 50%, #3949ab 0%, #5c6bc0 60%, #7986cb 100%);
+  }
+
+  /* Centraliza e enquadra cada tela como um "celular" */
+  .screen {
+    left: var(--app-x);
+    right: auto;
+    width: var(--app-w);
+    box-shadow: 0 24px 80px rgba(0,0,0,0.5), 0 0 0 1px rgba(0,0,0,0.08);
+    border-radius: 0;
+  }
+
+  /* Barras inferiores acompanham o frame */
+  .bottom-bar,
+  .bottom-bar-triple {
+    left: var(--app-x);
+    right: auto;
+    width: var(--app-w);
+  }
+
+  /* Dropdown posicionado dentro do frame */
+  .dropdown-menu {
+    right: calc(var(--app-x) + 8px);
+  }
+
+  /* Toast centralizado no frame */
+  .toast {
+    max-width: calc(var(--app-w) - 48px);
+  }
+
+  /* Dashboard: 4 colunas no lugar de 2 em telas maiores */
+  .cards-grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
