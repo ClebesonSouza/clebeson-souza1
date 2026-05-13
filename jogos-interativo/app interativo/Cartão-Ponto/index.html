@@ -1280,9 +1280,10 @@
     async function carregarDadosFirestore() {
       try {
         await _authPronto;
-        const [snapU, snapB] = await Promise.all([
+        const [snapU, snapB, snapO] = await Promise.all([
           db.collection("usuarios").get(),
           db.collection("batidas").get(),
+          db.collection("observacoes").get(),
         ]);
 
         if (!snapU.empty) {
@@ -1319,6 +1320,13 @@
             batidas = localB;
           }
         }
+
+        // Carrega observações
+        if (!snapO.empty) {
+          observacoes = snapO.docs.map(d => d.data());
+        } else {
+          try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
+        }
       } catch (e) {
         console.warn("Firestore indisponível, usando localStorage:", e);
         try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
@@ -1326,6 +1334,7 @@
           const raw = localStorage.getItem("batidas_bjk");
           batidas = raw ? (JSON.parse(raw) || []) : [];
         } catch {}
+        try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
       }
     }
 
@@ -1390,6 +1399,149 @@
           batch.commit().catch(e => console.warn("Firestore delete batidas usuario:", e));
         }
       }).catch(e => console.warn("Firestore excluir batidas usuario:", e));
+    }
+
+    // ============================
+    // OBSERVAÇÕES / ANOTAÇÕES DO DIA
+    // ============================
+    let observacoes = []; // anotações por usuário/dia — preenchido pelo Firestore
+
+    function _obsDocId(usuarioId, data) {
+      return `${usuarioId}_${data}`;
+    }
+
+    async function _salvarObservacaoFirestore(obs) {
+      try {
+        await _authPronto;
+        await db.collection("observacoes").doc(_obsDocId(obs.usuarioId, obs.data)).set(obs);
+      } catch (e) { console.warn("Firestore salvar observacao:", e); }
+    }
+
+    async function _excluirObservacaoFirestore(usuarioId, data) {
+      try {
+        await _authPronto;
+        await db.collection("observacoes").doc(_obsDocId(usuarioId, data)).delete();
+      } catch (e) { console.warn("Firestore excluir observacao:", e); }
+    }
+
+    async function salvarObservacao(usuarioId, dataStr, texto) {
+      const quem = usuarioLogado ? usuarioLogado.nome : "—";
+      const agora = new Date().toISOString();
+      const idx = observacoes.findIndex(o => String(o.usuarioId) === String(usuarioId) && o.data === dataStr);
+      if (idx >= 0) {
+        observacoes[idx].texto = texto;
+        observacoes[idx].atualizadoEm = agora;
+        observacoes[idx].atualizadoPor = quem;
+        await _salvarObservacaoFirestore(observacoes[idx]);
+      } else {
+        const novaObs = { usuarioId: String(usuarioId), data: dataStr, texto, criadoPor: quem, criadoEm: agora };
+        observacoes.push(novaObs);
+        await _salvarObservacaoFirestore(novaObs);
+      }
+      localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
+    }
+
+    async function excluirObservacao(usuarioId, dataStr) {
+      const idx = observacoes.findIndex(o => String(o.usuarioId) === String(usuarioId) && o.data === dataStr);
+      if (idx >= 0) observacoes.splice(idx, 1);
+      localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
+      await _excluirObservacaoFirestore(usuarioId, dataStr);
+    }
+
+    function renderObservacaoDia(container, usuarioId, dataStr) {
+      const obs = observacoes.find(o => String(o.usuarioId) === String(usuarioId) && o.data === dataStr);
+      const velha = container.querySelector("#obsDiaSecao");
+      if (velha) velha.remove();
+
+      const secao = document.createElement("div");
+      secao.id = "obsDiaSecao";
+      secao.style.cssText = "margin-top:14px;border-top:1px solid #e0e0e0;padding-top:12px;";
+
+      if (obs) {
+        secao.innerHTML = `
+          <div id="obsPainelExibicao" style="background:#fff9c4;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #f9a825;">
+            <div style="font-size:0.78em;color:#888;margin-bottom:4px;">💬 <strong>Observação</strong> — ${escaparHTML(obs.criadoPor)}${obs.atualizadoEm ? ' (editado)' : ''}</div>
+            <div style="font-size:0.9em;color:#333;line-height:1.5;white-space:pre-line;">${escaparHTML(obs.texto)}</div>
+          </div>
+          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Escreva uma observação para este dia..."></textarea>
+          <div id="obsBotoesNormais" style="display:flex;gap:8px;">
+            <button id="btnEditarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#f57c00;">✏️ Editar</button>
+            <button id="btnExcluirObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e53935;">Excluir</button>
+          </div>
+          <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2a6eb6;">Salvar</button>
+            <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
+          </div>`;
+      } else {
+        secao.innerHTML = `
+          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Escreva uma observação para este dia..."></textarea>
+          <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2a6eb6;">Salvar</button>
+            <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
+          </div>
+          <button id="btnAdicionarObs" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#2a6eb6;">💬 Adicionar observação</button>`;
+      }
+
+      container.appendChild(secao);
+
+      // Textarea value definida via JS (evita problemas de encoding no innerHTML)
+      const textarea = secao.querySelector("#obsTextarea");
+      if (textarea && obs) textarea.value = obs.texto;
+
+      const btnAdicionar   = secao.querySelector("#btnAdicionarObs");
+      const btnEditar      = secao.querySelector("#btnEditarObs");
+      const btnExcluir     = secao.querySelector("#btnExcluirObs");
+      const btnSalvar      = secao.querySelector("#btnSalvarObs");
+      const btnCancelar    = secao.querySelector("#btnCancelarObs");
+      const botoesNormais  = secao.querySelector("#obsBotoesNormais");
+      const botoesEdicao   = secao.querySelector("#obsBotoesEdicao");
+      const painelExibicao = secao.querySelector("#obsPainelExibicao");
+
+      function mostrarEdicao() {
+        if (textarea)       textarea.style.display = "block";
+        if (botoesNormais)  botoesNormais.style.display = "none";
+        if (botoesEdicao)   botoesEdicao.style.display = "flex";
+        if (btnAdicionar)   btnAdicionar.style.display = "none";
+        if (painelExibicao) painelExibicao.style.display = "none";
+      }
+
+      function esconderEdicao() {
+        if (textarea)       textarea.style.display = "none";
+        if (botoesNormais)  botoesNormais.style.display = "flex";
+        if (botoesEdicao)   botoesEdicao.style.display = "none";
+        if (btnAdicionar)   btnAdicionar.style.display = "block";
+        if (painelExibicao) painelExibicao.style.display = "block";
+      }
+
+      if (btnAdicionar) btnAdicionar.addEventListener("click", mostrarEdicao);
+      if (btnEditar)    btnEditar.addEventListener("click", mostrarEdicao);
+      if (btnCancelar)  btnCancelar.addEventListener("click", esconderEdicao);
+
+      if (btnSalvar) {
+        btnSalvar.addEventListener("click", async () => {
+          const texto = textarea ? textarea.value.trim() : "";
+          if (!texto) { if (textarea) textarea.style.border = "2px solid #e53935"; return; }
+          btnSalvar.disabled = true;
+          btnSalvar.textContent = "Salvando...";
+          await salvarObservacao(usuarioId, dataStr, texto);
+          renderObservacaoDia(container, usuarioId, dataStr);
+          renderRelatorio();
+        });
+      }
+
+      if (btnExcluir) {
+        btnExcluir.addEventListener("click", async () => {
+          if (!btnExcluir.dataset.confirmando) {
+            btnExcluir.dataset.confirmando = "1";
+            btnExcluir.textContent = "Confirmar exclusão";
+            btnExcluir.style.background = "#b71c1c";
+            return;
+          }
+          await excluirObservacao(usuarioId, dataStr);
+          renderObservacaoDia(container, usuarioId, dataStr);
+          renderRelatorio();
+        });
+      }
     }
 
     // ============================
@@ -2817,8 +2969,10 @@
         const onclickAttr = clicavel ? `onclick="abrirBatidasDia(${numDia})"` : "";
 
         const diaFmt = String(numDia).padStart(2,"0");
+        const _dataObs = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
+        const temObs = observacoes.some(o => String(o.usuarioId) === String(_relatorioUserId) && o.data === _dataObs);
         return `<tr class="${classTr}" ${onclickAttr}>
-          <td>${diaFmt}<br><small>${semAbrv}</small></td>
+          <td>${diaFmt}<br><small>${semAbrv}</small>${temObs ? '<br><span title="Tem observação" style="font-size:0.9em;">💬</span>' : ''}</td>
           <td>${e1}</td>
           <td>${s1}</td>
           <td>${e2}</td>
@@ -2941,6 +3095,10 @@
             + Adicionar batida neste dia
           </button>`;
       }
+
+      // Seção de observações/anotações do dia
+      const obsDataStr = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
+      renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
     }
