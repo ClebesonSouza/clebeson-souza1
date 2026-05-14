@@ -1613,11 +1613,25 @@
       const btnAdicionar   = secao.querySelector("#btnAdicionarObs");
       const btnEditar      = secao.querySelector("#btnEditarObs");
 
-      // Admin só pode visualizar e excluir — não pode escrever nem editar
-      if (!ehFuncionario) {
-        if (btnEditar)    btnEditar.style.display = "none";
-        if (btnAdicionar) btnAdicionar.style.display = "none";
+      // Admin: observação oculta por padrão com botão Visualizar/Ocultar
+      if (!ehFuncionario && obs) {
+        if (btnEditar) btnEditar.style.display = "none";
+        const painelObs = secao.querySelector("#obsPainelExibicao");
+        if (painelObs) painelObs.style.display = "none";
+        const botoesNorm = secao.querySelector("#obsBotoesNormais");
+        if (botoesNorm) {
+          const btnVer = document.createElement("button");
+          btnVer.textContent = "👁 Visualizar";
+          btnVer.style.cssText = "width:100%;margin-top:0;padding:8px;font-size:0.85em;background:#5c6bc0;";
+          btnVer.addEventListener("click", () => {
+            const visivel = painelObs.style.display !== "none";
+            painelObs.style.display = visivel ? "none" : "block";
+            btnVer.textContent = visivel ? "👁 Visualizar" : "🙈 Ocultar";
+          });
+          botoesNorm.insertBefore(btnVer, botoesNorm.firstChild);
+        }
       }
+      if (!ehFuncionario && btnAdicionar) btnAdicionar.style.display = "none";
       const btnExcluir     = secao.querySelector("#btnExcluirObs");
       const btnSalvar      = secao.querySelector("#btnSalvarObs");
       const btnCancelar    = secao.querySelector("#btnCancelarObs");
