@@ -3541,14 +3541,9 @@
         conteudo.appendChild(btnAdicionarBatida);
       }
 
-      // Seções de relatório e observação do dia
-      const obsDataStr = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
-      renderRelatorioDia(conteudo, _relatorioUserId, obsDataStr);
-      renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
-
       // Separador visual entre batidas e registros do dia
       const separador = document.createElement("div");
-      separador.style.cssText = "display:flex;align-items:center;gap:10px;margin:16px 0 10px;";
+      separador.style.cssText = "display:flex;align-items:center;gap:10px;margin:16px 0 0;";
       const linhaEsq = document.createElement("div");
       linhaEsq.style.cssText = "flex:1;height:1px;background:linear-gradient(to right,transparent,#bdbdbd);";
       const labelSep = document.createElement("span");
@@ -3561,18 +3556,21 @@
       separador.appendChild(linhaDir);
       conteudo.appendChild(separador);
 
-      // Coloca os botões "adicionar" lado a lado se ambos existirem
+      // Row de ação criada antes das seções para manter a ordem visual correta
+      const rowRegistros = document.createElement("div");
+      rowRegistros.style.cssText = "display:flex;gap:8px;margin:10px 0 0;";
+      conteudo.appendChild(rowRegistros);
+
+      // Seções de relatório e observação do dia
+      const obsDataStr = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
+      renderRelatorioDia(conteudo, _relatorioUserId, obsDataStr);
+      renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
+
+      // Move os botões de ação para o row (que está acima das seções de conteúdo)
       const btnRelAdd = conteudo.querySelector("#btnAdicionarRelatDia");
       const btnObsAdd = conteudo.querySelector("#btnAdicionarObs");
-      if (btnRelAdd && btnObsAdd) {
-        const row = document.createElement("div");
-        row.style.cssText = "display:flex;gap:8px;";
-        conteudo.appendChild(row);
-        btnRelAdd.style.marginTop = "0";
-        btnObsAdd.style.marginTop = "0";
-        row.appendChild(btnRelAdd);
-        row.appendChild(btnObsAdd);
-      }
+      if (btnRelAdd) { btnRelAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#1565c0;"; rowRegistros.appendChild(btnRelAdd); }
+      if (btnObsAdd) { btnObsAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#2a6eb6;"; rowRegistros.appendChild(btnObsAdd); }
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
     }
