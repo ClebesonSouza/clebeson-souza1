@@ -2711,7 +2711,13 @@
       _relatorioMes    = dt.getMonth();
       renderRelatorio();
       document.getElementById("modalRelatorio").classList.add("ativo");
-      setTimeout(() => abrirBatidasDia(dt.getDate()), 350);
+      setTimeout(() => {
+        abrirBatidasDia(dt.getDate());
+        setTimeout(() => {
+          const obsSecao = document.getElementById("obsDiaSecao");
+          if (obsSecao) obsSecao.scrollIntoView({ behavior: "smooth", block: "center" });
+        }, 200);
+      }, 350);
     }
 
     function abrirEdicao(id) {
