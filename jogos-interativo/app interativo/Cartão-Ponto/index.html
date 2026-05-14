@@ -1608,8 +1608,16 @@
       const textarea = secao.querySelector("#obsTextarea");
       if (textarea && obs) textarea.value = obs.texto;
 
+      const ehFuncionario = usuarioLogado && !usuarioLogado.admin;
+
       const btnAdicionar   = secao.querySelector("#btnAdicionarObs");
       const btnEditar      = secao.querySelector("#btnEditarObs");
+
+      // Admin só pode visualizar e excluir — não pode escrever nem editar
+      if (!ehFuncionario) {
+        if (btnEditar)    btnEditar.style.display = "none";
+        if (btnAdicionar) btnAdicionar.style.display = "none";
+      }
       const btnExcluir     = secao.querySelector("#btnExcluirObs");
       const btnSalvar      = secao.querySelector("#btnSalvarObs");
       const btnCancelar    = secao.querySelector("#btnCancelarObs");
