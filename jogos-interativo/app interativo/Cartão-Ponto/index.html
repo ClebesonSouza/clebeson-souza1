@@ -1626,7 +1626,7 @@
 
       const secao = document.createElement("div");
       secao.id = "relatDiaSecao";
-      secao.style.cssText = "margin-top:10px;border-top:1px solid #e0e0e0;padding-top:12px;";
+      secao.style.cssText = "margin-top:10px;";
 
       if (rel) {
         secao.innerHTML = `
@@ -3320,6 +3320,19 @@
       const obsDataStr = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
       renderRelatorioDia(conteudo, _relatorioUserId, obsDataStr);
       renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
+
+      // Coloca os botões "adicionar" lado a lado se ambos existirem
+      const btnRelAdd = conteudo.querySelector("#btnAdicionarRelatDia");
+      const btnObsAdd = conteudo.querySelector("#btnAdicionarObs");
+      if (btnRelAdd && btnObsAdd) {
+        const row = document.createElement("div");
+        row.style.cssText = "display:flex;gap:8px;margin-top:10px;border-top:1px solid #e0e0e0;padding-top:12px;";
+        conteudo.appendChild(row);
+        btnRelAdd.style.marginTop = "0";
+        btnObsAdd.style.marginTop = "0";
+        row.appendChild(btnRelAdd);
+        row.appendChild(btnObsAdd);
+      }
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
     }
