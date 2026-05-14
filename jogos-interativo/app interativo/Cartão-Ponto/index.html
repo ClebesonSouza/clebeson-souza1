@@ -1823,7 +1823,7 @@
       const dataFmt = dt.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
 
       // Cabeçalho
-      doc.setFillColor(56, 142, 60);
+      doc.setFillColor(21, 101, 192);
       doc.rect(0, 0, 210, 30, "F");
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
@@ -1836,7 +1836,7 @@
 
       // Dados
       let y = 40;
-      doc.setTextColor(56, 142, 60);
+      doc.setTextColor(21, 101, 192);
       doc.setFontSize(13);
       doc.setFont("helvetica", "bold");
       doc.text(u ? u.nome : "", 14, y); y += 7;
@@ -1848,7 +1848,7 @@
       doc.text(`Registrado por: ${rel.criadoPor}`, 14, y); y += 10;
 
       // Linha separadora
-      doc.setDrawColor(56, 142, 60);
+      doc.setDrawColor(21, 101, 192);
       doc.setLineWidth(0.5);
       doc.line(14, y, 196, y); y += 8;
 
