@@ -1549,12 +1549,8 @@
 
       if (btnExcluir) {
         btnExcluir.addEventListener("click", async () => {
-          if (!btnExcluir.dataset.confirmando) {
-            btnExcluir.dataset.confirmando = "1";
-            btnExcluir.textContent = "Confirmar exclusão";
-            btnExcluir.style.background = "#b71c1c";
-            return;
-          }
+          const ok = await confirmar("Excluir esta observação?\nEsta ação não pode ser desfeita.");
+          if (!ok) return;
           await excluirObservacao(usuarioId, dataStr);
           renderObservacaoDia(container, usuarioId, dataStr);
           renderRelatorio();
@@ -3137,7 +3133,7 @@
               ${usuarioLogado && usuarioLogado.admin ? `
               <div class="batida-admin-acoes">
                 <button class="btn-editar-batida" onclick="abrirEditarBatidaAdmin('${isoEscapado}')">Editar</button>
-                <button class="btn-excluir-batida" onclick="excluirBatidaAdmin('${isoEscapado}', this)">Excluir</button>
+                <button class="btn-excluir-batida" onclick="excluirBatidaAdmin('${isoEscapado}')">Excluir</button>
               </div>` : ""}
             </div>`;
         }).join("");
@@ -5272,23 +5268,9 @@
       document.getElementById("modalEditarBatida").classList.add("ativo");
     }
 
-    function excluirBatidaAdmin(dataHoraISO, btnEl) {
-      if (btnEl && !btnEl.dataset.confirmando) {
-        btnEl.dataset.confirmando = "1";
-        btnEl.textContent = "Confirmar exclusão";
-        btnEl.style.background = "#b71c1c";
-        const btnCancelar = document.createElement("button");
-        btnCancelar.className = "btn-editar-batida";
-        btnCancelar.textContent = "Cancelar";
-        btnCancelar.onclick = () => {
-          btnEl.textContent = "Excluir";
-          btnEl.style.background = "";
-          delete btnEl.dataset.confirmando;
-          btnCancelar.remove();
-        };
-        btnEl.insertAdjacentElement("afterend", btnCancelar);
-        return;
-      }
+    async function excluirBatidaAdmin(dataHoraISO) {
+      const ok = await confirmar("Excluir esta batida de ponto?\nEsta ação não pode ser desfeita.");
+      if (!ok) return;
       const idx = batidas.findIndex(b => b.data_hora === dataHoraISO);
       if (idx === -1) return;
       batidas.splice(idx, 1);
