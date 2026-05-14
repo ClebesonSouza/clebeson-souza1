@@ -1297,10 +1297,11 @@
     async function carregarDadosFirestore() {
       try {
         await _authPronto;
-        const [snapU, snapB, snapO] = await Promise.all([
+        const [snapU, snapB, snapO, snapR] = await Promise.all([
           db.collection("usuarios").get(),
           db.collection("batidas").get(),
           db.collection("observacoes").get(),
+          db.collection("relatoriosDia").get(),
         ]);
 
         if (!snapU.empty) {
@@ -1350,6 +1351,13 @@
           });
         } else {
           try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
+        }
+
+        // Carrega relatórios do dia
+        if (!snapR.empty) {
+          relatDias = snapR.docs.map(d => d.data()).filter(r => r.data && /^\d{4}-\d{2}-\d{2}$/.test(r.data));
+        } else {
+          try { relatDias = JSON.parse(localStorage.getItem("relatdias_bjk") || "[]"); } catch {}
         }
       } catch (e) {
         console.warn("Firestore indisponível, usando localStorage:", e);
@@ -1423,6 +1431,51 @@
           batch.commit().catch(e => console.warn("Firestore delete batidas usuario:", e));
         }
       }).catch(e => console.warn("Firestore excluir batidas usuario:", e));
+    }
+
+    // ============================
+    // RELATÓRIO DO DIA
+    // ============================
+    let relatDias = [];
+
+    function _relatDiaDocId(usuarioId, data) { return `${usuarioId}_${data}`; }
+
+    async function _salvarRelatDiaFirestore(rel) {
+      try {
+        await _authPronto;
+        await db.collection("relatoriosDia").doc(_relatDiaDocId(rel.usuarioId, rel.data)).set(rel);
+      } catch (e) { console.warn("Firestore salvar relatDia:", e); }
+    }
+
+    async function _excluirRelatDiaFirestore(usuarioId, data) {
+      try {
+        await _authPronto;
+        await db.collection("relatoriosDia").doc(_relatDiaDocId(usuarioId, data)).delete();
+      } catch (e) { console.warn("Firestore excluir relatDia:", e); }
+    }
+
+    async function salvarRelatDia(usuarioId, dataStr, texto) {
+      const quem = usuarioLogado ? usuarioLogado.nome : "—";
+      const agora = new Date().toISOString();
+      const idx = relatDias.findIndex(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
+      if (idx >= 0) {
+        relatDias[idx].texto = texto;
+        relatDias[idx].atualizadoEm = agora;
+        relatDias[idx].atualizadoPor = quem;
+        await _salvarRelatDiaFirestore(relatDias[idx]);
+      } else {
+        const novo = { usuarioId: String(usuarioId), data: dataStr, texto, criadoPor: quem, criadoEm: agora };
+        relatDias.push(novo);
+        await _salvarRelatDiaFirestore(novo);
+      }
+      localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+    }
+
+    async function excluirRelatDia(usuarioId, dataStr) {
+      const idx = relatDias.findIndex(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
+      if (idx >= 0) relatDias.splice(idx, 1);
+      localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+      await _excluirRelatDiaFirestore(usuarioId, dataStr);
     }
 
     // ============================
@@ -1562,6 +1615,95 @@
           renderObservacaoDia(container, usuarioId, dataStr);
           renderRelatorio();
           renderAlertasObservacao();
+        });
+      }
+    }
+
+    function renderRelatorioDia(container, usuarioId, dataStr) {
+      const rel = relatDias.find(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
+      const velha = container.querySelector("#relatDiaSecao");
+      if (velha) velha.remove();
+
+      const secao = document.createElement("div");
+      secao.id = "relatDiaSecao";
+      secao.style.cssText = "margin-top:10px;border-top:1px solid #e0e0e0;padding-top:12px;";
+
+      if (rel) {
+        secao.innerHTML = `
+          <div id="relatDiaPainelExibicao" style="background:#e8f5e9;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #43a047;">
+            <div style="font-size:0.78em;color:#888;margin-bottom:4px;">📋 <strong>Relatório do Dia</strong> — ${escaparHTML(rel.criadoPor)}${rel.atualizadoEm ? ' (editado)' : ''}</div>
+            <div style="font-size:0.9em;color:#333;line-height:1.5;white-space:pre-line;">${escaparHTML(rel.texto)}</div>
+          </div>
+          <textarea id="relatDiaTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
+          <div id="relatDiaBotoesNormais" style="display:flex;gap:8px;">
+            <button id="btnEditarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">✏️ Editar</button>
+            <button id="btnExcluirRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e53935;">Excluir</button>
+          </div>
+          <div id="relatDiaBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
+            <button id="btnSalvarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">Salvar</button>
+            <button id="btnCancelarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
+          </div>`;
+      } else {
+        secao.innerHTML = `
+          <textarea id="relatDiaTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
+          <div id="relatDiaBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
+            <button id="btnSalvarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">Salvar</button>
+            <button id="btnCancelarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
+          </div>
+          <button id="btnAdicionarRelatDia" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#388e3c;">📋 Relatório do Dia</button>`;
+      }
+
+      container.appendChild(secao);
+
+      const textarea       = secao.querySelector("#relatDiaTextarea");
+      const btnAdicionar   = secao.querySelector("#btnAdicionarRelatDia");
+      const btnEditar      = secao.querySelector("#btnEditarRelatDia");
+      const btnExcluir     = secao.querySelector("#btnExcluirRelatDia");
+      const btnSalvar      = secao.querySelector("#btnSalvarRelatDia");
+      const btnCancelar    = secao.querySelector("#btnCancelarRelatDia");
+      const botoesNormais  = secao.querySelector("#relatDiaBotoesNormais");
+      const botoesEdicao   = secao.querySelector("#relatDiaBotoesEdicao");
+      const painelExibicao = secao.querySelector("#relatDiaPainelExibicao");
+
+      if (textarea && rel) textarea.value = rel.texto;
+
+      function mostrarEdicao() {
+        if (textarea)       textarea.style.display = "block";
+        if (botoesNormais)  botoesNormais.style.display = "none";
+        if (botoesEdicao)   botoesEdicao.style.display = "flex";
+        if (btnAdicionar)   btnAdicionar.style.display = "none";
+        if (painelExibicao) painelExibicao.style.display = "none";
+      }
+
+      function esconderEdicao() {
+        if (textarea)       textarea.style.display = "none";
+        if (botoesNormais)  botoesNormais.style.display = "flex";
+        if (botoesEdicao)   botoesEdicao.style.display = "none";
+        if (btnAdicionar)   btnAdicionar.style.display = "block";
+        if (painelExibicao) painelExibicao.style.display = "block";
+      }
+
+      if (btnAdicionar) btnAdicionar.addEventListener("click", mostrarEdicao);
+      if (btnEditar)    btnEditar.addEventListener("click", mostrarEdicao);
+      if (btnCancelar)  btnCancelar.addEventListener("click", esconderEdicao);
+
+      if (btnSalvar) {
+        btnSalvar.addEventListener("click", async () => {
+          const texto = textarea ? textarea.value.trim() : "";
+          if (!texto) { if (textarea) textarea.style.border = "2px solid #e53935"; return; }
+          btnSalvar.disabled = true;
+          btnSalvar.textContent = "Salvando...";
+          await salvarRelatDia(usuarioId, dataStr, texto);
+          renderRelatorioDia(container, usuarioId, dataStr);
+        });
+      }
+
+      if (btnExcluir) {
+        btnExcluir.addEventListener("click", async () => {
+          const ok = await confirmar("Excluir o relatório deste dia?\nEsta ação não pode ser desfeita.");
+          if (!ok) return;
+          await excluirRelatDia(usuarioId, dataStr);
+          renderRelatorioDia(container, usuarioId, dataStr);
         });
       }
     }
@@ -3174,8 +3316,9 @@
         conteudo.appendChild(btnAdicionarBatida);
       }
 
-      // Seção de observações/anotações do dia
+      // Seções de relatório e observação do dia
       const obsDataStr = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
+      renderRelatorioDia(conteudo, _relatorioUserId, obsDataStr);
       renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
