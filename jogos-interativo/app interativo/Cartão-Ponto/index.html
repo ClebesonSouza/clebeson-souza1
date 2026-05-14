@@ -1837,6 +1837,31 @@
       doc.setFont("helvetica", "normal");
       const linhas = doc.splitTextToSize(rel.texto, 182);
       doc.text(linhas, 14, y);
+      y += linhas.length * 6 + 16;
+
+      // Assinaturas
+      const pageH = 297;
+      const yAssin = Math.max(y, pageH - 50);
+
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.4);
+
+      // Assinatura do funcionário (esquerda)
+      const nomeFuncionario = u ? u.nome : "Funcionário";
+      doc.line(14, yAssin, 90, yAssin);
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont("helvetica", "normal");
+      doc.text(nomeFuncionario, 52, yAssin + 5, { align: "center" });
+      doc.setFont("helvetica", "italic");
+      doc.text(u && u.cargo ? u.cargo : "Funcionário", 52, yAssin + 10, { align: "center" });
+
+      // Assinatura do diretor (direita)
+      doc.line(120, yAssin, 196, yAssin);
+      doc.setFont("helvetica", "normal");
+      doc.text("José Benildo de Souza", 158, yAssin + 5, { align: "center" });
+      doc.setFont("helvetica", "italic");
+      doc.text("Diretor — BJK", 158, yAssin + 10, { align: "center" });
 
       const nomeArq = `relatorio-dia-${(u ? u.nome : "funcionario").replace(/\s+/g,"-")}-${_relatDiaTelaDataStr}.pdf`;
       doc.save(nomeArq);
