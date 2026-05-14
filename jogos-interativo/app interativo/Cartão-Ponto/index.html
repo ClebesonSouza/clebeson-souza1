@@ -967,6 +967,12 @@
       <div class="card content" id="listaAlertasObs" style="padding:10px 14px;"></div>
     </div>
 
+    <!-- ALERTAS DE RELATÓRIOS DO DIA -->
+    <div class="card" id="painelAlertasRelat" style="margin-bottom:14px;display:none;">
+      <div class="card-title" style="background:#388e3c;">📋 Relatórios do Dia</div>
+      <div class="card content" id="listaAlertasRelat" style="padding:10px 14px;"></div>
+    </div>
+
     <div class="card">
       <div class="card-title">Área Administrativa</div>
       <div class="card content">
@@ -1641,6 +1647,7 @@
           renderObservacaoDia(container, usuarioId, dataStr);
           renderRelatorio();
           renderAlertasObservacao();
+          renderAlertasRelatDia();
         });
       }
 
@@ -1652,6 +1659,7 @@
           renderObservacaoDia(container, usuarioId, dataStr);
           renderRelatorio();
           renderAlertasObservacao();
+          renderAlertasRelatDia();
         });
       }
     }
@@ -1761,6 +1769,7 @@
       await salvarRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr, texto);
       btn.disabled = false;
       btn.textContent = "Salvar";
+      renderAlertasRelatDia();
       abrirTelaRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
     });
 
@@ -2481,6 +2490,7 @@
       usuarioLogado = admin;
       renderAdminUsers();
       renderAlertasObservacao();
+      renderAlertasRelatDia();
       iniciarDashboard();
       mudarTela("adminScreen");
     });
@@ -2876,6 +2886,7 @@
         usuarios = snap.docs.map(d => d.data());
         renderAdminUsers();
         renderAlertasObservacao();
+        renderAlertasRelatDia();
         renderDashboard(_dashBatidasHoje);
       }, e => console.warn("Dashboard usuarios erro:", e));
 
@@ -2974,6 +2985,42 @@
               <div style="font-size:0.76em;color:#888;margin-top:2px;">Anotação em ${dataFmt}</div>
             </div>
             <span style="font-size:0.85em;color:#2a6eb6;font-weight:bold;">Ver →</span>
+          </div>`;
+      }).filter(Boolean).join("");
+    }
+
+    function renderAlertasRelatDia() {
+      const painel = document.getElementById("painelAlertasRelat");
+      const lista  = document.getElementById("listaAlertasRelat");
+      if (!painel || !lista) return;
+
+      const relatFuncionarios = relatDias.filter(r => {
+        const u = usuarios.find(u => String(u.id) === String(r.usuarioId));
+        return u && !u.admin;
+      });
+
+      if (relatFuncionarios.length === 0) {
+        painel.style.display = "none";
+        return;
+      }
+
+      painel.style.display = "block";
+      lista.innerHTML = relatFuncionarios.map(rel => {
+        const u = usuarios.find(u => String(u.id) === String(rel.usuarioId));
+        if (!u) return "";
+        const dt = new Date(rel.data + "T00:00:00");
+        const dataFmt = dt.toLocaleDateString("pt-BR");
+        const uIdEsc  = escaparHTML(String(rel.usuarioId));
+        const dataEsc = escaparHTML(rel.data);
+        return `
+          <div onclick="abrirTelaRelatDia('${uIdEsc}','${dataEsc}')"
+               style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f1f8e9;border-radius:8px;margin-bottom:6px;border-left:4px solid #388e3c;cursor:pointer;">
+            <span style="font-size:1.3em;">📋</span>
+            <div style="flex:1;">
+              <div class="obs-alerta-nome" style="color:#2e7d32;">${escaparHTML(u.nome)}</div>
+              <div style="font-size:0.76em;color:#888;margin-top:2px;">Relatório em ${dataFmt}</div>
+            </div>
+            <span style="font-size:0.85em;color:#388e3c;font-weight:bold;">Ver →</span>
           </div>`;
       }).filter(Boolean).join("");
     }
