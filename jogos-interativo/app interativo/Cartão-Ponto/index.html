@@ -1621,7 +1621,7 @@
         if (botoesNorm && painelObs) {
           const btnVer = document.createElement("button");
           btnVer.textContent = "🙈 Ocultar";
-          btnVer.style.cssText = "width:100%;margin-top:0;padding:8px;font-size:0.85em;background:#5c6bc0;";
+          btnVer.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#5c6bc0;";
           btnVer.addEventListener("click", () => {
             const visivel = painelObs.style.display !== "none";
             painelObs.style.display = visivel ? "none" : "block";
