@@ -1203,6 +1203,43 @@
     </div>
   </div>
 
+  <!-- TELA DEDICADA: RELATÓRIO DO DIA -->
+  <div class="modal-overlay" id="modalRelatDiaTela" style="z-index:1600;align-items:flex-start;padding-top:20px;">
+    <div class="modal-box" style="width:96vw;max-width:480px;max-height:90vh;overflow-y:auto;text-align:left;padding:0;border-radius:12px;">
+      <!-- Cabeçalho -->
+      <div style="background:#388e3c;color:#fff;padding:14px 16px;border-radius:12px 12px 0 0;">
+        <div style="font-size:1.1em;font-weight:bold;">📋 Relatório do Dia</div>
+        <div id="relatDiaTelaSubtitulo" style="font-size:0.85em;opacity:0.88;margin-top:3px;"></div>
+      </div>
+      <!-- Corpo -->
+      <div style="padding:16px;">
+        <!-- Exibição do texto salvo -->
+        <div id="relatDiaTelaExibicao" style="display:none;background:#e8f5e9;border-radius:8px;padding:12px 14px;border-left:3px solid #388e3c;font-size:0.92em;color:#333;line-height:1.6;white-space:pre-line;margin-bottom:12px;"></div>
+        <!-- Mensagem quando admin e sem relatório -->
+        <div id="relatDiaTelaSemTexto" style="display:none;background:#f5f5f5;border-radius:8px;padding:12px;font-size:0.9em;color:#888;text-align:center;margin-bottom:12px;">Nenhum relatório registrado para este dia.</div>
+        <!-- Área de edição (só funcionário) -->
+        <div id="relatDiaTelaEdicao" style="display:none;">
+          <textarea id="relatDiaTelaTextarea" style="width:100%;min-height:180px;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:0.92em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
+          <div style="display:flex;gap:8px;margin-top:8px;">
+            <button id="btnSalvarRelatDiaTela" style="flex:1;background:#388e3c;margin-top:0;">Salvar</button>
+            <button id="btnCancelarRelatDiaTela" style="flex:1;background:#888;margin-top:0;">Cancelar</button>
+          </div>
+        </div>
+        <!-- Botões de ação -->
+        <button id="btnEscreverRelatDia" style="background:#388e3c;display:none;">✏️ Escrever Relatório</button>
+        <button id="btnEditarRelatDiaTela" style="background:#388e3c;display:none;">✏️ Editar Relatório</button>
+        <button id="btnCompartilharRelatDia" style="background:#25d366;display:none;">📤 Compartilhar Relatório</button>
+        <div id="relatDiaTelaPDFVoltar" style="display:none;display:none;">
+          <div style="display:flex;gap:8px;margin-top:0;">
+            <button id="btnPDFRelatDia" style="flex:1;background:#c62828;margin-top:0;">📄 Exportar PDF</button>
+            <button id="btnVoltarRelatDia" style="flex:1;background:#888;margin-top:0;">← Voltar</button>
+          </div>
+        </div>
+        <button id="btnVoltarRelatDiaSo" style="background:#888;display:none;">← Voltar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- MODAL DE CONFIRMAÇÃO GENÉRICO (substitui confirm() nativo) -->
   <div class="modal-overlay" id="modalConfirmar" style="z-index:2500;">
     <div class="modal-box" style="max-width:360px;width:94vw;text-align:center;">
@@ -1620,93 +1657,188 @@
     }
 
     function renderRelatorioDia(container, usuarioId, dataStr) {
-      const rel = relatDias.find(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
       const velha = container.querySelector("#relatDiaSecao");
       if (velha) velha.remove();
 
       const secao = document.createElement("div");
       secao.id = "relatDiaSecao";
-      secao.style.cssText = "margin-top:10px;";
+
+      const btn = document.createElement("button");
+      btn.id = "btnAdicionarRelatDia";
+      btn.style.cssText = "width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#388e3c;";
+      btn.textContent = "📋 Relatório do Dia";
+      btn.addEventListener("click", () => abrirTelaRelatDia(usuarioId, dataStr));
+      secao.appendChild(btn);
+      container.appendChild(secao);
+    }
+
+    // Estado da tela dedicada de relatório
+    let _relatDiaTelaUserId = null;
+    let _relatDiaTelaDataStr = null;
+    let _relatDiaTelaContainer = null;
+
+    function abrirTelaRelatDia(usuarioId, dataStr) {
+      _relatDiaTelaUserId  = usuarioId;
+      _relatDiaTelaDataStr = dataStr;
+
+      const u   = usuarios.find(u => String(u.id) === String(usuarioId));
+      const rel = relatDias.find(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
+      const dt  = new Date(dataStr + "T00:00:00");
+      const dataFmt = dt.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+      const ehFuncionario = usuarioLogado && !usuarioLogado.admin;
+
+      document.getElementById("relatDiaTelaSubtitulo").textContent =
+        `${u ? u.nome : ""} — ${dataFmt}`;
+
+      const elExibicao   = document.getElementById("relatDiaTelaExibicao");
+      const elSemTexto   = document.getElementById("relatDiaTelaSemTexto");
+      const elEdicao     = document.getElementById("relatDiaTelaEdicao");
+      const elTextarea   = document.getElementById("relatDiaTelaTextarea");
+      const btnEscrever  = document.getElementById("btnEscreverRelatDia");
+      const btnEditar    = document.getElementById("btnEditarRelatDiaTela");
+      const btnCompart   = document.getElementById("btnCompartilharRelatDia");
+      const elPDFVoltar  = document.getElementById("relatDiaTelaPDFVoltar");
+      const btnVoltarSo  = document.getElementById("btnVoltarRelatDiaSo");
+
+      // Reset
+      [elExibicao, elSemTexto, elEdicao, btnEscrever, btnEditar, btnCompart, elPDFVoltar, btnVoltarSo]
+        .forEach(el => { if (el) el.style.display = "none"; });
+      elEdicao.style.display = "none";
 
       if (rel) {
-        secao.innerHTML = `
-          <div id="relatDiaPainelExibicao" style="background:#e8f5e9;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #43a047;">
-            <div style="font-size:0.78em;color:#888;margin-bottom:4px;">📋 <strong>Relatório do Dia</strong> — ${escaparHTML(rel.criadoPor)}${rel.atualizadoEm ? ' (editado)' : ''}</div>
-            <div style="font-size:0.9em;color:#333;line-height:1.5;white-space:pre-line;">${escaparHTML(rel.texto)}</div>
-          </div>
-          <textarea id="relatDiaTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
-          <div id="relatDiaBotoesNormais" style="display:flex;gap:8px;">
-            <button id="btnEditarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">✏️ Editar</button>
-            <button id="btnExcluirRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e53935;">Excluir</button>
-          </div>
-          <div id="relatDiaBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">Salvar</button>
-            <button id="btnCancelarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
-          </div>`;
+        elExibicao.textContent = rel.texto;
+        elExibicao.style.display = "block";
+        btnCompart.style.display = "block";
+        elPDFVoltar.style.display = "block";
+        if (ehFuncionario) btnEditar.style.display = "block";
       } else {
-        secao.innerHTML = `
-          <textarea id="relatDiaTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
-          <div id="relatDiaBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#388e3c;">Salvar</button>
-            <button id="btnCancelarRelatDia" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
-          </div>
-          <button id="btnAdicionarRelatDia" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#388e3c;">📋 Relatório do Dia</button>`;
+        elSemTexto.style.display = "block";
+        if (ehFuncionario) {
+          btnEscrever.style.display = "block";
+          btnVoltarSo.style.display = "block";
+        } else {
+          btnVoltarSo.style.display = "block";
+        }
       }
 
-      container.appendChild(secao);
+      if (elTextarea) elTextarea.value = rel ? rel.texto : "";
 
-      const textarea       = secao.querySelector("#relatDiaTextarea");
-      const btnAdicionar   = secao.querySelector("#btnAdicionarRelatDia");
-      const btnEditar      = secao.querySelector("#btnEditarRelatDia");
-      const btnExcluir     = secao.querySelector("#btnExcluirRelatDia");
-      const btnSalvar      = secao.querySelector("#btnSalvarRelatDia");
-      const btnCancelar    = secao.querySelector("#btnCancelarRelatDia");
-      const botoesNormais  = secao.querySelector("#relatDiaBotoesNormais");
-      const botoesEdicao   = secao.querySelector("#relatDiaBotoesEdicao");
-      const painelExibicao = secao.querySelector("#relatDiaPainelExibicao");
-
-      if (textarea && rel) textarea.value = rel.texto;
-
-      function mostrarEdicao() {
-        if (textarea)       textarea.style.display = "block";
-        if (botoesNormais)  botoesNormais.style.display = "none";
-        if (botoesEdicao)   botoesEdicao.style.display = "flex";
-        if (btnAdicionar)   btnAdicionar.style.display = "none";
-        if (painelExibicao) painelExibicao.style.display = "none";
-      }
-
-      function esconderEdicao() {
-        if (textarea)       textarea.style.display = "none";
-        if (botoesNormais)  botoesNormais.style.display = "flex";
-        if (botoesEdicao)   botoesEdicao.style.display = "none";
-        if (btnAdicionar)   btnAdicionar.style.display = "block";
-        if (painelExibicao) painelExibicao.style.display = "block";
-      }
-
-      if (btnAdicionar) btnAdicionar.addEventListener("click", mostrarEdicao);
-      if (btnEditar)    btnEditar.addEventListener("click", mostrarEdicao);
-      if (btnCancelar)  btnCancelar.addEventListener("click", esconderEdicao);
-
-      if (btnSalvar) {
-        btnSalvar.addEventListener("click", async () => {
-          const texto = textarea ? textarea.value.trim() : "";
-          if (!texto) { if (textarea) textarea.style.border = "2px solid #e53935"; return; }
-          btnSalvar.disabled = true;
-          btnSalvar.textContent = "Salvando...";
-          await salvarRelatDia(usuarioId, dataStr, texto);
-          renderRelatorioDia(container, usuarioId, dataStr);
-        });
-      }
-
-      if (btnExcluir) {
-        btnExcluir.addEventListener("click", async () => {
-          const ok = await confirmar("Excluir o relatório deste dia?\nEsta ação não pode ser desfeita.");
-          if (!ok) return;
-          await excluirRelatDia(usuarioId, dataStr);
-          renderRelatorioDia(container, usuarioId, dataStr);
-        });
-      }
+      document.getElementById("modalRelatDiaTela").classList.add("ativo");
     }
+
+    // Botão Escrever (sem relatório ainda)
+    document.getElementById("btnEscreverRelatDia").addEventListener("click", () => {
+      document.getElementById("relatDiaTelaSemTexto").style.display = "none";
+      document.getElementById("btnEscreverRelatDia").style.display = "none";
+      document.getElementById("btnVoltarRelatDiaSo").style.display = "none";
+      document.getElementById("relatDiaTelaEdicao").style.display = "block";
+    });
+
+    // Botão Editar (já tem relatório)
+    document.getElementById("btnEditarRelatDiaTela").addEventListener("click", () => {
+      document.getElementById("relatDiaTelaExibicao").style.display = "none";
+      document.getElementById("btnEditarRelatDiaTela").style.display = "none";
+      document.getElementById("btnCompartilharRelatDia").style.display = "none";
+      document.getElementById("relatDiaTelaPDFVoltar").style.display = "none";
+      document.getElementById("relatDiaTelaEdicao").style.display = "block";
+    });
+
+    // Botão Cancelar edição
+    document.getElementById("btnCancelarRelatDiaTela").addEventListener("click", () => {
+      abrirTelaRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
+    });
+
+    // Botão Salvar
+    document.getElementById("btnSalvarRelatDiaTela").addEventListener("click", async () => {
+      const texto = document.getElementById("relatDiaTelaTextarea").value.trim();
+      if (!texto) {
+        document.getElementById("relatDiaTelaTextarea").style.border = "2px solid #e53935";
+        return;
+      }
+      const btn = document.getElementById("btnSalvarRelatDiaTela");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+      await salvarRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr, texto);
+      btn.disabled = false;
+      btn.textContent = "Salvar";
+      abrirTelaRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
+    });
+
+    // Botão Compartilhar
+    document.getElementById("btnCompartilharRelatDia").addEventListener("click", async () => {
+      const rel = relatDias.find(r => String(r.usuarioId) === String(_relatDiaTelaUserId) && r.data === _relatDiaTelaDataStr);
+      const u   = usuarios.find(u => String(u.id) === String(_relatDiaTelaUserId));
+      if (!rel) return;
+      const dt = new Date(_relatDiaTelaDataStr + "T00:00:00");
+      const dataFmt = dt.toLocaleDateString("pt-BR");
+      const texto = `📋 Relatório do Dia — ${u ? u.nome : ""}\n📅 ${dataFmt}\n\n${rel.texto}\n\n— Pontualize Cartão Ponto BJK`;
+      try {
+        if (navigator.share) {
+          await navigator.share({ title: "Relatório do Dia", text: texto });
+        } else {
+          await navigator.clipboard.writeText(texto);
+          alert("Relatório copiado para a área de transferência!");
+        }
+      } catch (e) { console.warn("Compartilhar:", e); }
+    });
+
+    // Botão Exportar PDF
+    document.getElementById("btnPDFRelatDia").addEventListener("click", () => {
+      const rel = relatDias.find(r => String(r.usuarioId) === String(_relatDiaTelaUserId) && r.data === _relatDiaTelaDataStr);
+      const u   = usuarios.find(u => String(u.id) === String(_relatDiaTelaUserId));
+      if (!rel) return;
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const dt = new Date(_relatDiaTelaDataStr + "T00:00:00");
+      const dataFmt = dt.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+
+      // Cabeçalho
+      doc.setFillColor(56, 142, 60);
+      doc.rect(0, 0, 210, 30, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório do Dia — Pontualize", 14, 12);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 20);
+      doc.text("Cartão Ponto BJK", 14, 26);
+
+      // Dados
+      let y = 40;
+      doc.setTextColor(56, 142, 60);
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text(u ? u.nome : "", 14, y); y += 7;
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      if (u && u.cargo) { doc.text(u.cargo, 14, y); y += 6; }
+      doc.text(`Data: ${dataFmt}`, 14, y); y += 6;
+      doc.text(`Registrado por: ${rel.criadoPor}`, 14, y); y += 10;
+
+      // Linha separadora
+      doc.setDrawColor(56, 142, 60);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, 196, y); y += 8;
+
+      // Texto do relatório
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const linhas = doc.splitTextToSize(rel.texto, 182);
+      doc.text(linhas, 14, y);
+
+      const nomeArq = `relatorio-dia-${(u ? u.nome : "funcionario").replace(/\s+/g,"-")}-${_relatDiaTelaDataStr}.pdf`;
+      doc.save(nomeArq);
+    });
+
+    // Botões Voltar
+    ["btnVoltarRelatDia", "btnVoltarRelatDiaSo"].forEach(id => {
+      document.getElementById(id).addEventListener("click", () => {
+        document.getElementById("modalRelatDiaTela").classList.remove("ativo");
+      });
+    });
 
     // ============================
     // UTILITARIOS
