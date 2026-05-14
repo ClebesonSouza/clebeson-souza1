@@ -3546,12 +3546,27 @@
       renderRelatorioDia(conteudo, _relatorioUserId, obsDataStr);
       renderObservacaoDia(conteudo, _relatorioUserId, obsDataStr);
 
+      // Separador visual entre batidas e registros do dia
+      const separador = document.createElement("div");
+      separador.style.cssText = "display:flex;align-items:center;gap:10px;margin:16px 0 10px;";
+      const linhaEsq = document.createElement("div");
+      linhaEsq.style.cssText = "flex:1;height:1px;background:linear-gradient(to right,transparent,#bdbdbd);";
+      const labelSep = document.createElement("span");
+      labelSep.style.cssText = "font-size:0.72em;color:#9e9e9e;white-space:nowrap;letter-spacing:0.05em;text-transform:uppercase;";
+      labelSep.textContent = "📝 registros do dia";
+      const linhaDir = document.createElement("div");
+      linhaDir.style.cssText = "flex:1;height:1px;background:linear-gradient(to left,transparent,#bdbdbd);";
+      separador.appendChild(linhaEsq);
+      separador.appendChild(labelSep);
+      separador.appendChild(linhaDir);
+      conteudo.appendChild(separador);
+
       // Coloca os botões "adicionar" lado a lado se ambos existirem
       const btnRelAdd = conteudo.querySelector("#btnAdicionarRelatDia");
       const btnObsAdd = conteudo.querySelector("#btnAdicionarObs");
       if (btnRelAdd && btnObsAdd) {
         const row = document.createElement("div");
-        row.style.cssText = "display:flex;gap:8px;margin-top:10px;border-top:1px solid #e0e0e0;padding-top:12px;";
+        row.style.cssText = "display:flex;gap:8px;";
         conteudo.appendChild(row);
         btnRelAdd.style.marginTop = "0";
         btnObsAdd.style.marginTop = "0";
