@@ -3003,28 +3003,43 @@
         "Atualizado: " + agora.toLocaleTimeString("pt-BR", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
     }
 
+    function getObsLidas() {
+      try { return JSON.parse(localStorage.getItem("obs_lidas") || "[]"); } catch { return []; }
+    }
+    function marcarObsLida(usuarioId, dataStr) {
+      const key = String(usuarioId) + ":" + dataStr;
+      const lidas = getObsLidas();
+      if (!lidas.includes(key)) {
+        lidas.push(key);
+        localStorage.setItem("obs_lidas", JSON.stringify(lidas));
+      }
+    }
+    function isObsLida(usuarioId, dataStr) {
+      return getObsLidas().includes(String(usuarioId) + ":" + dataStr);
+    }
+
     function renderAlertasObservacao() {
       const painel = document.getElementById("painelAlertasObs");
       const lista  = document.getElementById("listaAlertasObs");
       if (!painel || !lista) return;
 
-      const obsAdmin = observacoes.filter(o => {
+      const hoje = new Date().toISOString().slice(0, 10);
+
+      const obsHoje = observacoes.filter(o => {
         const u = usuarios.find(u => String(u.id) === String(o.usuarioId));
         const dtValida = o.data && !isNaN(new Date(o.data + "T00:00:00").getTime());
-        return u && !u.admin && dtValida;
+        return u && !u.admin && dtValida && o.data === hoje && !isObsLida(o.usuarioId, o.data);
       });
 
-      if (obsAdmin.length === 0) {
+      if (obsHoje.length === 0) {
         painel.style.display = "none";
         return;
       }
 
       painel.style.display = "block";
-      lista.innerHTML = obsAdmin.map(obs => {
+      lista.innerHTML = obsHoje.map(obs => {
         const u = usuarios.find(u => String(u.id) === String(obs.usuarioId));
         if (!u) return "";
-        const dt = new Date(obs.data + "T00:00:00");
-        const dataFmt = dt.toLocaleDateString("pt-BR");
         const uIdEsc  = escaparHTML(String(obs.usuarioId));
         const dataEsc = escaparHTML(obs.data);
         return `
@@ -3033,9 +3048,9 @@
             <span style="font-size:1.3em;">⚠️</span>
             <div style="flex:1;">
               <div class="obs-alerta-nome">${escaparHTML(u.nome)}</div>
-              <div style="font-size:0.76em;color:#888;margin-top:2px;">Anotação em ${dataFmt}</div>
+              <div style="font-size:0.76em;color:#888;margin-top:2px;">Anotação de hoje não lida</div>
             </div>
-            <span style="font-size:0.85em;color:#2a6eb6;font-weight:bold;">Ver →</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:#e53935;color:#fff;border-radius:999px;font-size:0.78em;font-weight:bold;">1</span>
           </div>`;
       }).filter(Boolean).join("");
     }
@@ -3061,9 +3076,11 @@
       if (!painel || !lista) return;
 
       const funcionarios = usuarios.filter(u => !u.admin);
+      const hoje = new Date().toISOString().slice(0, 10);
+
       const porFuncionario = funcionarios.map(u => {
         const naoLidos = relatDias.filter(r =>
-          String(r.usuarioId) === String(u.id) && !isRelatLido(u.id, r.data)
+          String(r.usuarioId) === String(u.id) && r.data === hoje && !isRelatLido(u.id, r.data)
         );
         return { u, naoLidos };
       }).filter(f => f.naoLidos.length > 0);
@@ -3093,6 +3110,10 @@
     }
 
     function irParaObservacao(usuarioId, dataStr) {
+      if (usuarioLogado && usuarioLogado.admin) {
+        marcarObsLida(usuarioId, dataStr);
+        renderAlertasObservacao();
+      }
       const dt = new Date(dataStr + "T00:00:00");
       _relatorioUserId = usuarioId;
       _relatorioAno    = dt.getFullYear();
