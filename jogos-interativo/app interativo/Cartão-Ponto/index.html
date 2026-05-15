@@ -1752,6 +1752,11 @@
 
       if (elTextarea) elTextarea.value = rel ? rel.texto : "";
 
+      if (usuarioLogado && usuarioLogado.admin) {
+        marcarRelatLido(usuarioId, dataStr);
+        renderAlertasRelatDia();
+      }
+
       document.getElementById("modalRelatDiaTela").classList.add("ativo");
     }
 
@@ -3035,40 +3040,56 @@
       }).filter(Boolean).join("");
     }
 
+    function getRelatLidos() {
+      try { return JSON.parse(localStorage.getItem("relatDias_lidos") || "[]"); } catch { return []; }
+    }
+    function marcarRelatLido(usuarioId, dataStr) {
+      const key = String(usuarioId) + ":" + dataStr;
+      const lidos = getRelatLidos();
+      if (!lidos.includes(key)) {
+        lidos.push(key);
+        localStorage.setItem("relatDias_lidos", JSON.stringify(lidos));
+      }
+    }
+    function isRelatLido(usuarioId, dataStr) {
+      return getRelatLidos().includes(String(usuarioId) + ":" + dataStr);
+    }
+
     function renderAlertasRelatDia() {
       const painel = document.getElementById("painelAlertasRelat");
       const lista  = document.getElementById("listaAlertasRelat");
       if (!painel || !lista) return;
 
-      const relatFuncionarios = relatDias.filter(r => {
-        const u = usuarios.find(u => String(u.id) === String(r.usuarioId));
-        return u && !u.admin;
-      });
+      const funcionarios = usuarios.filter(u => !u.admin);
+      const porFuncionario = funcionarios.map(u => {
+        const naoLidos = relatDias.filter(r =>
+          String(r.usuarioId) === String(u.id) && !isRelatLido(u.id, r.data)
+        );
+        return { u, naoLidos };
+      }).filter(f => f.naoLidos.length > 0);
 
-      if (relatFuncionarios.length === 0) {
+      if (porFuncionario.length === 0) {
         painel.style.display = "none";
         return;
       }
 
       painel.style.display = "block";
-      lista.innerHTML = relatFuncionarios.map(rel => {
-        const u = usuarios.find(u => String(u.id) === String(rel.usuarioId));
-        if (!u) return "";
-        const dt = new Date(rel.data + "T00:00:00");
-        const dataFmt = dt.toLocaleDateString("pt-BR");
-        const uIdEsc  = escaparHTML(String(rel.usuarioId));
-        const dataEsc = escaparHTML(rel.data);
+      lista.innerHTML = porFuncionario.map(({ u, naoLidos }) => {
+        const uIdEsc = escaparHTML(String(u.id));
+        const maisRecente = naoLidos.sort((a, b) => b.data.localeCompare(a.data))[0];
+        const dataEsc = escaparHTML(maisRecente.data);
+        const count = naoLidos.length;
         return `
           <div onclick="abrirTelaRelatDia('${uIdEsc}','${dataEsc}')"
                style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#f1f8e9;border-radius:8px;margin-bottom:6px;border-left:4px solid #388e3c;cursor:pointer;">
             <span style="font-size:1.3em;">📋</span>
             <div style="flex:1;">
               <div class="obs-alerta-nome" style="color:#2e7d32;">${escaparHTML(u.nome)}</div>
-              <div style="font-size:0.76em;color:#888;margin-top:2px;">Relatório em ${dataFmt}</div>
+              <div style="font-size:0.76em;color:#888;margin-top:2px;">Relatório${count > 1 ? "s" : ""} não lido${count > 1 ? "s" : ""}</div>
             </div>
-            <span style="font-size:0.85em;color:#388e3c;font-weight:bold;">Ver →</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:#e53935;color:#fff;border-radius:999px;font-size:0.78em;font-weight:bold;">${count}</span>
           </div>`;
-      }).filter(Boolean).join("");
+      }).join("");
     }
 
     function irParaObservacao(usuarioId, dataStr) {
