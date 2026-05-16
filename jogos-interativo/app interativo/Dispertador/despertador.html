@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Despertador</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: #1a1a2e;
+    color: #eee;
+    font-family: 'Courier New', monospace;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    gap: 24px;
+    padding: 32px 16px;
+  }
+
+  #relogio {
+    font-size: clamp(40px, 14vw, 72px);
+    font-weight: bold;
+    letter-spacing: 4px;
+    color: #00d4ff;
+    text-shadow: 0 0 20px #00d4ff88;
+  }
+
+  #data {
+    font-size: clamp(11px, 3vw, 16px);
+    color: #888;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    text-align: center;
+  }
+
+  .card {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 24px 32px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    width: min(360px, 100%);
+  }
+
+  .campo {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+  }
+
+  label {
+    font-size: 12px;
+    color: #aaa;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+  }
+
+  input[type="time"],
+  input[type="date"],
+  textarea {
+    width: 100%;
+    padding: 10px 14px;
+    font-family: 'Courier New', monospace;
+    background: #0f1b35;
+    border: 1px solid #0f3460;
+    border-radius: 8px;
+    color: #eee;
+    transition: border-color 0.2s;
+  }
+
+  input[type="time"]:focus,
+  input[type="date"]:focus,
+  textarea:focus {
+    outline: none;
+    border-color: #00d4ff;
+  }
+
+  input[type="time"] {
+    font-size: 28px;
+    color: #00d4ff;
+    text-align: center;
+    cursor: pointer;
+  }
+
+  input[type="date"] {
+    font-size: 15px;
+    color: #ccc;
+    cursor: pointer;
+  }
+
+  input[type="date"]::-webkit-calendar-picker-indicator {
+    filter: invert(0.7);
+    cursor: pointer;
+  }
+
+  .data-row {
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+
+  .data-row label.toggle-data {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-transform: none;
+    font-size: 13px;
+    color: #888;
+    white-space: nowrap;
+    letter-spacing: 0;
+  }
+
+  .data-row input[type="checkbox"] {
+    width: 14px;
+    height: 14px;
+    accent-color: #00d4ff;
+    cursor: pointer;
+  }
+
+  textarea {
+    font-size: 13px;
+    resize: none;
+    height: 60px;
+    color: #ccc;
+  }
+
+  textarea::placeholder { color: #445; }
+
+  button {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+    font-family: 'Courier New', monospace;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    letter-spacing: 1px;
+    font-weight: bold;
+    transition: all 0.2s;
+  }
+
+  #btnAdicionar {
+    background: #00d4ff;
+    color: #1a1a2e;
+  }
+
+  #btnAdicionar:hover { background: #00b8d9; }
+
+  #listaAlarmes {
+    width: min(360px, 100%);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  #listaAlarmes:empty::before {
+    content: 'Nenhum alarme cadastrado';
+    display: block;
+    text-align: center;
+    color: #555;
+    font-size: 13px;
+    padding: 8px 0;
+  }
+
+  .alarme-item {
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 10px;
+    padding: 12px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .alarme-item.disparando {
+    border-color: #e74c3c;
+    animation: pisca-borda 0.5s infinite;
+  }
+
+  @keyframes pisca-borda { 50% { border-color: transparent; } }
+
+  .alarme-info {
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    min-width: 0;
+  }
+
+  .alarme-hora {
+    font-size: 22px;
+    color: #00d4ff;
+    letter-spacing: 2px;
+  }
+
+  .alarme-meta {
+    font-size: 11px;
+    color: #556;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .alarme-aviso-preview {
+    font-size: 11px;
+    color: #778;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+    font-style: italic;
+  }
+
+  .alarme-controles {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-shrink: 0;
+  }
+
+  .toggle {
+    position: relative;
+    width: 44px;
+    height: 24px;
+    cursor: pointer;
+  }
+
+  .toggle input { display: none; }
+
+  .toggle-track {
+    position: absolute;
+    inset: 0;
+    background: #0f3460;
+    border-radius: 24px;
+    transition: background 0.2s;
+  }
+
+  .toggle input:checked + .toggle-track { background: #2ecc71; }
+
+  .toggle-thumb {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    width: 18px;
+    height: 18px;
+    background: #eee;
+    border-radius: 50%;
+    transition: left 0.2s;
+  }
+
+  .toggle input:checked ~ .toggle-thumb { left: 23px; }
+
+  .btn-remover {
+    width: auto;
+    padding: 4px 10px;
+    font-size: 14px;
+    background: transparent;
+    color: #e74c3c;
+    border: 1px solid #e74c3c44;
+    border-radius: 6px;
+  }
+
+  .btn-remover:hover { background: #e74c3c22; }
+
+  /* Modal de alarme disparado */
+  #modal {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: #0a0a1aee;
+    backdrop-filter: blur(6px);
+    z-index: 100;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 32px;
+    padding: 32px;
+    animation: fadeIn 0.4s ease;
+  }
+
+  #modal.visivel { display: flex; }
+
+  @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+  #modal-icone {
+    font-size: 80px;
+    animation: balanco 0.6s ease-in-out infinite alternate;
+  }
+
+  @keyframes balanco {
+    from { transform: rotate(-15deg); }
+    to   { transform: rotate(15deg); }
+  }
+
+  #modal-hora {
+    font-size: clamp(36px, 12vw, 56px);
+    font-weight: bold;
+    color: #00d4ff;
+    letter-spacing: 4px;
+    text-shadow: 0 0 30px #00d4ffaa;
+  }
+
+  #modal-aviso {
+    font-size: clamp(16px, 4vw, 22px);
+    color: #eee;
+    text-align: center;
+    max-width: min(500px, 90vw);
+    line-height: 1.5;
+    background: #16213e;
+    border: 1px solid #0f3460;
+    border-radius: 12px;
+    padding: 20px 28px;
+    display: none;
+  }
+
+  #modal-sem-aviso {
+    font-size: 16px;
+    color: #555;
+    display: none;
+  }
+
+  #btnPararModal {
+    background: #e74c3c;
+    color: #fff;
+    font-size: 18px;
+    padding: 16px 48px;
+    width: auto;
+    border-radius: 50px;
+    letter-spacing: 2px;
+    box-shadow: 0 0 30px #e74c3c66;
+    animation: pisca-btn 0.8s infinite;
+  }
+
+  @keyframes pisca-btn { 50% { box-shadow: 0 0 8px #e74c3c33; } }
+
+  #btnPararModal:hover { background: #c0392b; }
+
+  @keyframes pisca { 50% { opacity: 0; } }
+
+  footer {
+    font-size: 13px;
+    font-weight: bold;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+    padding: 10px 24px;
+    border-radius: 50px;
+    background: linear-gradient(90deg, #00d4ff22, #7f00ff22);
+    border: 1px solid #00d4ff55;
+    color: transparent;
+    background-clip: text;
+    -webkit-background-clip: text;
+    background-image: linear-gradient(90deg, #00d4ff, #a855f7);
+    text-shadow: 0 0 12px #00d4ff66;
+    animation: brilho 2.5s ease-in-out infinite alternate;
+  }
+
+  @keyframes brilho {
+    from { text-shadow: 0 0 8px #00d4ff88, 0 0 20px #00d4ff44; }
+    to   { text-shadow: 0 0 16px #a855f7cc, 0 0 32px #a855f766; }
+  }
+
+  #wakelock-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 12px;
+    letter-spacing: 1px;
+    padding: 6px 14px;
+    border-radius: 50px;
+    border: 1px solid #1a3a1a;
+    background: #0f1f0f;
+    color: #446644;
+    transition: all 0.4s;
+    user-select: none;
+  }
+
+  #wakelock-status.ativo {
+    border-color: #2ecc7155;
+    background: #0f2a1a;
+    color: #2ecc71;
+    box-shadow: 0 0 10px #2ecc7133;
+  }
+
+  #wakelock-status.sem-suporte {
+    border-color: #55333355;
+    background: #1a0f0f;
+    color: #664444;
+  }
+
+  #wakelock-dot {
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: currentColor;
+    flex-shrink: 0;
+  }
+
+  #wakelock-status.ativo #wakelock-dot {
+    animation: pisca-dot 1.5s ease-in-out infinite;
+  }
+
+  @keyframes pisca-dot {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.3; }
+  }
+
+  @media (max-width: 400px) {
+    body { padding: 20px 12px; gap: 16px; }
+    .card { padding: 18px 16px; }
+    input[type="time"] { font-size: 22px; }
+    .alarme-hora { font-size: 18px; }
+    #btnPararModal { padding: 14px 32px; font-size: 16px; }
+    #modal-icone { font-size: 60px; }
+    footer { font-size: 11px; letter-spacing: 2px; padding: 8px 16px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="relogio">00:00:00</div>
+<div id="data"></div>
+
+<div class="card">
+  <div class="campo">
+    <label>Horário</label>
+    <input type="time" id="horarioAlarme">
+  </div>
+
+  <div class="campo">
+    <div class="data-row">
+      <label class="toggle-data">
+        <input type="checkbox" id="usarData" onchange="toggleCampoData()">
+        Tocar em uma data específica
+      </label>
+    </div>
+    <input type="date" id="dataAlarme" style="display:none">
+  </div>
+
+  <div class="campo">
+    <label>Aviso (opcional)</label>
+    <textarea id="avisoAlarme" placeholder="Ex: Tomar remédio, Reunião às 14h..."></textarea>
+  </div>
+
+  <button id="btnAdicionar" onclick="adicionarAlarme()">+ ADICIONAR ALARME</button>
+</div>
+
+<div id="wakelock-status" class="sem-suporte">
+  <span id="wakelock-dot"></span>
+  <span id="wakelock-texto">Verificando tela ativa...</span>
+</div>
+
+<div id="listaAlarmes"></div>
+
+<footer>Desenvolvedor Clebeson Souza</footer>
+
+<!-- Modal de alarme disparado -->
+<div id="modal">
+  <div id="modal-icone">⏰</div>
+  <div id="modal-hora"></div>
+  <div id="modal-aviso"></div>
+  <div id="modal-sem-aviso">Alarme disparado!</div>
+  <button id="btnPararModal" onclick="parar()">PARAR ALARME</button>
+</div>
+
+<script>
+  let alarmes = [];
+  let audioCtx = null;
+  let somInterval = null;
+  let alarmeDisparando = null;
+  let volumeAtual = 0;
+  let wakeLock = null;
+
+  const VOLUME_INICIAL = 0.02;
+  const VOLUME_MAXIMO  = 0.3;
+  const VOLUME_PASSO   = 0.025;
+
+  const suportaWakeLock = 'wakeLock' in navigator;
+
+  function atualizarIndicadorWakeLock() {
+    const el     = document.getElementById('wakelock-status');
+    const texto  = document.getElementById('wakelock-texto');
+    if (!suportaWakeLock) {
+      el.className = 'sem-suporte';
+      texto.textContent = 'Tela ativa não suportada neste navegador';
+      return;
+    }
+    if (wakeLock && !wakeLock.released) {
+      el.className = 'ativo';
+      texto.textContent = 'Tela mantida ativa pelo alarme';
+    } else {
+      el.className = '';
+      texto.textContent = 'Tela pode apagar (nenhum alarme ativo)';
+    }
+  }
+
+  async function ativarWakeLock() {
+    if (!suportaWakeLock) return;
+    if (wakeLock && !wakeLock.released) return;
+    try {
+      wakeLock = await navigator.wakeLock.request('screen');
+      wakeLock.addEventListener('release', () => {
+        atualizarIndicadorWakeLock();
+      });
+      atualizarIndicadorWakeLock();
+    } catch (e) {
+      atualizarIndicadorWakeLock();
+    }
+  }
+
+  async function liberarWakeLock() {
+    if (wakeLock && !wakeLock.released) {
+      await wakeLock.release();
+      wakeLock = null;
+    }
+    atualizarIndicadorWakeLock();
+  }
+
+  function syncWakeLock() {
+    const temAtivo = alarmes.some(a => a.ativo);
+    if (temAtivo) {
+      ativarWakeLock();
+    } else {
+      liberarWakeLock();
+    }
+  }
+
+  // Reativa o wake lock ao voltar para a aba (o OS libera ao ir para background)
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') syncWakeLock();
+  });
+
+  function getAudioCtx() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    return audioCtx;
+  }
+
+  function tocarSom() {
+    volumeAtual = Math.min(volumeAtual + VOLUME_PASSO, VOLUME_MAXIMO);
+    const ctx = getAudioCtx();
+    const notas = [880, 1100, 880, 1100, 660, 880];
+    let t = ctx.currentTime;
+    notas.forEach((freq, i) => {
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.frequency.value = freq;
+      osc.type = 'square';
+      gain.gain.setValueAtTime(volumeAtual, t + i * 0.15);
+      gain.gain.exponentialRampToValueAtTime(0.0001, t + i * 0.15 + 0.12);
+      osc.start(t + i * 0.15);
+      osc.stop(t + i * 0.15 + 0.15);
+    });
+  }
+
+  function toggleCampoData() {
+    const usar = document.getElementById('usarData').checked;
+    const campo = document.getElementById('dataAlarme');
+    campo.style.display = usar ? 'block' : 'none';
+    if (!usar) campo.value = '';
+  }
+
+  function atualizarRelogio() {
+    const agora = new Date();
+    const h = String(agora.getHours()).padStart(2, '0');
+    const m = String(agora.getMinutes()).padStart(2, '0');
+    const s = String(agora.getSeconds()).padStart(2, '0');
+    document.getElementById('relogio').textContent = `${h}:${m}:${s}`;
+
+    const dias  = ['Domingo','Segunda','Terça','Quarta','Quinta','Sexta','Sábado'];
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    document.getElementById('data').textContent =
+      `${dias[agora.getDay()]}, ${agora.getDate()} ${meses[agora.getMonth()]} ${agora.getFullYear()}`;
+
+    if (alarmeDisparando === null) {
+      const hojeISO = agora.toISOString().slice(0, 10);
+      alarmes.forEach(al => {
+        if (!al.ativo) return;
+        if (al.data && al.data !== hojeISO) return;
+        const [ah, am] = al.horario.split(':').map(Number);
+        if (agora.getHours() === ah && agora.getMinutes() === am) {
+          if (!al.disparado) {
+            al.disparado = true;
+            disparar(al);
+          }
+        } else {
+          al.disparado = false;
+        }
+      });
+    }
+  }
+
+  function disparar(al) {
+    alarmeDisparando = al;
+    al.ativo = false;
+    volumeAtual = VOLUME_INICIAL;
+    renderLista();
+
+    const modal = document.getElementById('modal');
+    document.getElementById('modal-hora').textContent = al.horario;
+
+    const avisoEl    = document.getElementById('modal-aviso');
+    const semAvisoEl = document.getElementById('modal-sem-aviso');
+    if (al.aviso) {
+      avisoEl.textContent = al.aviso;
+      avisoEl.style.display = 'block';
+      semAvisoEl.style.display = 'none';
+    } else {
+      avisoEl.style.display = 'none';
+      semAvisoEl.style.display = 'block';
+    }
+
+    modal.classList.add('visivel');
+    document.title = '⏰ ACORDE!';
+    somInterval = setInterval(tocarSom, 1000);
+    tocarSom();
+
+    const item = document.querySelector(`[data-id="${al.id}"]`);
+    if (item) item.classList.add('disparando');
+  }
+
+  function parar() {
+    if (alarmeDisparando) {
+      const item = document.querySelector(`[data-id="${alarmeDisparando.id}"]`);
+      if (item) item.classList.remove('disparando');
+      alarmeDisparando = null;
+    }
+    clearInterval(somInterval);
+    document.getElementById('modal').classList.remove('visivel');
+    document.title = 'Despertador';
+  }
+
+  function adicionarAlarme() {
+    const horario = document.getElementById('horarioAlarme').value;
+    if (!horario) {
+      document.getElementById('horarioAlarme').focus();
+      return;
+    }
+
+    const usarData = document.getElementById('usarData').checked;
+    const data     = usarData ? document.getElementById('dataAlarme').value : '';
+    if (usarData && !data) {
+      document.getElementById('dataAlarme').focus();
+      return;
+    }
+
+    const aviso = document.getElementById('avisoAlarme').value.trim();
+
+    const duplicado = alarmes.some(a => a.horario === horario && a.data === data);
+    if (duplicado) {
+      alert(`Já existe um alarme para ${horario}${data ? ' em ' + formatarData(data) : ''}.`);
+      return;
+    }
+
+    getAudioCtx().resume();
+    ativarWakeLock();
+
+    alarmes.push({ id: Date.now(), horario, data, aviso, ativo: true, disparado: false });
+    alarmes.sort((a, b) => {
+      const cmp = a.horario.localeCompare(b.horario);
+      return cmp !== 0 ? cmp : (a.data || '').localeCompare(b.data || '');
+    });
+
+    document.getElementById('horarioAlarme').value = '';
+    document.getElementById('dataAlarme').value    = '';
+    document.getElementById('avisoAlarme').value   = '';
+    document.getElementById('usarData').checked    = false;
+    toggleCampoData();
+    renderLista();
+  }
+
+  function removerAlarme(id) {
+    alarmes = alarmes.filter(a => a.id !== id);
+    syncWakeLock();
+    renderLista();
+  }
+
+  function toggleAlarme(id) {
+    const al = alarmes.find(a => a.id === id);
+    if (al) {
+      al.ativo = !al.ativo;
+      if (!al.ativo) al.disparado = false;
+    }
+    syncWakeLock();
+  }
+
+  function formatarData(iso) {
+    if (!iso) return '';
+    const [y, mo, d] = iso.split('-');
+    const meses = ['Jan','Fev','Mar','Abr','Mai','Jun','Jul','Ago','Set','Out','Nov','Dez'];
+    return `${d} ${meses[parseInt(mo, 10) - 1]} ${y}`;
+  }
+
+  function renderLista() {
+    const lista = document.getElementById('listaAlarmes');
+    lista.innerHTML = '';
+    alarmes.forEach(al => {
+      const div = document.createElement('div');
+      div.className = 'alarme-item';
+      div.dataset.id = al.id;
+
+      const metaTexto = al.data ? formatarData(al.data) : 'Todo dia';
+      const avisoHTML = al.aviso
+        ? `<div class="alarme-aviso-preview" title="${al.aviso.replace(/"/g,'&quot;')}">"${al.aviso}"</div>`
+        : '';
+
+      div.innerHTML = `
+        <div class="alarme-info">
+          <span class="alarme-hora">${al.horario}</span>
+          <span class="alarme-meta">${metaTexto}</span>
+          ${avisoHTML}
+        </div>
+        <div class="alarme-controles">
+          <label class="toggle" title="${al.ativo ? 'Ativo' : 'Inativo'}">
+            <input type="checkbox" ${al.ativo ? 'checked' : ''} onchange="toggleAlarme(${al.id})">
+            <div class="toggle-track"></div>
+            <div class="toggle-thumb"></div>
+          </label>
+          <button class="btn-remover" onclick="removerAlarme(${al.id})">✕</button>
+        </div>
+      `;
+      lista.appendChild(div);
+    });
+  }
+
+  setInterval(atualizarRelogio, 1000);
+  atualizarRelogio();
+  atualizarIndicadorWakeLock();
+</script>
+
+</body>
+</html>
