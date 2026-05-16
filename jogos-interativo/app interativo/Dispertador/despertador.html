@@ -15,13 +15,14 @@
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    min-height: 100vh;
-    gap: 24px;
-    padding: 32px 16px;
+    height: 100vh;
+    overflow: hidden;
+    gap: 12px;
+    padding: 14px 16px;
   }
 
   #relogio {
-    font-size: clamp(40px, 14vw, 72px);
+    font-size: clamp(32px, 10vw, 56px);
     font-weight: bold;
     letter-spacing: 4px;
     color: #00d4ff;
@@ -40,11 +41,11 @@
     background: #16213e;
     border: 1px solid #0f3460;
     border-radius: 12px;
-    padding: 24px 32px;
+    padding: 14px 24px;
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 14px;
+    gap: 10px;
     width: min(360px, 100%);
   }
 
@@ -129,7 +130,7 @@
   textarea {
     font-size: 13px;
     resize: none;
-    height: 60px;
+    height: 44px;
     color: #ccc;
   }
 
@@ -160,6 +161,8 @@
     display: flex;
     flex-direction: column;
     gap: 8px;
+    max-height: 28vh;
+    overflow-y: auto;
   }
 
   #listaAlarmes:empty::before {
@@ -220,6 +223,57 @@
     max-width: 180px;
     font-style: italic;
   }
+
+  .alarme-som {
+    font-size: 11px;
+    color: #446;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 180px;
+  }
+
+  .som-opcoes {
+    display: flex;
+    gap: 18px;
+  }
+
+  .som-opcoes label {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    text-transform: none;
+    font-size: 13px;
+    color: #aaa;
+    letter-spacing: 0;
+    font-weight: normal;
+  }
+
+  .som-opcoes input[type="radio"] {
+    accent-color: #00d4ff;
+    cursor: pointer;
+    width: 14px;
+    height: 14px;
+  }
+
+  .musica-upload-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #0f1b35;
+    border: 1px dashed #0f3460;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 12px;
+    color: #667;
+    transition: border-color 0.2s, color 0.2s;
+    margin-top: 6px;
+  }
+
+  .musica-upload-label:hover { border-color: #00d4ff; color: #00d4ff; }
+  .musica-upload-label.com-arquivo { border-color: #2ecc7166; color: #2ecc71; }
 
   .alarme-controles {
     display: flex;
@@ -451,6 +505,26 @@
     <textarea id="avisoAlarme" placeholder="Ex: Tomar remédio, Reunião às 14h..."></textarea>
   </div>
 
+  <div class="campo">
+    <label>Tipo de som</label>
+    <div class="som-opcoes">
+      <label>
+        <input type="radio" name="tipoSom" value="padrao" checked onchange="toggleTipoSom()">
+        Som padrão
+      </label>
+      <label>
+        <input type="radio" name="tipoSom" value="musica" onchange="toggleTipoSom()">
+        Música personalizada
+      </label>
+    </div>
+    <div id="musicaUpload" style="display:none">
+      <label class="musica-upload-label" id="musicaLabel" for="arquivoMusica">
+        🎵 <span id="musicaNomeLabel">Clique para escolher um arquivo de áudio</span>
+      </label>
+      <input type="file" id="arquivoMusica" accept="audio/*" style="display:none" onchange="onMusicaChange(this)">
+    </div>
+  </div>
+
   <button id="btnAdicionar" onclick="adicionarAlarme()">+ ADICIONAR ALARME</button>
 </div>
 
@@ -479,6 +553,7 @@
   let alarmeDisparando = null;
   let volumeAtual = 0;
   let wakeLock = null;
+  let audioMusica = null;
 
   const VOLUME_INICIAL = 0.02;
   const VOLUME_MAXIMO  = 0.3;
@@ -563,6 +638,18 @@
     });
   }
 
+  function toggleTipoSom() {
+    const tipo = document.querySelector('input[name="tipoSom"]:checked').value;
+    document.getElementById('musicaUpload').style.display = tipo === 'musica' ? 'block' : 'none';
+  }
+
+  function onMusicaChange(input) {
+    const file = input.files[0];
+    if (!file) return;
+    document.getElementById('musicaNomeLabel').textContent = file.name;
+    document.getElementById('musicaLabel').classList.add('com-arquivo');
+  }
+
   function toggleCampoData() {
     const usar = document.getElementById('usarData').checked;
     const campo = document.getElementById('dataAlarme');
@@ -622,8 +709,16 @@
 
     modal.classList.add('visivel');
     document.title = '⏰ ACORDE!';
-    somInterval = setInterval(tocarSom, 1000);
-    tocarSom();
+
+    if (al.tipoSom === 'musica' && al.musicaUrl) {
+      audioMusica = new Audio(al.musicaUrl);
+      audioMusica.loop = true;
+      audioMusica.volume = 0.8;
+      audioMusica.play().catch(() => {});
+    } else {
+      somInterval = setInterval(tocarSom, 1000);
+      tocarSom();
+    }
 
     const item = document.querySelector(`[data-id="${al.id}"]`);
     if (item) item.classList.add('disparando');
@@ -636,6 +731,11 @@
       alarmeDisparando = null;
     }
     clearInterval(somInterval);
+    if (audioMusica) {
+      audioMusica.pause();
+      audioMusica.currentTime = 0;
+      audioMusica = null;
+    }
     document.getElementById('modal').classList.remove('visivel');
     document.title = 'Despertador';
   }
@@ -656,6 +756,20 @@
 
     const aviso = document.getElementById('avisoAlarme').value.trim();
 
+    const tipoSom = document.querySelector('input[name="tipoSom"]:checked').value;
+    let musicaUrl  = null;
+    let musicaNome = null;
+
+    if (tipoSom === 'musica') {
+      const arquivo = document.getElementById('arquivoMusica').files[0];
+      if (!arquivo) {
+        document.getElementById('arquivoMusica').click();
+        return;
+      }
+      musicaUrl  = URL.createObjectURL(arquivo);
+      musicaNome = arquivo.name;
+    }
+
     const duplicado = alarmes.some(a => a.horario === horario && a.data === data);
     if (duplicado) {
       alert(`Já existe um alarme para ${horario}${data ? ' em ' + formatarData(data) : ''}.`);
@@ -665,7 +779,7 @@
     getAudioCtx().resume();
     ativarWakeLock();
 
-    alarmes.push({ id: Date.now(), horario, data, aviso, ativo: true, disparado: false });
+    alarmes.push({ id: Date.now(), horario, data, aviso, tipoSom, musicaUrl, musicaNome, ativo: true, disparado: false });
     alarmes.sort((a, b) => {
       const cmp = a.horario.localeCompare(b.horario);
       return cmp !== 0 ? cmp : (a.data || '').localeCompare(b.data || '');
@@ -674,8 +788,13 @@
     document.getElementById('horarioAlarme').value = '';
     document.getElementById('dataAlarme').value    = '';
     document.getElementById('avisoAlarme').value   = '';
+    document.getElementById('arquivoMusica').value = '';
     document.getElementById('usarData').checked    = false;
+    document.querySelector('input[name="tipoSom"][value="padrao"]').checked = true;
+    document.getElementById('musicaNomeLabel').textContent = 'Clique para escolher um arquivo de áudio';
+    document.getElementById('musicaLabel').classList.remove('com-arquivo');
     toggleCampoData();
+    toggleTipoSom();
     renderLista();
   }
 
@@ -713,12 +832,16 @@
       const avisoHTML = al.aviso
         ? `<div class="alarme-aviso-preview" title="${al.aviso.replace(/"/g,'&quot;')}">"${al.aviso}"</div>`
         : '';
+      const somHTML = al.tipoSom === 'musica' && al.musicaNome
+        ? `<div class="alarme-som" title="${al.musicaNome}">🎵 ${al.musicaNome}</div>`
+        : `<div class="alarme-som">🔔 Som padrão</div>`;
 
       div.innerHTML = `
         <div class="alarme-info">
           <span class="alarme-hora">${al.horario}</span>
           <span class="alarme-meta">${metaTexto}</span>
           ${avisoHTML}
+          ${somHTML}
         </div>
         <div class="alarme-controles">
           <label class="toggle" title="${al.ativo ? 'Ativo' : 'Inativo'}">
