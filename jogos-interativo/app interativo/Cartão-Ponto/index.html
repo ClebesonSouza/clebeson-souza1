@@ -1415,17 +1415,9 @@
           try { relatDias = JSON.parse(localStorage.getItem("relatdias_bjk") || "[]"); } catch {}
         }
 
-        // Salva cache local para uso offline (converte Float32Array para array simples)
+        // Salva cache local para uso offline
+        _salvarCacheUsuarios();
         try {
-          const usuariosCache = usuarios.map(u => {
-            const us = { ...u };
-            if (Array.isArray(us.faceDescriptors) && us.faceDescriptors[0] instanceof Float32Array)
-              us.faceDescriptors = us.faceDescriptors.map(d => Array.from(d));
-            if (us.faceDescriptor instanceof Float32Array)
-              us.faceDescriptor = Array.from(us.faceDescriptor);
-            return us;
-          });
-          localStorage.setItem("usuarios_bjk", JSON.stringify(usuariosCache));
           localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
           localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
           localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
@@ -1501,6 +1493,20 @@
     // FILA OFFLINE
     // ============================
     const _FILA_KEY = "bjk_fila_offline";
+
+    function _salvarCacheUsuarios() {
+      try {
+        const cache = usuarios.map(u => {
+          const us = { ...u };
+          if (Array.isArray(us.faceDescriptors) && us.faceDescriptors.length > 0 && us.faceDescriptors[0] instanceof Float32Array)
+            us.faceDescriptors = us.faceDescriptors.map(d => Array.from(d));
+          if (us.faceDescriptor instanceof Float32Array)
+            us.faceDescriptor = Array.from(us.faceDescriptor);
+          return us;
+        });
+        localStorage.setItem("usuarios_bjk", JSON.stringify(cache));
+      } catch (e) { console.warn("Cache usuarios:", e); }
+    }
 
     function _lerFila() {
       try { return JSON.parse(localStorage.getItem(_FILA_KEY) || "[]"); } catch { return []; }
@@ -2940,6 +2946,9 @@
       limparBloqueio(email);
       salvarUltimoEmail(email);
       usuarioLogado = user;
+
+      // Atualiza cache offline com o estado atual dos usuários
+      if (navigator.onLine) _salvarCacheUsuarios();
 
       // Mostra botão de cadastro biométrico se o funcionário ainda não tem biometria
       document.getElementById("btnCadastrarBioProprio").style.display =
