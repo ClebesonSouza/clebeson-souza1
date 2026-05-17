@@ -1347,10 +1347,10 @@
       try {
         // Sem internet: usa localStorage imediatamente sem tentar o Firestore
         if (!navigator.onLine) throw new Error("offline");
-        // Timeout de segurança: se o Firebase demorar mais de 8s, usa localStorage
+        // Timeout de segurança: 20s para não travar em conexões lentas
         await Promise.race([
           _authPronto,
-          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000))
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 20000))
         ]);
         const [snapU, snapB, snapO, snapR] = await Promise.all([
           db.collection("usuarios").get(),
@@ -2930,6 +2930,9 @@
       }
 
       const senhaHash = await hashSenha(fd.get("senha"));
+      console.log("[LOGIN] usuarios carregados:", usuarios.length, "| online:", navigator.onLine);
+      console.log("[LOGIN] hash digitado:", senhaHash);
+      console.log("[LOGIN] usuarios encontrados com este email:", usuarios.filter(u => u.email === email).map(u => ({ admin: u.admin, senhaHash: u.senha })));
       // Busca apenas funcionários (não admins) — admins devem usar o login administrativo
       const user = usuarios.find((u) => !u.admin && u.email === email && u.senha === senhaHash);
 
