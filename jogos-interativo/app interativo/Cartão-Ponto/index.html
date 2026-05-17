@@ -1345,7 +1345,13 @@
 
     async function carregarDadosFirestore() {
       try {
-        await _authPronto;
+        // Sem internet: usa localStorage imediatamente sem tentar o Firestore
+        if (!navigator.onLine) throw new Error("offline");
+        // Timeout de segurança: se o Firebase demorar mais de 8s, usa localStorage
+        await Promise.race([
+          _authPronto,
+          new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 8000))
+        ]);
         const [snapU, snapB, snapO, snapR] = await Promise.all([
           db.collection("usuarios").get(),
           db.collection("batidas").get(),
@@ -2446,6 +2452,7 @@
     // INICIALIZAÇÃO DO APP (carrega Firestore antes de liberar a tela)
     // ============================
     async function _limparBatidasAntigas() {
+      if (!navigator.onLine) return; // sem internet, pula a limpeza no Firestore
       try {
         const corte = new Date();
         corte.setMonth(corte.getMonth() - 6);
