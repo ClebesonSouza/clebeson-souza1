@@ -1417,8 +1417,8 @@
 
         // Salva cache local para uso offline
         _salvarCacheUsuarios();
+        salvarBatidas(); // usa limite de 30 dias para não estourar quota
         try {
-          localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
           localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
           localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
         } catch (e) { console.warn("Cache offline:", e); }
@@ -2930,9 +2930,6 @@
       }
 
       const senhaHash = await hashSenha(fd.get("senha"));
-      console.log("[LOGIN] usuarios carregados:", usuarios.length, "| online:", navigator.onLine);
-      console.log("[LOGIN] hash digitado:", senhaHash);
-      console.log("[LOGIN] usuarios encontrados com este email:", usuarios.filter(u => u.email === email).map(u => ({ admin: u.admin, senhaHash: u.senha })));
       // Busca apenas funcionários (não admins) — admins devem usar o login administrativo
       const user = usuarios.find((u) => !u.admin && u.email === email && u.senha === senhaHash);
 
@@ -5760,10 +5757,14 @@
     }
 
     function salvarBatidas() {
-      // Mantém localStorage como cache offline
-      try { localStorage.setItem("batidas_bjk", JSON.stringify(batidas)); } catch (_) {}
+      // Salva apenas os últimos 30 dias no localStorage para evitar quota exceeded
+      try {
+        const corte = new Date();
+        corte.setDate(corte.getDate() - 30);
+        const recentes = batidas.filter(b => b.data_hora >= corte.toISOString());
+        localStorage.setItem("batidas_bjk", JSON.stringify(recentes));
+      } catch (_) {}
       // Sincronização com Firestore é feita de forma pontual em cada operação
-      // (push → _salvarBatidaFirestore, delete → _excluirBatidaFirestore, etc.)
     }
 
     // Garante alternância obrigatória entrada → saída → entrada
