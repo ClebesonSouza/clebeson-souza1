@@ -1201,12 +1201,6 @@
     </div>
   </div>
 
-  <!-- BANNER OFFLINE -->
-  <div id="indicadorOffline" style="display:none;position:fixed;bottom:0;left:0;right:0;z-index:5000;
-    padding:10px 16px;text-align:center;font-size:0.88em;font-weight:bold;color:#fff;
-    box-shadow:0 -2px 8px rgba(0,0,0,0.2);transition:background 0.3s;">
-  </div>
-
   <!-- LOADING OVERLAY -->
   <div id="loadingOverlay">
     <div class="loading-box">
@@ -1453,15 +1447,8 @@
     }
 
     function _salvarBatidaFirestore(b) {
-      if (!navigator.onLine) {
-        _enfileirarBatida(b);
-        return;
-      }
       db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b)
-        .catch(e => {
-          console.warn("Firestore salvar batida:", e);
-          _enfileirarBatida(b);
-        });
+        .catch(e => console.warn("Firestore salvar batida:", e));
     }
 
     function _excluirBatidaFirestore(iso) {
@@ -1473,76 +1460,6 @@
       db.collection("batidas").doc(_batidaDocId(iso)).update({ cidade })
         .catch(e => console.warn("Firestore atualizar cidade:", e));
     }
-
-    // ============================
-    // FILA OFFLINE
-    // ============================
-    const _FILA_KEY = "bjk_fila_offline";
-
-    function _lerFila() {
-      try { return JSON.parse(localStorage.getItem(_FILA_KEY) || "[]"); } catch { return []; }
-    }
-
-    function _gravarFila(fila) {
-      try { localStorage.setItem(_FILA_KEY, JSON.stringify(fila)); } catch {}
-    }
-
-    function _enfileirarBatida(b) {
-      const fila = _lerFila();
-      // Evita duplicata na fila (mesma data_hora)
-      if (!fila.some(item => item.dados.data_hora === b.data_hora)) {
-        fila.push({ tipo: "batida", dados: b, enfileiradoEm: new Date().toISOString() });
-        _gravarFila(fila);
-      }
-      _atualizarIndicadorOffline();
-    }
-
-    async function _sincronizarFila() {
-      const fila = _lerFila();
-      if (fila.length === 0) return;
-      try { await _authPronto; } catch { return; }
-      const falhas = [];
-      for (const item of fila) {
-        try {
-          if (item.tipo === "batida") {
-            await db.collection("batidas").doc(_batidaDocId(item.dados.data_hora)).set(item.dados);
-          }
-        } catch {
-          falhas.push(item);
-        }
-      }
-      _gravarFila(falhas);
-      _atualizarIndicadorOffline();
-      if (falhas.length === 0 && fila.length > 0) {
-        console.log(`[Offline] ${fila.length} batida(s) sincronizadas.`);
-      }
-    }
-
-    function _atualizarIndicadorOffline() {
-      const el = document.getElementById("indicadorOffline");
-      if (!el) return;
-      const fila = _lerFila();
-      if (!navigator.onLine) {
-        el.style.display = "block";
-        el.style.background = "#e65100";
-        el.textContent = "📶 Sem internet — batidas salvas localmente e serão enviadas ao reconectar";
-      } else if (fila.length > 0) {
-        el.style.display = "block";
-        el.style.background = "#1565c0";
-        el.textContent = `🔄 Sincronizando ${fila.length} batida(s) pendente(s)...`;
-      } else {
-        el.style.display = "none";
-      }
-    }
-
-    window.addEventListener("online", async () => {
-      _atualizarIndicadorOffline();
-      await _sincronizarFila();
-    });
-
-    window.addEventListener("offline", () => {
-      _atualizarIndicadorOffline();
-    });
 
     function _excluirBatidasDoUsuarioFirestore(idsSet) {
       // Exclui todas as batidas de usuários cujos IDs estão no Set
