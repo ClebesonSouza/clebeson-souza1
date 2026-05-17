@@ -5697,7 +5697,20 @@
     function abrirAdicionarBatidaAdmin() {
       _batidaEditandoISO = null;
       document.getElementById("editBatidaTitulo").textContent = "Adicionar Batida";
-      document.getElementById("editBatidaTipo").value = "entrada";
+
+      // Determina o próximo tipo correto com base na última batida do dia
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
+      const bDia = batidas
+        .filter(b => {
+          if (!u || !_matchUsuarioBatida(b, u)) return false;
+          const dt = new Date(b.data_hora);
+          return dt.getFullYear() === _relatorioAno && dt.getMonth() === _relatorioMes && dt.getDate() === _batidasDiaNumDia;
+        })
+        .sort((a, b) => new Date(a.data_hora) - new Date(b.data_hora));
+      const ultimaBatida = bDia.length > 0 ? bDia[bDia.length - 1] : null;
+      const proximoTipo = (!ultimaBatida || ultimaBatida.tipo === "saida") ? "entrada" : "saida";
+      document.getElementById("editBatidaTipo").value = proximoTipo;
+
       // Pré-preenche com o dia sendo visualizado às 08:00
       const dt = new Date(_relatorioAno, _relatorioMes, _batidasDiaNumDia, 8, 0);
       document.getElementById("editBatidaDataHora").value = toDatetimeLocal(dt);
