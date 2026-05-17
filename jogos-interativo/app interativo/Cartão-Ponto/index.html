@@ -1414,6 +1414,23 @@
         } else {
           try { relatDias = JSON.parse(localStorage.getItem("relatdias_bjk") || "[]"); } catch {}
         }
+
+        // Salva cache local para uso offline (converte Float32Array para array simples)
+        try {
+          const usuariosCache = usuarios.map(u => {
+            const us = { ...u };
+            if (Array.isArray(us.faceDescriptors) && us.faceDescriptors[0] instanceof Float32Array)
+              us.faceDescriptors = us.faceDescriptors.map(d => Array.from(d));
+            if (us.faceDescriptor instanceof Float32Array)
+              us.faceDescriptor = Array.from(us.faceDescriptor);
+            return us;
+          });
+          localStorage.setItem("usuarios_bjk", JSON.stringify(usuariosCache));
+          localStorage.setItem("batidas_bjk", JSON.stringify(batidas));
+          localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
+          localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+        } catch (e) { console.warn("Cache offline:", e); }
+
       } catch (e) {
         console.warn("Firestore indisponível, usando localStorage:", e);
         try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
