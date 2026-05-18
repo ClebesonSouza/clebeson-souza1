@@ -1,4 +1,4 @@
-const CACHE = 'pontualize-v4';
+const CACHE = 'pontualize-v5';
 
 const SHELL = [
   './',

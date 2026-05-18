@@ -2942,6 +2942,10 @@
       }
 
       const senhaHash = await hashSenha(fd.get("senha"));
+      // Garante que usuarios está carregado — se estiver vazio, tenta localStorage diretamente
+      if (usuarios.length === 0) {
+        try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
+      }
       // Busca apenas funcionários (não admins) — admins devem usar o login administrativo
       const user = usuarios.find((u) => !u.admin && u.email === email && u.senha === senhaHash);
 
