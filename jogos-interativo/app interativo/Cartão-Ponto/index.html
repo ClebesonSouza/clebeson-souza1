@@ -1421,6 +1421,8 @@
           localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
           localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
         } catch (e) { console.warn("Cache offline:", e); }
+        // Firestore conectado: sincroniza fila offline imediatamente (conexão garantida aqui)
+        _sincronizarFila().catch(() => {});
 
       } catch (e) {
         console.warn("Firestore indisponível, usando localStorage:", e);
@@ -1430,16 +1432,17 @@
           batidas = raw ? (JSON.parse(raw) || []) : [];
         } catch {}
         try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
-        // Mescla fila offline apenas no modo offline — online, o Firestore é autoritativo
-        try {
-          const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
-          fila.forEach(item => {
-            if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
-              batidas.push(item.dados);
-            }
-          });
-        } catch {}
       }
+      // Mescla fila offline na memória (online e offline) para mostrar batidas pendentes na UI
+      // — batidas excluídas pelo admin são removidas da fila em excluirBatidaAdmin(), sem risco de ressurgir
+      try {
+        const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
+        fila.forEach(item => {
+          if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
+            batidas.push(item.dados);
+          }
+        });
+      } catch {}
     }
 
     async function _syncUsuariosFirestore() {
@@ -1569,6 +1572,8 @@
 
     window.addEventListener("online", async () => {
       _atualizarIndicadorOffline();
+      // Aguarda 2s para o Firestore (WebSocket) reconectar antes de tentar sincronizar
+      await new Promise(r => setTimeout(r, 2000));
       try {
         await Promise.race([
           _authPronto,
