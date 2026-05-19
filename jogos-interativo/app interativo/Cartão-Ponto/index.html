@@ -1431,6 +1431,16 @@
         } catch {}
         try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
       }
+      // Mescla batidas pendentes na fila offline — garante que batidas feitas sem internet
+      // aparecem corretamente mesmo antes da sincronização com o Firestore
+      try {
+        const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
+        fila.forEach(item => {
+          if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
+            batidas.push(item.dados);
+          }
+        });
+      } catch {}
     }
 
     async function _syncUsuariosFirestore() {
