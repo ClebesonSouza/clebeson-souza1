@@ -1430,17 +1430,16 @@
           batidas = raw ? (JSON.parse(raw) || []) : [];
         } catch {}
         try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
+        // Mescla fila offline apenas no modo offline — online, o Firestore é autoritativo
+        try {
+          const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
+          fila.forEach(item => {
+            if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
+              batidas.push(item.dados);
+            }
+          });
+        } catch {}
       }
-      // Mescla batidas pendentes na fila offline — garante que batidas feitas sem internet
-      // aparecem corretamente mesmo antes da sincronização com o Firestore
-      try {
-        const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
-        fila.forEach(item => {
-          if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
-            batidas.push(item.dados);
-          }
-        });
-      } catch {}
     }
 
     async function _syncUsuariosFirestore() {
@@ -2536,11 +2535,11 @@
       } catch (e) {
         console.warn("Erro na inicialização:", e);
       }
-      // Fallback: 'let batidas' é declarado após inicializarApp() no script, então
+      // Fallback offline: 'let batidas' é declarado após inicializarApp() no script, então
       // carregarDadosFirestore() pode ter rodado antes da variável ser inicializada (TDZ).
-      // Aqui o await já garantiu que batidas está inicializado; se ainda estiver vazio,
+      // Aqui o await já garantiu que batidas está inicializado; se offline e ainda vazio,
       // carrega do localStorage e mescla a fila offline.
-      if (batidas.length === 0) {
+      if (!navigator.onLine && batidas.length === 0) {
         try {
           const _raw = localStorage.getItem("batidas_bjk");
           if (_raw) batidas = JSON.parse(_raw) || [];
@@ -5899,6 +5898,12 @@
       batidas.splice(idx, 1);
       salvarBatidas();
       _excluirBatidaFirestore(dataHoraISO);
+      // Remove da fila offline para não ressurgir ao recarregar o app
+      try {
+        const filaAtual = _lerFila().filter(item => !(item.tipo === "batida" && item.dados.data_hora === dataHoraISO));
+        _gravarFila(filaAtual);
+        _atualizarIndicadorOffline();
+      } catch {}
       renderRelatorio();
       abrirBatidasDia(_batidasDiaNumDia);
     }
