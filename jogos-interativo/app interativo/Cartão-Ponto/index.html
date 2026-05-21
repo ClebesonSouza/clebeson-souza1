@@ -2685,7 +2685,9 @@
         return;
       }
 
-      const senhaHash = await hashSenha(fd.get("senhaAdmin"));
+      const adminTemp = usuarios.find((u) => u.admin && u.email === email);
+      const saltAdmin = adminTemp ? (adminTemp.salt || "") : "";
+      const senhaHash = await hashSenha(fd.get("senhaAdmin") + saltAdmin);
       const admin = usuarios.find((u) => u.admin && u.email === email && u.senha === senhaHash);
       if (!admin) {
         registrarTentativaFalha(email);
@@ -2768,8 +2770,9 @@
         return;
       }
 
-      const senhaHash = await hashSenha(senha);
-      dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, cargo, telefone, nascimento };
+      const salt = crypto.randomUUID();
+      const senhaHash = await hashSenha(senha + salt);
+      dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, salt, cargo, telefone, nascimento };
       const btnCadastrar = e.target.querySelector("button[type=submit]");
       if (btnCadastrar) btnCadastrar.disabled = true;
       await abrirModalBioCadastro('novo');
@@ -2972,11 +2975,14 @@
         return;
       }
 
-      const senhaHash = await hashSenha(fd.get("senha"));
       // Garante que usuarios está carregado — se estiver vazio, tenta localStorage diretamente
       if (usuarios.length === 0) {
         try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
       }
+      // Busca pelo email primeiro para obter o salt individual
+      const userTemp = usuarios.find((u) => !u.admin && u.email === email);
+      const saltUser = userTemp ? (userTemp.salt || "") : "";
+      const senhaHash = await hashSenha(fd.get("senha") + saltUser);
       // Busca apenas funcionários (não admins) — admins devem usar o login administrativo
       const user = usuarios.find((u) => !u.admin && u.email === email && u.senha === senhaHash);
 
@@ -4702,7 +4708,11 @@
           delete usuarioEditando.geoRaio;
         }
       }
-      if (novaSenha) usuarioEditando.senha = await hashSenha(novaSenha);
+      if (novaSenha) {
+        const novoSalt = crypto.randomUUID();
+        usuarioEditando.salt = novoSalt;
+        usuarioEditando.senha = await hashSenha(novaSenha + novoSalt);
+      }
 
       salvarUsuarios();
       statusEl.textContent = "Alterações salvas com sucesso!";
@@ -4956,8 +4966,9 @@
         localStorage.removeItem("bjk_codigo_ativacao");
       }
 
-      const senhaHash = await hashSenha(senha);
-      const novoAdmin = { id: Date.now(), nome, email, senha: senhaHash, admin: true, titular: ehTitular };
+      const saltAdmin2 = crypto.randomUUID();
+      const senhaHash = await hashSenha(senha + saltAdmin2);
+      const novoAdmin = { id: Date.now(), nome, email, senha: senhaHash, salt: saltAdmin2, admin: true, titular: ehTitular };
       usuarios.push(novoAdmin);
       localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
       statusEl.textContent = "Salvando no servidor...";
