@@ -763,6 +763,7 @@
   <script src="https://cdn.jsdelivr.net/npm/@vladmandic/face-api/dist/face-api.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 </head>
 <body>
   <!-- SPLASH SCREEN -->
@@ -1174,6 +1175,7 @@
         <button id="btnExportarCSV" style="background:#1565c0;flex:1;margin-top:0;">Exportar CSV</button>
         <button id="btnExportarPDF" style="background:#c62828;flex:1;margin-top:0;">Exportar PDF</button>
       </div>
+      <button id="btnExportarTodosRelatoriosDia" style="background:#6a1b9a;margin-top:6px;">📥 Exportar todos os relatórios do dia (ZIP)</button>
       <button id="btnFecharRelatorio" style="background:#888;margin-top:6px;">Fechar</button>
     </div>
   </div>
@@ -2309,6 +2311,144 @@
 
       const nomeArq = `relatorio-dia-${(u ? u.nome : "funcionario").replace(/\s+/g,"-")}-${_relatDiaTelaDataStr}.pdf`;
       doc.save(nomeArq);
+    });
+
+    // Gera PDF de um relatório do dia e retorna o blob (usado no export ZIP)
+    async function _gerarPDFRelatDiaBlob(rel, u) {
+      const { jsPDF } = window.jspdf;
+      const doc = new jsPDF({ orientation: "portrait", unit: "mm", format: "a4" });
+      const dt = new Date(rel.data + "T00:00:00");
+      const dataFmt = dt.toLocaleDateString("pt-BR", { weekday:"long", day:"2-digit", month:"long", year:"numeric" });
+
+      // Cabeçalho
+      doc.setFillColor(21, 101, 192);
+      doc.rect(0, 0, 210, 30, "F");
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(14);
+      doc.setFont("helvetica", "bold");
+      doc.text("Relatório do Dia — Pontualize", 14, 12);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 20);
+      doc.text("Cartão Ponto BJK", 14, 26);
+
+      // Dados
+      let y = 40;
+      doc.setTextColor(21, 101, 192);
+      doc.setFontSize(13);
+      doc.setFont("helvetica", "bold");
+      doc.text(u ? u.nome : "", 14, y); y += 7;
+      doc.setTextColor(80, 80, 80);
+      doc.setFontSize(9);
+      doc.setFont("helvetica", "normal");
+      if (u && u.cargo) { doc.text(u.cargo, 14, y); y += 6; }
+      doc.text(`Data: ${dataFmt}`, 14, y); y += 6;
+      doc.text(`Registrado por: ${rel.criadoPor || "—"}`, 14, y); y += 10;
+
+      // Linha separadora
+      doc.setDrawColor(21, 101, 192);
+      doc.setLineWidth(0.5);
+      doc.line(14, y, 196, y); y += 8;
+
+      // Texto
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(10);
+      doc.setFont("helvetica", "normal");
+      const linhas = doc.splitTextToSize(rel.texto || "", 182);
+      doc.text(linhas, 14, y);
+      y += linhas.length * 6 + 10;
+
+      // Fotos
+      const fotos = rel.fotos || [];
+      if (fotos.length > 0) {
+        doc.setDrawColor(21, 101, 192);
+        doc.setLineWidth(0.3);
+        doc.line(14, y, 196, y); y += 6;
+        doc.setTextColor(21, 101, 192);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(`Fotos do Relatório (${fotos.length})`, 14, y); y += 6;
+        const colW = 56, colH = 42, gap = 5, margemEsq = 14;
+        let col = 0, xFoto = margemEsq, yFoto = y;
+        for (const foto of fotos) {
+          try {
+            if (yFoto + colH > 280) { doc.addPage(); yFoto = 20; col = 0; xFoto = margemEsq; }
+            doc.addImage(foto.url, "JPEG", xFoto, yFoto, colW, colH);
+            col++;
+            if (col >= 3) { col = 0; xFoto = margemEsq; yFoto += colH + gap; }
+            else { xFoto += colW + gap; }
+          } catch(e) {}
+        }
+        y = col > 0 ? yFoto + colH + 10 : yFoto + 10;
+      }
+
+      // Assinaturas
+      const pageH = 297;
+      if (y > pageH - 55) { doc.addPage(); y = 20; }
+      const yAssin = Math.max(y + 6, pageH - 50);
+      doc.setDrawColor(100, 100, 100);
+      doc.setLineWidth(0.4);
+      const nomeFuncionario = u ? u.nome : "Funcionário";
+      doc.line(14, yAssin, 90, yAssin);
+      doc.setFontSize(8);
+      doc.setTextColor(80, 80, 80);
+      doc.setFont("helvetica", "normal");
+      doc.text(nomeFuncionario, 52, yAssin + 5, { align: "center" });
+      doc.setFont("helvetica", "italic");
+      doc.text(u && u.cargo ? u.cargo : "Funcionário", 52, yAssin + 10, { align: "center" });
+      doc.line(120, yAssin, 196, yAssin);
+      doc.setFont("helvetica", "normal");
+      doc.text("José Benildo de Souza", 158, yAssin + 5, { align: "center" });
+      doc.setFont("helvetica", "italic");
+      doc.text("Diretor — BJK", 158, yAssin + 10, { align: "center" });
+
+      return doc.output("blob");
+    }
+
+    // Botão exportar TODOS os relatórios do dia em ZIP
+    document.getElementById("btnExportarTodosRelatoriosDia").addEventListener("click", async () => {
+      const u = usuarios.find(u => String(u.id) === String(_relatorioUserId));
+      const meuRelats = relatDias.filter(r => String(r.usuarioId) === String(_relatorioUserId));
+      if (meuRelats.length === 0) {
+        alert("Este funcionário não possui relatórios do dia registrados.");
+        return;
+      }
+
+      const btn = document.getElementById("btnExportarTodosRelatoriosDia");
+      btn.disabled = true;
+      btn.textContent = `Gerando ZIP (0/${meuRelats.length})...`;
+
+      try {
+        const zip = new JSZip();
+        const nomePasta = (u ? u.nome : "funcionario").replace(/\s+/g, "-");
+        const pasta = zip.folder(nomePasta);
+
+        // Ordenar por data
+        const ordenados = [...meuRelats].sort((a, b) => a.data.localeCompare(b.data));
+
+        for (let i = 0; i < ordenados.length; i++) {
+          btn.textContent = `Gerando PDF (${i + 1}/${ordenados.length})...`;
+          const rel = ordenados[i];
+          try {
+            const blob = await _gerarPDFRelatDiaBlob(rel, u);
+            pasta.file(`${rel.data}.pdf`, blob);
+          } catch(e) { console.warn("Erro ao gerar PDF:", rel.data, e); }
+        }
+
+        btn.textContent = "Compactando ZIP...";
+        const zipBlob = await zip.generateAsync({ type: "blob" });
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(zipBlob);
+        link.download = `relatorios-${nomePasta}.zip`;
+        link.click();
+        setTimeout(() => URL.revokeObjectURL(link.href), 5000);
+      } catch(e) {
+        console.error("Erro ao gerar ZIP:", e);
+        alert("Erro ao gerar o arquivo ZIP. Tente novamente.");
+      }
+
+      btn.disabled = false;
+      btn.textContent = "📥 Exportar todos os relatórios do dia (ZIP)";
     });
 
     // Botões Voltar
