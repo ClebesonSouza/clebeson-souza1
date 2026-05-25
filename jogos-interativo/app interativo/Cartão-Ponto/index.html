@@ -690,6 +690,72 @@
       border-radius: 50%; width: 40px; height: 40px;
       animation: spin 0.8s linear infinite; margin: 0 auto 12px;
     }
+    /* FOTOS DO RELATÓRIO DO DIA */
+    .relat-fotos-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+      margin-top: 8px;
+    }
+    .relat-foto-thumb {
+      width: 100%;
+      aspect-ratio: 1;
+      object-fit: cover;
+      border-radius: 6px;
+      cursor: pointer;
+      border: 2px solid #ddd;
+      transition: border-color 0.2s;
+      display: block;
+    }
+    .relat-foto-thumb:hover { border-color: #1565c0; }
+    .relat-foto-edicao-item {
+      position: relative;
+      aspect-ratio: 1;
+    }
+    .relat-foto-edicao-item img {
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      border-radius: 6px;
+      border: 2px solid #ddd;
+    }
+    .relat-foto-del {
+      position: absolute;
+      top: 3px;
+      right: 3px;
+      background: rgba(229,57,53,0.9);
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 13px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+      margin: 0;
+      z-index: 1;
+    }
+    #relatFotoViewer {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.92);
+      z-index: 3500;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+    }
+    #relatFotoViewer.ativo { display: flex; }
+    #relatFotoViewerImg {
+      max-width: 95vw;
+      max-height: 85vh;
+      border-radius: 8px;
+      object-fit: contain;
+    }
   </style>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-auth-compat.js"></script>
@@ -1225,13 +1291,28 @@
       <!-- Corpo -->
       <div style="padding:16px;">
         <!-- Exibição do texto salvo -->
-        <div id="relatDiaTelaExibicao" style="display:none;background:#e3f2fd;border-radius:8px;padding:12px 14px;border-left:3px solid #1565c0;font-size:0.92em;color:#333;line-height:1.6;white-space:pre-line;margin-bottom:12px;"></div>
+        <div id="relatDiaTelaExibicao" style="display:none;background:#e3f2fd;border-radius:8px;padding:12px 14px;border-left:3px solid #1565c0;font-size:0.92em;color:#333;line-height:1.6;white-space:pre-line;margin-bottom:8px;"></div>
+        <!-- Fotos salvas (exibição) -->
+        <div id="relatDiaTelaFotosView" style="display:none;margin-bottom:12px;">
+          <div style="font-size:0.82em;color:#1565c0;font-weight:bold;margin-bottom:4px;">📷 Fotos do relatório</div>
+          <div id="relatDiaTelaFotosGrid" class="relat-fotos-grid"></div>
+        </div>
         <!-- Mensagem quando admin e sem relatório -->
         <div id="relatDiaTelaSemTexto" style="display:none;background:#f5f5f5;border-radius:8px;padding:12px;font-size:0.9em;color:#888;text-align:center;margin-bottom:12px;">Nenhum relatório registrado para este dia.</div>
         <!-- Área de edição (só funcionário) -->
         <div id="relatDiaTelaEdicao" style="display:none;">
-          <textarea id="relatDiaTelaTextarea" style="width:100%;min-height:180px;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:0.92em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
-          <div style="display:flex;gap:8px;margin-top:8px;">
+          <textarea id="relatDiaTelaTextarea" style="width:100%;min-height:150px;padding:10px;border:1px solid #ccc;border-radius:6px;font-size:0.92em;resize:vertical;box-sizing:border-box;" placeholder="Descreva as atividades executadas neste dia..."></textarea>
+          <!-- Upload de fotos -->
+          <div style="margin-top:10px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:6px;">
+              <span style="font-size:0.82em;color:#555;font-weight:bold;">📷 Fotos (máx. 3)</span>
+              <button id="btnAdicionarFotoRelatorio" style="background:#1565c0;font-size:0.78em;padding:5px 12px;margin:0;border-radius:20px;">+ Adicionar foto</button>
+            </div>
+            <input type="file" id="inputFotoRelatorio" accept="image/*" multiple style="display:none;" />
+            <div id="relatDiaFotosEdicaoGrid" class="relat-fotos-grid"></div>
+            <div id="relatDiaFotosEdicaoInfo" style="font-size:0.75em;color:#888;margin-top:4px;display:none;">Toque em uma foto para removê-la</div>
+          </div>
+          <div style="display:flex;gap:8px;margin-top:10px;">
             <button id="btnSalvarRelatDiaTela" style="flex:1;background:#388e3c;margin-top:0;">Salvar</button>
             <button id="btnCancelarRelatDiaTela" style="flex:1;background:#888;margin-top:0;">Cancelar</button>
           </div>
@@ -1249,6 +1330,12 @@
         <button id="btnVoltarRelatDiaSo" style="background:#888;display:none;">← Voltar</button>
       </div>
     </div>
+  </div>
+
+  <!-- LIGHTBOX DE FOTO DO RELATÓRIO -->
+  <div id="relatFotoViewer">
+    <img id="relatFotoViewerImg" src="" alt="Foto do relatório" />
+    <button onclick="document.getElementById('relatFotoViewer').classList.remove('ativo')" style="margin-top:16px;background:rgba(255,255,255,0.15);border:1px solid rgba(255,255,255,0.3);color:#fff;padding:8px 28px;border-radius:20px;font-size:0.95em;">Fechar</button>
   </div>
 
   <!-- MODAL DE CONFIRMAÇÃO GENÉRICO (substitui confirm() nativo) -->
@@ -1624,17 +1711,19 @@
       } catch (e) { console.warn("Firestore excluir relatDia:", e); }
     }
 
-    async function salvarRelatDia(usuarioId, dataStr, texto) {
+    async function salvarRelatDia(usuarioId, dataStr, texto, fotos) {
       const quem = usuarioLogado ? usuarioLogado.nome : "—";
       const agora = new Date().toISOString();
+      const fotosArr = Array.isArray(fotos) ? fotos : [];
       const idx = relatDias.findIndex(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
       if (idx >= 0) {
         relatDias[idx].texto = texto;
+        relatDias[idx].fotos = fotosArr;
         relatDias[idx].atualizadoEm = agora;
         relatDias[idx].atualizadoPor = quem;
         await _salvarRelatDiaFirestore(relatDias[idx]);
       } else {
-        const novo = { usuarioId: String(usuarioId), data: dataStr, texto, criadoPor: quem, criadoEm: agora };
+        const novo = { usuarioId: String(usuarioId), data: dataStr, texto, fotos: fotosArr, criadoPor: quem, criadoEm: agora };
         relatDias.push(novo);
         await _salvarRelatDiaFirestore(novo);
       }
@@ -1832,6 +1921,93 @@
     let _relatDiaTelaUserId = null;
     let _relatDiaTelaDataStr = null;
     let _relatDiaTelaContainer = null;
+    let _fotosRelatorioEdicao = [];     // [{file, blobUrl, nome}] — novas, ainda não enviadas
+    let _fotosRelatorioExistentes = []; // [{url, nome}]          — já salvas no Storage
+
+    // Comprime imagem e retorna base64 (max 400px, qualidade 0.55) — salvo no Firestore
+    function _comprimirParaBase64(file) {
+      return new Promise(resolve => {
+        const img = new Image();
+        const url = URL.createObjectURL(file);
+        img.onload = () => {
+          const MAX = 400;
+          let w = img.naturalWidth, h = img.naturalHeight;
+          if (w > MAX || h > MAX) {
+            if (w > h) { h = Math.round(h * MAX / w); w = MAX; }
+            else       { w = Math.round(w * MAX / h); h = MAX; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = w; canvas.height = h;
+          canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+          URL.revokeObjectURL(url);
+          resolve(canvas.toDataURL("image/jpeg", 0.55));
+        };
+        img.onerror = () => { URL.revokeObjectURL(url); resolve(null); };
+        img.src = url;
+      });
+    }
+
+    // Renderiza grid de fotos no modo EDIÇÃO
+    function _renderFotosEdicao() {
+      const grid = document.getElementById("relatDiaFotosEdicaoGrid");
+      const info = document.getElementById("relatDiaFotosEdicaoInfo");
+      const btn  = document.getElementById("btnAdicionarFotoRelatorio");
+      if (!grid) return;
+      const total = _fotosRelatorioExistentes.length + _fotosRelatorioEdicao.length;
+      grid.innerHTML = "";
+
+      // Fotos já salvas
+      _fotosRelatorioExistentes.forEach((foto, i) => {
+        const item = document.createElement("div");
+        item.className = "relat-foto-edicao-item";
+        item.innerHTML = `<img src="${foto.url}" alt="foto" /><button class="relat-foto-del" title="Remover">✕</button>`;
+        item.querySelector(".relat-foto-del").addEventListener("click", () => {
+          _fotosRelatorioExistentes.splice(i, 1);
+          _renderFotosEdicao();
+        });
+        grid.appendChild(item);
+      });
+
+      // Fotos novas (locais)
+      _fotosRelatorioEdicao.forEach((foto, i) => {
+        const item = document.createElement("div");
+        item.className = "relat-foto-edicao-item";
+        item.innerHTML = `<img src="${foto.blobUrl}" alt="nova foto" /><button class="relat-foto-del" title="Remover">✕</button>`;
+        item.querySelector(".relat-foto-del").addEventListener("click", () => {
+          URL.revokeObjectURL(foto.blobUrl);
+          _fotosRelatorioEdicao.splice(i, 1);
+          _renderFotosEdicao();
+        });
+        grid.appendChild(item);
+      });
+
+      info.style.display = total > 0 ? "block" : "none";
+      btn.style.display  = total >= 3 ? "none" : "inline-block";
+    }
+
+    // Renderiza grid de fotos no modo VISUALIZAÇÃO
+    function _renderFotosView(fotos) {
+      const container = document.getElementById("relatDiaTelaFotosView");
+      const grid      = document.getElementById("relatDiaTelaFotosGrid");
+      if (!container || !grid) return;
+      if (!fotos || fotos.length === 0) {
+        container.style.display = "none";
+        return;
+      }
+      grid.innerHTML = "";
+      fotos.forEach(foto => {
+        const img = document.createElement("img");
+        img.src = foto.url;
+        img.className = "relat-foto-thumb";
+        img.alt = "Foto do relatório";
+        img.addEventListener("click", () => {
+          document.getElementById("relatFotoViewerImg").src = foto.url;
+          document.getElementById("relatFotoViewer").classList.add("ativo");
+        });
+        grid.appendChild(img);
+      });
+      container.style.display = "block";
+    }
 
     function abrirTelaRelatDia(usuarioId, dataStr) {
       _relatDiaTelaUserId  = usuarioId;
@@ -1855,15 +2031,17 @@
       const btnCompart   = document.getElementById("btnCompartilharRelatDia");
       const elPDFVoltar  = document.getElementById("relatDiaTelaPDFVoltar");
       const btnVoltarSo  = document.getElementById("btnVoltarRelatDiaSo");
+      const elFotosView  = document.getElementById("relatDiaTelaFotosView");
 
       // Reset
-      [elExibicao, elSemTexto, elEdicao, btnEscrever, btnEditar, btnCompart, elPDFVoltar, btnVoltarSo]
+      [elExibicao, elSemTexto, elEdicao, btnEscrever, btnEditar, btnCompart, elPDFVoltar, btnVoltarSo, elFotosView]
         .forEach(el => { if (el) el.style.display = "none"; });
       elEdicao.style.display = "none";
 
       if (rel) {
         elExibicao.textContent = rel.texto;
         elExibicao.style.display = "block";
+        _renderFotosView(rel.fotos || []);
         btnCompart.style.display = "block";
         elPDFVoltar.style.display = "block";
         if (ehFuncionario) btnEditar.style.display = "block";
@@ -1889,23 +2067,34 @@
 
     // Botão Escrever (sem relatório ainda)
     document.getElementById("btnEscreverRelatDia").addEventListener("click", () => {
+      _fotosRelatorioEdicao = [];
+      _fotosRelatorioExistentes = [];
       document.getElementById("relatDiaTelaSemTexto").style.display = "none";
       document.getElementById("btnEscreverRelatDia").style.display = "none";
       document.getElementById("btnVoltarRelatDiaSo").style.display = "none";
       document.getElementById("relatDiaTelaEdicao").style.display = "block";
+      _renderFotosEdicao();
     });
 
     // Botão Editar (já tem relatório)
     document.getElementById("btnEditarRelatDiaTela").addEventListener("click", () => {
+      const rel = relatDias.find(r => String(r.usuarioId) === String(_relatDiaTelaUserId) && r.data === _relatDiaTelaDataStr);
+      _fotosRelatorioEdicao = [];
+      _fotosRelatorioExistentes = rel && rel.fotos ? rel.fotos.map(f => ({ url: f.url, nome: f.nome || "foto" })) : [];
       document.getElementById("relatDiaTelaExibicao").style.display = "none";
+      document.getElementById("relatDiaTelaFotosView").style.display = "none";
       document.getElementById("btnEditarRelatDiaTela").style.display = "none";
       document.getElementById("btnCompartilharRelatDia").style.display = "none";
       document.getElementById("relatDiaTelaPDFVoltar").style.display = "none";
       document.getElementById("relatDiaTelaEdicao").style.display = "block";
+      _renderFotosEdicao();
     });
 
     // Botão Cancelar edição
     document.getElementById("btnCancelarRelatDiaTela").addEventListener("click", () => {
+      _fotosRelatorioEdicao.forEach(f => URL.revokeObjectURL(f.blobUrl));
+      _fotosRelatorioEdicao = [];
+      _fotosRelatorioExistentes = [];
       abrirTelaRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
     });
 
@@ -1918,8 +2107,35 @@
       }
       const btn = document.getElementById("btnSalvarRelatDiaTela");
       btn.disabled = true;
+
+      // Comprime fotos novas para base64 e salva no Firestore
+      const totalFotos = _fotosRelatorioEdicao.length;
+      if (totalFotos > 0) {
+        btn.textContent = `Processando fotos (0/${totalFotos})...`;
+      } else {
+        btn.textContent = "Salvando...";
+      }
+
+      const fotosNovas = [];
+      for (let i = 0; i < _fotosRelatorioEdicao.length; i++) {
+        const f = _fotosRelatorioEdicao[i];
+        btn.textContent = `Processando fotos (${i+1}/${totalFotos})...`;
+        try {
+          const base64 = await _comprimirParaBase64(f.file);
+          if (base64) fotosNovas.push({ url: base64, nome: f.nome });
+        } catch(e) {
+          console.warn("Erro ao processar foto:", e);
+        }
+        URL.revokeObjectURL(f.blobUrl);
+      }
+
+      // Combinar fotos existentes + novas
+      const todasFotos = [..._fotosRelatorioExistentes, ...fotosNovas];
+
       btn.textContent = "Salvando...";
-      await salvarRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr, texto);
+      await salvarRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr, texto, todasFotos);
+      _fotosRelatorioEdicao = [];
+      _fotosRelatorioExistentes = [];
       btn.disabled = false;
       btn.textContent = "Salvar";
       renderAlertasRelatDia();
@@ -1944,8 +2160,25 @@
       } catch (e) { console.warn("Compartilhar:", e); }
     });
 
+    // Botão adicionar foto + input de arquivo
+    document.getElementById("btnAdicionarFotoRelatorio").addEventListener("click", () => {
+      document.getElementById("inputFotoRelatorio").click();
+    });
+
+    document.getElementById("inputFotoRelatorio").addEventListener("change", (e) => {
+      const files = Array.from(e.target.files || []);
+      const vagas = 3 - _fotosRelatorioExistentes.length - _fotosRelatorioEdicao.length;
+      const adicionando = files.slice(0, vagas);
+      adicionando.forEach(file => {
+        const blobUrl = URL.createObjectURL(file);
+        _fotosRelatorioEdicao.push({ file, blobUrl, nome: file.name });
+      });
+      e.target.value = "";
+      _renderFotosEdicao();
+    });
+
     // Botão Exportar PDF
-    document.getElementById("btnPDFRelatDia").addEventListener("click", () => {
+    document.getElementById("btnPDFRelatDia").addEventListener("click", async () => {
       const rel = relatDias.find(r => String(r.usuarioId) === String(_relatDiaTelaUserId) && r.data === _relatDiaTelaDataStr);
       const u   = usuarios.find(u => String(u.id) === String(_relatDiaTelaUserId));
       if (!rel) return;
@@ -1990,11 +2223,57 @@
       doc.setFont("helvetica", "normal");
       const linhas = doc.splitTextToSize(rel.texto, 182);
       doc.text(linhas, 14, y);
-      y += linhas.length * 6 + 16;
+      y += linhas.length * 6 + 10;
 
-      // Assinaturas
+      // Fotos do relatório (se houver)
+      const fotos = rel.fotos || [];
+      if (fotos.length > 0) {
+        // Título das fotos
+        doc.setDrawColor(21, 101, 192);
+        doc.setLineWidth(0.3);
+        doc.line(14, y, 196, y); y += 6;
+        doc.setTextColor(21, 101, 192);
+        doc.setFontSize(9);
+        doc.setFont("helvetica", "bold");
+        doc.text(`📷 Fotos do Relatório (${fotos.length})`, 14, y); y += 6;
+
+        // Carregar e inserir as fotos em grid de 3 colunas
+        const colW = 56; // largura de cada foto em mm
+        const colH = 42; // altura de cada foto em mm
+        const gap  = 5;
+        const margemEsq = 14;
+        let col = 0;
+        let xFoto = margemEsq;
+        let yFoto = y;
+
+        for (const foto of fotos) {
+          try {
+            // base64 já está pronto — adiciona direto no PDF
+            if (yFoto + colH > 280) {
+              doc.addPage();
+              yFoto = 20;
+              col = 0;
+              xFoto = margemEsq;
+            }
+            doc.addImage(foto.url, "JPEG", xFoto, yFoto, colW, colH);
+            col++;
+            if (col >= 3) {
+              col = 0;
+              xFoto = margemEsq;
+              yFoto += colH + gap;
+            } else {
+              xFoto += colW + gap;
+            }
+          } catch(e) { console.warn("PDF: erro ao inserir foto", e); }
+        }
+        if (col > 0) y = yFoto + colH + 10;
+        else         y = yFoto + 10;
+      }
+
+      // Assinaturas — em nova página se não couber
       const pageH = 297;
-      const yAssin = Math.max(y, pageH - 50);
+      if (y > pageH - 55) { doc.addPage(); y = 20; }
+      const yAssin = Math.max(y + 6, pageH - 50);
 
       doc.setDrawColor(100, 100, 100);
       doc.setLineWidth(0.4);
