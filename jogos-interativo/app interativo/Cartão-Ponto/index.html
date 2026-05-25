@@ -1319,7 +1319,10 @@
         </div>
         <!-- Botões de ação -->
         <button id="btnEscreverRelatDia" style="background:#388e3c;display:none;">✏️ Escrever Relatório</button>
-        <button id="btnEditarRelatDiaTela" style="background:#388e3c;display:none;">✏️ Editar Relatório</button>
+        <div id="relatDiaBotoesEdicao" style="display:none;display:flex;gap:8px;">
+          <button id="btnEditarRelatDiaTela" style="flex:1;background:#388e3c;margin-top:0;">✏️ Editar</button>
+          <button id="btnExcluirRelatDiaTela" style="flex:1;background:#e53935;margin-top:0;">🗑️ Excluir</button>
+        </div>
         <button id="btnCompartilharRelatDia" style="background:#25d366;display:none;">📤 Compartilhar Relatório</button>
         <div id="relatDiaTelaPDFVoltar" style="display:none;display:none;">
           <div style="display:flex;gap:8px;margin-top:0;">
@@ -2022,19 +2025,19 @@
       document.getElementById("relatDiaTelaSubtitulo").textContent =
         `${u ? u.nome : ""} — ${dataFmt}`;
 
-      const elExibicao   = document.getElementById("relatDiaTelaExibicao");
-      const elSemTexto   = document.getElementById("relatDiaTelaSemTexto");
-      const elEdicao     = document.getElementById("relatDiaTelaEdicao");
-      const elTextarea   = document.getElementById("relatDiaTelaTextarea");
-      const btnEscrever  = document.getElementById("btnEscreverRelatDia");
-      const btnEditar    = document.getElementById("btnEditarRelatDiaTela");
-      const btnCompart   = document.getElementById("btnCompartilharRelatDia");
-      const elPDFVoltar  = document.getElementById("relatDiaTelaPDFVoltar");
-      const btnVoltarSo  = document.getElementById("btnVoltarRelatDiaSo");
-      const elFotosView  = document.getElementById("relatDiaTelaFotosView");
+      const elExibicao     = document.getElementById("relatDiaTelaExibicao");
+      const elSemTexto     = document.getElementById("relatDiaTelaSemTexto");
+      const elEdicao       = document.getElementById("relatDiaTelaEdicao");
+      const elTextarea     = document.getElementById("relatDiaTelaTextarea");
+      const btnEscrever    = document.getElementById("btnEscreverRelatDia");
+      const elBotoesEdicao = document.getElementById("relatDiaBotoesEdicao");
+      const btnCompart     = document.getElementById("btnCompartilharRelatDia");
+      const elPDFVoltar    = document.getElementById("relatDiaTelaPDFVoltar");
+      const btnVoltarSo    = document.getElementById("btnVoltarRelatDiaSo");
+      const elFotosView    = document.getElementById("relatDiaTelaFotosView");
 
       // Reset
-      [elExibicao, elSemTexto, elEdicao, btnEscrever, btnEditar, btnCompart, elPDFVoltar, btnVoltarSo, elFotosView]
+      [elExibicao, elSemTexto, elEdicao, btnEscrever, elBotoesEdicao, btnCompart, elPDFVoltar, btnVoltarSo, elFotosView]
         .forEach(el => { if (el) el.style.display = "none"; });
       elEdicao.style.display = "none";
 
@@ -2044,7 +2047,7 @@
         _renderFotosView(rel.fotos || []);
         btnCompart.style.display = "block";
         elPDFVoltar.style.display = "block";
-        if (ehFuncionario) btnEditar.style.display = "block";
+        if (ehFuncionario) elBotoesEdicao.style.display = "flex";
       } else {
         elSemTexto.style.display = "block";
         if (ehFuncionario) {
@@ -2083,11 +2086,20 @@
       _fotosRelatorioExistentes = rel && rel.fotos ? rel.fotos.map(f => ({ url: f.url, nome: f.nome || "foto" })) : [];
       document.getElementById("relatDiaTelaExibicao").style.display = "none";
       document.getElementById("relatDiaTelaFotosView").style.display = "none";
-      document.getElementById("btnEditarRelatDiaTela").style.display = "none";
+      document.getElementById("relatDiaBotoesEdicao").style.display = "none";
       document.getElementById("btnCompartilharRelatDia").style.display = "none";
       document.getElementById("relatDiaTelaPDFVoltar").style.display = "none";
       document.getElementById("relatDiaTelaEdicao").style.display = "block";
       _renderFotosEdicao();
+    });
+
+    // Botão Excluir relatório
+    document.getElementById("btnExcluirRelatDiaTela").addEventListener("click", async () => {
+      const ok = await confirmar("Tem certeza que deseja excluir este relatório?\n\nEsta ação não pode ser desfeita.");
+      if (!ok) return;
+      await excluirRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
+      renderAlertasRelatDia();
+      abrirTelaRelatDia(_relatDiaTelaUserId, _relatDiaTelaDataStr);
     });
 
     // Botão Cancelar edição
