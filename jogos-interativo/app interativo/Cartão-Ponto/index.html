@@ -776,6 +776,25 @@
     </div>
   </div>
 
+  <!-- TELA SELEÇÃO DE EMPRESA -->
+  <div class="container hidden" id="empresaScreen">
+    <h1 style="color:#2a6eb6;">Pontualize</h1>
+    <div style="text-align:center;font-size:2.4em;margin-bottom:8px;">🏢</div>
+    <div class="card">
+      <div class="card-title">Código de Acesso</div>
+      <div class="card content">
+        <p style="font-size:0.92em;color:#555;margin-bottom:14px;">
+          Digite o código da empresa fornecido pelo seu gestor para continuar.
+        </p>
+        <label>Código da empresa</label>
+        <input type="text" id="inputCodigoEmpresa" placeholder="Ex: BJK-2024" autocomplete="off"
+          style="text-transform:uppercase;letter-spacing:2px;font-weight:bold;font-size:1.1em;" />
+        <p id="erroEmpresa" class="error" style="min-height:1.4em;margin-top:6px;"></p>
+        <button id="btnConfirmarEmpresa" style="margin-top:4px;">Acessar</button>
+      </div>
+    </div>
+  </div>
+
   <!-- TELA INICIAL: LOGIN -->
   <div class="container hidden" id="loginScreen">
     <h1>Cartão Ponto BJK</h1>
@@ -838,6 +857,63 @@
             Cadastrar administrador
           </button>
           <button id="voltarDoLoginAdmin">Voltar ao login</button>
+          <button id="gotoSuperAdmin" style="background:none;color:#bbb;font-size:0.72em;margin-top:4px;">⚙ Acesso master</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA SUPER ADMIN (Clebeson) -->
+  <div class="container hidden" id="superadminScreen" style="max-width:480px;">
+    <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+      <span style="font-size:2em;">👑</span>
+      <div>
+        <h2 style="color:#6a1b9a;margin:0;font-size:1.3em;">Painel Master</h2>
+        <div style="font-size:0.78em;color:#888;" id="superadminNomeTopo"></div>
+      </div>
+      <button id="btnSairSuperAdmin" style="width:auto;padding:6px 14px;background:#e53935;font-size:0.82em;margin:0 0 0 auto;">Sair</button>
+    </div>
+    <!-- Login Super Admin -->
+    <div id="superadminLoginBox" class="card">
+      <div class="card-title" style="background:#6a1b9a;">🔐 Acesso Master</div>
+      <div class="card content">
+        <form id="superadminLoginForm">
+          <label>Usuário</label>
+          <input type="text" name="superUser" autocomplete="off" />
+          <label>Senha</label>
+          <div class="senha-wrapper">
+            <input type="password" name="superSenha" />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+          </div>
+          <p id="erroSuperAdmin" class="error" style="min-height:1.2em;"></p>
+          <button type="submit" style="background:#6a1b9a;">Entrar</button>
+        </form>
+        <div class="switch">
+          <button id="voltarDoSuperAdmin" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">Voltar</button>
+        </div>
+      </div>
+    </div>
+    <!-- Painel Super Admin (após login) -->
+    <div id="superadminPainel" style="display:none;">
+      <div style="background:#f3e5f5;border-radius:8px;padding:12px;margin-bottom:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <span style="font-weight:bold;color:#6a1b9a;">🏢 Empresas cadastradas</span>
+          <button id="btnNovaEmpresa" style="width:auto;padding:6px 12px;background:#6a1b9a;font-size:0.82em;margin:0;">+ Nova empresa</button>
+        </div>
+        <div id="superadminListaEmpresas" style="font-size:0.88em;"></div>
+      </div>
+      <!-- Modal nova empresa -->
+      <div id="superadminNovaEmpresaBox" style="display:none;background:#fff;border:1px solid #ddd;border-radius:8px;padding:14px;margin-bottom:12px;">
+        <div style="font-weight:bold;color:#6a1b9a;margin-bottom:10px;">➕ Cadastrar nova empresa</div>
+        <label style="font-size:0.85em;">Nome da empresa</label>
+        <input type="text" id="inputNomeNovaEmpresa" placeholder="Ex: BJK Construções" />
+        <label style="font-size:0.85em;margin-top:8px;">Código de acesso</label>
+        <input type="text" id="inputCodigoNovaEmpresa" placeholder="Ex: BJK-2024" style="text-transform:uppercase;letter-spacing:2px;font-weight:bold;" />
+        <p style="font-size:0.78em;color:#888;margin-top:4px;">O código será usado pelos funcionários para acessar o app.</p>
+        <p id="erroNovaEmpresa" class="error" style="min-height:1.2em;"></p>
+        <div style="display:flex;gap:8px;margin-top:8px;">
+          <button id="btnSalvarNovaEmpresa" style="flex:1;background:#6a1b9a;margin:0;">Salvar</button>
+          <button id="btnCancelarNovaEmpresa" style="flex:1;background:#888;margin:0;">Cancelar</button>
         </div>
       </div>
     </div>
@@ -1422,6 +1498,22 @@
     const auth = firebase.auth();
     const db = firebase.firestore();
 
+    // ============================
+    // MULTI-TENANCY — HELPERS
+    // ============================
+    let empresaCodigo = null; // código da empresa atual (ex: "BJK-2024")
+
+    // Retorna subcoleção da empresa atual
+    function _col(nome) {
+      if (!empresaCodigo) throw new Error("empresaCodigo não definido");
+      return db.collection("empresas").doc(empresaCodigo).collection(nome);
+    }
+
+    // Retorna chave de localStorage prefixada pela empresa
+    function _lsKey(nome) {
+      return (empresaCodigo || "bjk") + "_" + nome;
+    }
+
     // Login anônimo automático — aguarda auth antes de liberar operações Firestore
     const _authPronto = new Promise(resolve => {
       auth.onAuthStateChanged(user => {
@@ -1434,6 +1526,67 @@
       return iso.replace(/[:.]/g, "-");
     }
 
+    async function _migrarDadosAntigos() {
+      // Migração única: move dados das coleções raiz (estrutura antiga) para a subcoleção da empresa
+      // Só roda uma vez — verifica flag no Firestore
+      try {
+        const flagKey = "pontualize_migrado_" + empresaCodigo;
+        if (localStorage.getItem(flagKey)) return; // já migrou
+        const [snapU, snapB] = await Promise.all([
+          db.collection("usuarios").get(),
+          db.collection("batidas").get()
+        ]);
+        const temDadosAntigos = !snapU.empty || !snapB.empty;
+        if (!temDadosAntigos) { localStorage.setItem(flagKey, "1"); return; }
+        console.log("[Migração] Movendo dados para empresas/" + empresaCodigo);
+        // Garante que o documento da empresa existe
+        const docEmpresaRef = db.collection("empresas").doc(empresaCodigo);
+        const docEmpresa = await docEmpresaRef.get();
+        if (!docEmpresa.exists) {
+          await docEmpresaRef.set({ nome: empresaCodigo, codigo: empresaCodigo, ativa: true, criadaEm: new Date().toISOString(), migradaEm: new Date().toISOString() });
+        }
+        // Migra usuários
+        if (!snapU.empty) {
+          for (let i = 0; i < snapU.docs.length; i += 400) {
+            const batch = db.batch();
+            snapU.docs.slice(i, i + 400).forEach(d => batch.set(_col("usuarios").doc(d.id), d.data()));
+            await batch.commit();
+          }
+        }
+        // Migra batidas
+        if (!snapB.empty) {
+          for (let i = 0; i < snapB.docs.length; i += 400) {
+            const batch = db.batch();
+            snapB.docs.slice(i, i + 400).forEach(d => batch.set(_col("batidas").doc(d.id), d.data()));
+            await batch.commit();
+          }
+        }
+        // Migra observações e relatórios
+        const [snapO, snapR] = await Promise.all([
+          db.collection("observacoes").get(),
+          db.collection("relatoriosDia").get()
+        ]);
+        if (!snapO.empty) {
+          for (let i = 0; i < snapO.docs.length; i += 400) {
+            const batch = db.batch();
+            snapO.docs.slice(i, i + 400).forEach(d => batch.set(_col("observacoes").doc(d.id), d.data()));
+            await batch.commit();
+          }
+        }
+        if (!snapR.empty) {
+          for (let i = 0; i < snapR.docs.length; i += 400) {
+            const batch = db.batch();
+            snapR.docs.slice(i, i + 400).forEach(d => batch.set(_col("relatoriosDia").doc(d.id), d.data()));
+            await batch.commit();
+          }
+        }
+        localStorage.setItem(flagKey, "1");
+        console.log("[Migração] Concluída com sucesso para empresa " + empresaCodigo);
+      } catch (ex) {
+        console.warn("[Migração] Falhou (continuará na próxima sessão):", ex);
+      }
+    }
+
     async function carregarDadosFirestore() {
       try {
         // Sem internet: usa localStorage imediatamente sem tentar o Firestore
@@ -1443,11 +1596,13 @@
           _authPronto,
           new Promise((_, reject) => setTimeout(() => reject(new Error("timeout")), 20000))
         ]);
+        // Migração automática: move dados da estrutura antiga para a nova (uma única vez)
+        await _migrarDadosAntigos();
         const [snapU, snapB, snapO, snapR] = await Promise.all([
-          db.collection("usuarios").get(),
-          db.collection("batidas").get(),
-          db.collection("observacoes").get(),
-          db.collection("relatoriosDia").get(),
+          _col("usuarios").get(),
+          _col("batidas").get(),
+          _col("observacoes").get(),
+          _col("relatoriosDia").get(),
         ]);
 
         if (!snapU.empty) {
@@ -1459,10 +1614,10 @@
           });
         } else {
           // Migração do localStorage na primeira vez
-          const local = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]");
+          const local = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]");
           if (local.length > 0) {
             const batch = db.batch();
-            local.forEach(u => batch.set(db.collection("usuarios").doc(String(u.id)), u));
+            local.forEach(u => batch.set(_col("usuarios").doc(String(u.id)), u));
             await batch.commit();
             usuarios = local;
           }
@@ -1472,12 +1627,12 @@
           batidas = snapB.docs.map(d => d.data());
         } else {
           // Migração do localStorage na primeira vez
-          const localB = JSON.parse(localStorage.getItem("batidas_bjk") || "[]");
+          const localB = JSON.parse(localStorage.getItem(_lsKey("batidas")) || "[]");
           if (localB.length > 0) {
             for (let i = 0; i < localB.length; i += 500) {
               const batch = db.batch();
               localB.slice(i, i + 500).forEach(b =>
-                batch.set(db.collection("batidas").doc(_batidaDocId(b.data_hora)), b)
+                batch.set(_col("batidas").doc(_batidaDocId(b.data_hora)), b)
               );
               await batch.commit();
             }
@@ -1496,39 +1651,39 @@
             }
           });
         } else {
-          try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
+          try { observacoes = JSON.parse(localStorage.getItem(_lsKey("observacoes")) || "[]"); } catch {}
         }
 
         // Carrega relatórios do dia
         if (!snapR.empty) {
           relatDias = snapR.docs.map(d => d.data()).filter(r => r.data && /^\d{4}-\d{2}-\d{2}$/.test(r.data));
         } else {
-          try { relatDias = JSON.parse(localStorage.getItem("relatdias_bjk") || "[]"); } catch {}
+          try { relatDias = JSON.parse(localStorage.getItem(_lsKey("relatdias")) || "[]"); } catch {}
         }
 
         // Salva cache local para uso offline (batidas limitadas a 5 dias para não estourar quota)
         _salvarCacheUsuarios();
         salvarBatidas();
         try {
-          localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
-          localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+          localStorage.setItem(_lsKey("observacoes"), JSON.stringify(observacoes));
+          localStorage.setItem(_lsKey("relatdias"), JSON.stringify(relatDias));
         } catch (e) { console.warn("Cache offline:", e); }
         // Firestore conectado: sincroniza fila offline imediatamente (conexão garantida aqui)
         _sincronizarFila().catch(() => {});
 
       } catch (e) {
         console.warn("Firestore indisponível, usando localStorage:", e);
-        try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
+        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
         try {
-          const raw = localStorage.getItem("batidas_bjk");
+          const raw = localStorage.getItem(_lsKey("batidas"));
           batidas = raw ? (JSON.parse(raw) || []) : [];
         } catch {}
-        try { observacoes = JSON.parse(localStorage.getItem("observacoes_bjk") || "[]"); } catch {}
+        try { observacoes = JSON.parse(localStorage.getItem(_lsKey("observacoes")) || "[]"); } catch {}
       }
       // Mescla fila offline na memória (online e offline) para mostrar batidas pendentes na UI
       // — batidas excluídas pelo admin são removidas da fila em excluirBatidaAdmin(), sem risco de ressurgir
       try {
-        const fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
+        const fila = JSON.parse(localStorage.getItem(_lsKey("fila_offline")) || "[]");
         fila.forEach(item => {
           if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora)) {
             batidas.push(item.dados);
@@ -1546,7 +1701,7 @@
             const uSalvar = { ...u };
             if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
             if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
-            batch.set(db.collection("usuarios").doc(String(uSalvar.id)), uSalvar);
+            batch.set(_col("usuarios").doc(String(uSalvar.id)), uSalvar);
           });
           await batch.commit();
         }
@@ -1559,14 +1714,14 @@
         const uSalvar = { ...u };
         if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
         if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
-        await db.collection("usuarios").doc(String(uSalvar.id)).set(uSalvar);
+        await _col("usuarios").doc(String(uSalvar.id)).set(uSalvar);
       } catch (e) { console.warn("Firestore salvar usuario:", e); }
     }
 
     async function _excluirUsuarioFirestore(id) {
       try {
         await _authPronto;
-        await db.collection("usuarios").doc(String(id)).delete();
+        await _col("usuarios").doc(String(id)).delete();
       } catch (e) { console.warn("Firestore excluir usuario:", e); }
     }
 
@@ -1575,7 +1730,7 @@
         _enfileirarBatida(b);
         return;
       }
-      db.collection("batidas").doc(_batidaDocId(b.data_hora)).set(b)
+      _col("batidas").doc(_batidaDocId(b.data_hora)).set(b)
         .catch(e => {
           console.warn("Firestore salvar batida:", e);
           _enfileirarBatida(b);
@@ -1583,19 +1738,25 @@
     }
 
     function _excluirBatidaFirestore(iso) {
-      db.collection("batidas").doc(_batidaDocId(iso)).delete()
+      _col("batidas").doc(_batidaDocId(iso)).delete()
         .catch(e => console.warn("Firestore excluir batida:", e));
     }
 
     function _atualizarCidadeBatidaFirestore(iso, cidade) {
-      db.collection("batidas").doc(_batidaDocId(iso)).update({ cidade })
+      _col("batidas").doc(_batidaDocId(iso)).update({ cidade })
         .catch(e => console.warn("Firestore atualizar cidade:", e));
     }
 
     // ============================
     // CACHE OFFLINE / FILA DE SYNC
     // ============================
-    const _FILA_KEY = "bjk_fila_offline";
+    // _FILA_KEY é dinâmico (depende de empresaCodigo), por isso usa função em vez de const
+    function _lerFila() {
+      try { return JSON.parse(localStorage.getItem(_lsKey("fila_offline")) || "[]"); } catch { return []; }
+    }
+    function _gravarFila(fila) {
+      try { localStorage.setItem(_lsKey("fila_offline"), JSON.stringify(fila)); } catch {}
+    }
 
     function _salvarCacheUsuarios() {
       try {
@@ -1607,15 +1768,8 @@
             us.faceDescriptor = Array.from(us.faceDescriptor);
           return us;
         });
-        localStorage.setItem("usuarios_bjk", JSON.stringify(cache));
+        localStorage.setItem(_lsKey("usuarios"), JSON.stringify(cache));
       } catch (e) { console.warn("Cache usuarios:", e); }
-    }
-
-    function _lerFila() {
-      try { return JSON.parse(localStorage.getItem(_FILA_KEY) || "[]"); } catch { return []; }
-    }
-    function _gravarFila(fila) {
-      try { localStorage.setItem(_FILA_KEY, JSON.stringify(fila)); } catch {}
     }
     function _enfileirarBatida(b) {
       const fila = _lerFila();
@@ -1633,7 +1787,7 @@
       for (const item of fila) {
         try {
           if (item.tipo === "batida") {
-            await db.collection("batidas").doc(_batidaDocId(item.dados.data_hora)).set(item.dados);
+            await _col("batidas").doc(_batidaDocId(item.dados.data_hora)).set(item.dados);
           }
         } catch (e) {
           erros.push(item);
@@ -1682,7 +1836,7 @@
 
     function _excluirBatidasDoUsuarioFirestore(idsSet) {
       // Exclui todas as batidas de usuários cujos IDs estão no Set
-      db.collection("batidas").get().then(snap => {
+      _col("batidas").get().then(snap => {
         const toDelete = snap.docs.filter(d => {
           const b = d.data();
           return b.usuarioId != null && idsSet.has(String(b.usuarioId));
@@ -1705,14 +1859,14 @@
     async function _salvarRelatDiaFirestore(rel) {
       try {
         await _authPronto;
-        await db.collection("relatoriosDia").doc(_relatDiaDocId(rel.usuarioId, rel.data)).set(rel);
+        await _col("relatoriosDia").doc(_relatDiaDocId(rel.usuarioId, rel.data)).set(rel);
       } catch (e) { console.warn("Firestore salvar relatDia:", e); }
     }
 
     async function _excluirRelatDiaFirestore(usuarioId, data) {
       try {
         await _authPronto;
-        await db.collection("relatoriosDia").doc(_relatDiaDocId(usuarioId, data)).delete();
+        await _col("relatoriosDia").doc(_relatDiaDocId(usuarioId, data)).delete();
       } catch (e) { console.warn("Firestore excluir relatDia:", e); }
     }
 
@@ -1732,13 +1886,13 @@
         relatDias.push(novo);
         await _salvarRelatDiaFirestore(novo);
       }
-      localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+      localStorage.setItem(_lsKey("relatdias"), JSON.stringify(relatDias));
     }
 
     async function excluirRelatDia(usuarioId, dataStr) {
       const idx = relatDias.findIndex(r => String(r.usuarioId) === String(usuarioId) && r.data === dataStr);
       if (idx >= 0) relatDias.splice(idx, 1);
-      localStorage.setItem("relatdias_bjk", JSON.stringify(relatDias));
+      localStorage.setItem(_lsKey("relatdias"), JSON.stringify(relatDias));
       await _excluirRelatDiaFirestore(usuarioId, dataStr);
     }
 
@@ -1754,14 +1908,14 @@
     async function _salvarObservacaoFirestore(obs) {
       try {
         await _authPronto;
-        await db.collection("observacoes").doc(_obsDocId(obs.usuarioId, obs.data)).set(obs);
+        await _col("observacoes").doc(_obsDocId(obs.usuarioId, obs.data)).set(obs);
       } catch (e) { console.warn("Firestore salvar observacao:", e); }
     }
 
     async function _excluirObservacaoFirestore(usuarioId, data) {
       try {
         await _authPronto;
-        await db.collection("observacoes").doc(_obsDocId(usuarioId, data)).delete();
+        await _col("observacoes").doc(_obsDocId(usuarioId, data)).delete();
       } catch (e) { console.warn("Firestore excluir observacao:", e); }
     }
 
@@ -1779,13 +1933,13 @@
         observacoes.push(novaObs);
         await _salvarObservacaoFirestore(novaObs);
       }
-      localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
+      localStorage.setItem(_lsKey("observacoes"), JSON.stringify(observacoes));
     }
 
     async function excluirObservacao(usuarioId, dataStr) {
       const idx = observacoes.findIndex(o => String(o.usuarioId) === String(usuarioId) && o.data === dataStr);
       if (idx >= 0) observacoes.splice(idx, 1);
-      localStorage.setItem("observacoes_bjk", JSON.stringify(observacoes));
+      localStorage.setItem(_lsKey("observacoes"), JSON.stringify(observacoes));
       await _excluirObservacaoFirestore(usuarioId, dataStr);
     }
 
@@ -2933,7 +3087,7 @@
         if (batidas.length < antes) salvarBatidas();
 
         // Remove do Firestore em lotes
-        const snap = await db.collection("batidas").get();
+        const snap = await _col("batidas").get();
         const antigas = snap.docs.filter(d => {
           const b = d.data();
           return b.data_hora && b.data_hora < corteISO;
@@ -2951,19 +3105,19 @@
       }
     }
 
-    async function inicializarApp() {
-      // Poda imediata: remove batidas_bjk antigas do localStorage para liberar espaço
+    async function inicializarApp(pularSplash = false) {
+      // Poda imediata: remove batidas antigas do localStorage para liberar espaço
       try {
-        const raw = localStorage.getItem("batidas_bjk");
+        const raw = localStorage.getItem(_lsKey("batidas"));
         if (raw) {
           const corte = new Date();
           corte.setDate(corte.getDate() - 5);
           const podadas = JSON.parse(raw).filter(b => b.data_hora >= corte.toISOString());
-          localStorage.setItem("batidas_bjk", JSON.stringify(podadas));
+          localStorage.setItem(_lsKey("batidas"), JSON.stringify(podadas));
         }
-      } catch (_) { try { localStorage.removeItem("batidas_bjk"); } catch {} }
+      } catch (_) { try { localStorage.removeItem(_lsKey("batidas")); } catch {} }
 
-      const splashMinimo = new Promise(r => setTimeout(r, 2800));
+      const splashMinimo = pularSplash ? Promise.resolve() : new Promise(r => setTimeout(r, 2800));
       try {
         await carregarDadosFirestore();
         migrarTitular();
@@ -2977,11 +3131,11 @@
       // carrega do localStorage e mescla a fila offline.
       if (!navigator.onLine && batidas.length === 0) {
         try {
-          const _raw = localStorage.getItem("batidas_bjk");
+          const _raw = localStorage.getItem(_lsKey("batidas"));
           if (_raw) batidas = JSON.parse(_raw) || [];
         } catch {}
         try {
-          const _fila = JSON.parse(localStorage.getItem("bjk_fila_offline") || "[]");
+          const _fila = JSON.parse(localStorage.getItem(_lsKey("fila_offline")) || "[]");
           _fila.forEach(item => {
             if (item.tipo === "batida" && !batidas.some(b => b.data_hora === item.dados.data_hora))
               batidas.push(item.dados);
@@ -2989,9 +3143,11 @@
         } catch {}
       }
       await splashMinimo;
-      const splash = document.getElementById("splashScreen");
-      splash.classList.add("splash-saindo");
-      setTimeout(() => { splash.style.display = "none"; }, 650);
+      if (!pularSplash) {
+        const splash = document.getElementById("splashScreen");
+        splash.classList.add("splash-saindo");
+        setTimeout(() => { splash.style.display = "none"; }, 650);
+      }
       mudarTela("loginScreen");
       // Pré-preenche e-mail do último login após carregar dados
       const ultimoEmail = carregarUltimoEmail();
@@ -3000,13 +3156,41 @@
         if (inputEmail) inputEmail.value = ultimoEmail;
       }
     }
-    inicializarApp();
+
+    // ============================
+    // DETECÇÃO DE EMPRESA (multi-tenancy)
+    // ============================
+    (function detectarEmpresa() {
+      // 1. Tenta pegar da URL: ?empresa=BJK-2024
+      const params = new URLSearchParams(window.location.search);
+      const empresaUrl = (params.get("empresa") || "").toUpperCase().trim();
+      if (empresaUrl) {
+        empresaCodigo = empresaUrl;
+        localStorage.setItem("pontualize_empresa", empresaCodigo);
+        inicializarApp();
+        return;
+      }
+      // 2. Tenta pegar do localStorage
+      const empresaSalva = localStorage.getItem("pontualize_empresa");
+      if (empresaSalva) {
+        empresaCodigo = empresaSalva;
+        inicializarApp();
+        return;
+      }
+      // 3. Não encontrou — aguarda splash e mostra tela de empresa
+      setTimeout(() => {
+        const splash = document.getElementById("splashScreen");
+        splash.classList.add("splash-saindo");
+        setTimeout(() => { splash.style.display = "none"; }, 650);
+        mudarTela("empresaScreen");
+      }, 2800);
+    })();
 
     // ============================
     // TELAS: LOGIN, CADASTRO, APP
     // ============================
     function mudarTela(id) {
-      ["loginScreen","loginAdminScreen","cadastroScreen","cadastroAdminScreen","appScreen","adminScreen","configScreen"].forEach(s => {
+      ["empresaScreen","loginScreen","loginAdminScreen","cadastroScreen","cadastroAdminScreen","appScreen","adminScreen","configScreen","superadminScreen"].forEach(s => {
         document.getElementById(s).classList.add("hidden");
       });
       document.getElementById(id).classList.remove("hidden");
@@ -3098,6 +3282,188 @@
       mudarTela("loginScreen");
     });
 
+    // ============================
+    // TELA DE EMPRESA (multi-tenancy)
+    // ============================
+    document.getElementById("btnConfirmarEmpresa").addEventListener("click", async () => {
+      const input = document.getElementById("inputCodigoEmpresa");
+      const codigo = (input.value || "").toUpperCase().trim();
+      const erroEl = document.getElementById("erroEmpresa");
+      if (!codigo) {
+        erroEl.textContent = "Digite o código da empresa.";
+        return;
+      }
+      const btnEl = document.getElementById("btnConfirmarEmpresa");
+      btnEl.disabled = true;
+      btnEl.textContent = "Verificando...";
+      erroEl.textContent = "";
+      try {
+        await _authPronto;
+        const docEmpresa = await db.collection("empresas").doc(codigo).get();
+        if (!docEmpresa.exists) {
+          erroEl.textContent = "Código inválido. Verifique com seu gestor.";
+          btnEl.disabled = false;
+          btnEl.textContent = "Acessar";
+          return;
+        }
+        empresaCodigo = codigo;
+        localStorage.setItem("pontualize_empresa", codigo);
+        erroEl.textContent = "";
+        await inicializarApp(true);
+      } catch (e) {
+        erroEl.textContent = "Erro ao verificar. Tente novamente.";
+        btnEl.disabled = false;
+        btnEl.textContent = "Acessar";
+      }
+    });
+
+    document.getElementById("inputCodigoEmpresa").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("btnConfirmarEmpresa").click();
+      // Força maiúsculo ao digitar
+      setTimeout(() => { e.target.value = e.target.value.toUpperCase(); }, 0);
+    });
+
+    // ============================
+    // SUPER ADMIN
+    // ============================
+    document.getElementById("gotoSuperAdmin").addEventListener("click", () => {
+      mudarTela("superadminScreen");
+      document.getElementById("superadminLoginBox").style.display = "";
+      document.getElementById("superadminPainel").style.display = "none";
+      document.getElementById("btnSairSuperAdmin").style.display = "none";
+    });
+
+    document.getElementById("voltarDoSuperAdmin").addEventListener("click", () => {
+      mudarTela("loginAdminScreen");
+    });
+
+    document.getElementById("btnSairSuperAdmin").addEventListener("click", () => {
+      mudarTela("loginAdminScreen");
+    });
+
+    document.getElementById("superadminLoginForm").addEventListener("submit", async e => {
+      e.preventDefault();
+      const form = e.target;
+      const usuario = form.superUser.value.trim();
+      const senha = form.superSenha.value;
+      const erroEl = document.getElementById("erroSuperAdmin");
+      erroEl.textContent = "Verificando...";
+      try {
+        await _authPronto;
+        const snap = await db.collection("superadmin").doc("master").get();
+        if (!snap.exists) { erroEl.textContent = "Acesso não autorizado."; return; }
+        const dados = snap.data();
+        if (dados.usuario !== usuario) { erroEl.textContent = "Usuário ou senha incorretos."; return; }
+        const senhaHash = await hashSenha(senha + dados.salt);
+        if (senhaHash !== dados.senha) { erroEl.textContent = "Usuário ou senha incorretos."; return; }
+        // Login OK
+        erroEl.textContent = "";
+        document.getElementById("superadminNomeTopo").textContent = dados.nomeCompleto || "Super Admin";
+        document.getElementById("superadminLoginBox").style.display = "none";
+        document.getElementById("superadminPainel").style.display = "";
+        document.getElementById("btnSairSuperAdmin").style.display = "";
+        await carregarEmpresasSuperAdmin();
+      } catch (ex) {
+        erroEl.textContent = "Erro ao verificar. Tente novamente.";
+        console.warn("SuperAdmin login:", ex);
+      }
+    });
+
+    async function carregarEmpresasSuperAdmin() {
+      const listaEl = document.getElementById("superadminListaEmpresas");
+      listaEl.innerHTML = "<div style='color:#888;font-size:0.9em;'>Carregando...</div>";
+      try {
+        const snap = await db.collection("empresas").get();
+        if (snap.empty) {
+          listaEl.innerHTML = "<div style='color:#aaa;font-size:0.9em;padding:8px 0;'>Nenhuma empresa cadastrada.</div>";
+          return;
+        }
+        listaEl.innerHTML = "";
+        snap.docs.forEach(doc => {
+          const emp = doc.data();
+          const div = document.createElement("div");
+          div.style.cssText = "background:#fff;border-radius:6px;padding:10px 12px;margin-bottom:8px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 1px 3px rgba(0,0,0,0.08);";
+          div.innerHTML = `
+            <div>
+              <div style="font-weight:bold;color:#333;">${emp.nome || doc.id}</div>
+              <div style="font-size:0.8em;color:#888;">Código: <b>${doc.id}</b>${emp.ativa === false ? ' — <span style="color:#e53935;">Inativa</span>' : ''}</div>
+            </div>
+            <div style="display:flex;gap:6px;">
+              <button onclick="superAdminEntrarEmpresa('${doc.id}')"
+                style="width:auto;padding:5px 10px;font-size:0.8em;background:#1565c0;margin:0;">Entrar</button>
+              <button onclick="superAdminToggleEmpresa('${doc.id}', ${emp.ativa !== false})"
+                style="width:auto;padding:5px 10px;font-size:0.8em;background:${emp.ativa !== false ? '#f57c00' : '#43a047'};margin:0;">
+                ${emp.ativa !== false ? 'Desativar' : 'Ativar'}
+              </button>
+            </div>`;
+          listaEl.appendChild(div);
+        });
+      } catch (ex) {
+        listaEl.innerHTML = "<div style='color:#e53935;font-size:0.9em;'>Erro ao carregar empresas.</div>";
+        console.warn("SuperAdmin listar empresas:", ex);
+      }
+    }
+
+    async function superAdminEntrarEmpresa(codigo) {
+      empresaCodigo = codigo;
+      localStorage.setItem("pontualize_empresa", codigo);
+      document.getElementById("superadminPainel").style.display = "none";
+      await inicializarApp(true);
+    }
+
+    async function superAdminToggleEmpresa(codigo, desativar) {
+      const acao = desativar ? "desativar" : "ativar";
+      const ok = await confirmar(`Deseja ${acao} a empresa ${codigo}?`);
+      if (!ok) return;
+      await db.collection("empresas").doc(codigo).update({ ativa: !desativar });
+      await carregarEmpresasSuperAdmin();
+    }
+
+    document.getElementById("btnNovaEmpresa").addEventListener("click", () => {
+      document.getElementById("superadminNovaEmpresaBox").style.display = "";
+      document.getElementById("inputNomeNovaEmpresa").focus();
+    });
+
+    document.getElementById("btnCancelarNovaEmpresa").addEventListener("click", () => {
+      document.getElementById("superadminNovaEmpresaBox").style.display = "none";
+      document.getElementById("erroNovaEmpresa").textContent = "";
+    });
+
+    document.getElementById("btnSalvarNovaEmpresa").addEventListener("click", async () => {
+      const nome = document.getElementById("inputNomeNovaEmpresa").value.trim();
+      const codigo = document.getElementById("inputCodigoNovaEmpresa").value.toUpperCase().trim();
+      const erroEl = document.getElementById("erroNovaEmpresa");
+      if (!nome) { erroEl.textContent = "Digite o nome da empresa."; return; }
+      if (!codigo || codigo.length < 3) { erroEl.textContent = "Código inválido (mínimo 3 caracteres)."; return; }
+      // Verifica se já existe
+      const existente = await db.collection("empresas").doc(codigo).get();
+      if (existente.exists) { erroEl.textContent = "Já existe uma empresa com este código."; return; }
+      const btn = document.getElementById("btnSalvarNovaEmpresa");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+      try {
+        await db.collection("empresas").doc(codigo).set({
+          nome,
+          codigo,
+          ativa: true,
+          criadaEm: new Date().toISOString()
+        });
+        document.getElementById("superadminNovaEmpresaBox").style.display = "none";
+        document.getElementById("inputNomeNovaEmpresa").value = "";
+        document.getElementById("inputCodigoNovaEmpresa").value = "";
+        erroEl.textContent = "";
+        await carregarEmpresasSuperAdmin();
+      } catch (ex) {
+        erroEl.textContent = "Erro ao salvar. Tente novamente.";
+      }
+      btn.disabled = false;
+      btn.textContent = "Salvar";
+    });
+
+    document.getElementById("inputCodigoNovaEmpresa").addEventListener("input", function() {
+      this.value = this.value.toUpperCase();
+    });
+
     document.getElementById("gotoLogin").addEventListener("click", () => {
       mudarTela("loginScreen");
     });
@@ -3156,7 +3522,7 @@
     let streamCadastro = null;
 
     function salvarUsuarios() {
-      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
       _syncUsuariosFirestore();
     }
 
@@ -3276,7 +3642,7 @@
       fecharBiometriaCadastro();
       const novoUsuario = { id: Date.now(), ...dados };
       usuarios.push(novoUsuario);
-      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
       _salvarUsuarioFirestore(novoUsuario);
       const erroEl = document.getElementById("erroCadastro");
       erroEl.className = "sucesso";
@@ -3333,7 +3699,7 @@
           usuarioEditando.faceDescriptors = descritores;
           usuarioEditando.fotoProfile = fotoProfile;
           const idx = usuarios.findIndex(u => String(u.id) === String(usuarioEditando.id));
-          if (idx !== -1) { usuarios[idx] = { ...usuarioEditando }; localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios)); }
+          if (idx !== -1) { usuarios[idx] = { ...usuarioEditando }; localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios)); }
           _salvarUsuarioFirestore(usuarioEditando);
           statusEl.textContent = "Biometria recadastrada com sucesso!";
           statusEl.style.color = "green";
@@ -3347,7 +3713,7 @@
           usuarioLogado.faceDescriptors = descritores;
           usuarioLogado.fotoProfile = fotoProfile;
           const idx = usuarios.findIndex(u => String(u.id) === String(usuarioLogado.id));
-          if (idx !== -1) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios)); }
+          if (idx !== -1) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios)); }
           _salvarUsuarioFirestore(usuarioLogado);
           statusEl.textContent = "Biometria cadastrada com sucesso!";
           statusEl.style.color = "green";
@@ -3363,7 +3729,7 @@
             fotoProfile,
           };
           usuarios.push(novoUsuarioBio);
-          localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+          localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
           _salvarUsuarioFirestore(novoUsuarioBio);
           statusEl.textContent = "Rosto cadastrado com sucesso! (3 amostras)";
           statusEl.style.color = "green";
@@ -3408,7 +3774,7 @@
 
       // Garante que usuarios está carregado — se estiver vazio, tenta localStorage diretamente
       if (usuarios.length === 0) {
-        try { usuarios = JSON.parse(localStorage.getItem("usuarios_bjk") || "[]"); } catch {}
+        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
       }
       // Busca pelo email primeiro para obter o salt individual
       const userTemp = usuarios.find((u) => !u.admin && u.email === email);
@@ -3531,7 +3897,7 @@
       const hoje = new Date().toISOString().slice(0, 10);
 
       // Escuta mudanças nos usuários em tempo real
-      _dashUsuariosUnsubscribe = db.collection("usuarios").onSnapshot(snap => {
+      _dashUsuariosUnsubscribe = _col("usuarios").onSnapshot(snap => {
         usuarios = snap.docs.map(d => d.data());
         renderAdminUsers();
         renderAlertasObservacao();
@@ -3540,7 +3906,7 @@
       }, e => console.warn("Dashboard usuarios erro:", e));
 
       // Escuta mudanças nas batidas de hoje em tempo real
-      _dashUnsubscribe = db.collection("batidas")
+      _dashUnsubscribe = _col("batidas")
         .where("data_hora", ">=", hoje + "T00:00:00.000Z")
         .where("data_hora", "<=", hoje + "T23:59:59.999Z")
         .onSnapshot(snap => {
@@ -5223,8 +5589,8 @@
           const u = usuarios.find(u => String(u.id) === String(_fotoAdminUserId));
           if (!u) return;
           u.fotoProfile = fotoProfile;
-          localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
-          await db.collection("usuarios").doc(String(u.id)).update({ fotoProfile })
+          localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+          await _col("usuarios").doc(String(u.id)).update({ fotoProfile })
             .catch(err => console.warn("Firestore foto:", err));
           const preview = document.getElementById("fotoAdminPreview");
           preview.innerHTML = `<img src="${fotoProfile}" style="width:100%;height:100%;object-fit:cover;" />`;
@@ -5242,8 +5608,8 @@
       const u = usuarios.find(u => String(u.id) === String(_fotoAdminUserId));
       if (!u) return;
       delete u.fotoProfile;
-      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
-      await db.collection("usuarios").doc(String(u.id))
+      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+      await _col("usuarios").doc(String(u.id))
         .update({ fotoProfile: firebase.firestore.FieldValue.delete() })
         .catch(err => console.warn("Firestore remover foto:", err));
       const preview = document.getElementById("fotoAdminPreview");
@@ -5401,7 +5767,7 @@
       const senhaHash = await hashSenha(senha + saltAdmin2);
       const novoAdmin = { id: Date.now(), nome, email, senha: senhaHash, salt: saltAdmin2, admin: true, titular: ehTitular };
       usuarios.push(novoAdmin);
-      localStorage.setItem("usuarios_bjk", JSON.stringify(usuarios));
+      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
       statusEl.textContent = "Salvando no servidor...";
       statusEl.style.color = "#555";
       await _salvarUsuarioFirestore(novoAdmin);
@@ -5874,7 +6240,7 @@
         compCanvas.toBlob(compBlob => {
           const reader = new FileReader();
           reader.onload = () => {
-            db.collection("batidas").doc(_batidaDocId(dataHoraBatida))
+            _col("batidas").doc(_batidaDocId(dataHoraBatida))
               .update({ foto: reader.result })
               .catch(e => console.warn("Firestore update foto:", e));
           };
@@ -6249,7 +6615,7 @@
         const corte = new Date();
         corte.setDate(corte.getDate() - 5);
         const recentes = batidas.filter(b => b.data_hora >= corte.toISOString());
-        localStorage.setItem("batidas_bjk", JSON.stringify(recentes));
+        localStorage.setItem(_lsKey("batidas"), JSON.stringify(recentes));
       } catch (_) {}
     }
 
@@ -6411,6 +6777,29 @@
     document.getElementById("btnCancelarEdicaoBatida").addEventListener("click", () => {
       document.getElementById("modalEditarBatida").classList.remove("ativo");
     });
+
+    // ============================
+    // SETUP SUPER ADMIN (executar UMA vez pelo console do navegador)
+    // Abra o console e chame: await configurarSuperAdmin("Clebeson", "seu_usuario", "sua_senha_forte")
+    // ============================
+    window.configurarSuperAdmin = async function(nomeCompleto, usuario, senha) {
+      if (!nomeCompleto || !usuario || !senha) {
+        console.error("Uso: await configurarSuperAdmin('Nome', 'usuario', 'senha')");
+        return;
+      }
+      try {
+        await _authPronto;
+        const docRef = db.collection("superadmin").doc("master");
+        const snap = await docRef.get();
+        if (snap.exists) { console.warn("Super Admin já configurado. Delete o documento 'superadmin/master' no Firestore para reconfigurar."); return; }
+        const salt = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
+        const senhaHash = await hashSenha(senha + salt);
+        await docRef.set({ nomeCompleto, usuario, senha: senhaHash, salt, criadoEm: new Date().toISOString() });
+        console.log("✅ Super Admin configurado com sucesso! Usuário:", usuario);
+      } catch (e) {
+        console.error("Erro:", e);
+      }
+    };
   </script>
 
   <script>
