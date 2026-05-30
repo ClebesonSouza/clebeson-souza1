@@ -791,6 +791,9 @@
           style="text-transform:uppercase;letter-spacing:2px;font-weight:bold;font-size:1.1em;" />
         <p id="erroEmpresa" class="error" style="min-height:1.4em;margin-top:6px;"></p>
         <button id="btnConfirmarEmpresa" style="margin-top:4px;">Acessar</button>
+        <div style="text-align:center;margin-top:14px;">
+          <button id="btnEmpresaParaMaster" style="background:none;color:#ccc;font-size:0.75em;text-decoration:underline;padding:4px;width:auto;display:inline-block;">⚙ Acesso master</button>
+        </div>
       </div>
     </div>
   </div>
@@ -3315,6 +3318,13 @@
         btnEl.disabled = false;
         btnEl.textContent = "Acessar";
       }
+    });
+
+    document.getElementById("btnEmpresaParaMaster").addEventListener("click", () => {
+      mudarTela("superadminScreen");
+      document.getElementById("superadminLoginBox").style.display = "";
+      document.getElementById("superadminPainel").style.display = "none";
+      document.getElementById("btnSairSuperAdmin").style.display = "none";
     });
 
     document.getElementById("inputCodigoEmpresa").addEventListener("keydown", e => {
