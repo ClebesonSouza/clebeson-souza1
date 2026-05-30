@@ -6788,28 +6788,7 @@
       document.getElementById("modalEditarBatida").classList.remove("ativo");
     });
 
-    // ============================
-    // SETUP SUPER ADMIN (executar UMA vez pelo console do navegador)
-    // Abra o console e chame: await configurarSuperAdmin("Clebeson", "seu_usuario", "sua_senha_forte")
-    // ============================
-    window.configurarSuperAdmin = async function(nomeCompleto, usuario, senha) {
-      if (!nomeCompleto || !usuario || !senha) {
-        console.error("Uso: await configurarSuperAdmin('Nome', 'usuario', 'senha')");
-        return;
-      }
-      try {
-        await _authPronto;
-        const docRef = db.collection("superadmin").doc("master");
-        const snap = await docRef.get();
-        if (snap.exists) { console.warn("Super Admin já configurado. Delete o documento 'superadmin/master' no Firestore para reconfigurar."); return; }
-        const salt = Array.from(crypto.getRandomValues(new Uint8Array(16))).map(b => b.toString(16).padStart(2, '0')).join('');
-        const senhaHash = await hashSenha(senha + salt);
-        await docRef.set({ nomeCompleto, usuario, senha: senhaHash, salt, criadoEm: new Date().toISOString() });
-        console.log("✅ Super Admin configurado com sucesso! Usuário:", usuario);
-      } catch (e) {
-        console.error("Erro:", e);
-      }
-    };
+    // Função de setup do super admin removida após configuração inicial.
   </script>
 
   <script>

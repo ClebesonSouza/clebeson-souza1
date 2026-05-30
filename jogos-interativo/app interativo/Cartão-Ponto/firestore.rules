@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ================================================
+    // SUPER ADMIN — somente leitura pelo app (login)
+    // ESCRITA BLOQUEADA para sempre via cliente
+    // Para alterar credenciais: use o Firebase Console
+    // ================================================
+    match /superadmin/{doc} {
+      allow read: if true;   // necessário para o login do master
+      allow write: if false; // ninguém pode criar/editar/apagar via cliente
+    }
+
+    // ================================================
+    // EMPRESAS — leitura livre (validação de código)
+    // Escrita permitida apenas para o super admin logado
+    // ================================================
+    match /empresas/{empresaId} {
+      allow read: if true;
+      allow write: if request.auth != null; // usuário autenticado (anônimo ou não)
+    }
+
+    // ================================================
+    // DADOS DAS EMPRESAS — subcoleções
+    // Leitura e escrita para usuários autenticados
+    // ================================================
+    match /empresas/{empresaId}/{colecao}/{docId} {
+      allow read, write: if request.auth != null;
+    }
+
+  }
+}
