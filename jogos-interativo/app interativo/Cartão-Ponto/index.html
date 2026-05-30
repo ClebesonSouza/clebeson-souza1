@@ -3420,6 +3420,8 @@
                 style="width:auto;padding:5px 10px;font-size:0.8em;background:${emp.ativa !== false ? '#f57c00' : '#43a047'};margin:0;">
                 ${emp.ativa !== false ? 'Desativar' : 'Ativar'}
               </button>
+              <button onclick="superAdminExcluirEmpresa('${doc.id}', '${(emp.nome || doc.id).replace(/'/g, "\\'")}')"
+                style="width:auto;padding:5px 10px;font-size:0.8em;background:#e53935;margin:0;">Excluir</button>
             </div>`;
           listaEl.appendChild(div);
         });
@@ -3442,6 +3444,42 @@
       if (!ok) return;
       await db.collection("empresas").doc(codigo).update({ ativa: !desativar });
       await carregarEmpresasSuperAdmin();
+    }
+
+    async function superAdminExcluirEmpresa(codigo, nome) {
+      // Confirmação com digitação obrigatória do código — evita exclusão acidental
+      const ok = await confirmar(
+        `⚠️ Você está prestes a EXCLUIR a empresa:\n\n"${nome}" (${codigo})\n\nTodos os dados serão apagados permanentemente:\nfuncionários, batidas, relatórios e configurações.\n\nEsta ação NÃO pode ser desfeita.`,
+        {
+          digitar: codigo,
+          labelDigitar: `Para confirmar, digite o código da empresa: "${codigo}"`,
+          btnTexto: "Excluir definitivamente"
+        }
+      );
+      if (!ok) return;
+
+      mostrarLoading("Excluindo empresa e todos os seus dados...");
+      try {
+        // Apaga todas as subcoleções antes do documento pai
+        // (Firestore não apaga subcoleções automaticamente)
+        const subcols = ["usuarios", "batidas", "observacoes", "relatoriosDia"];
+        for (const col of subcols) {
+          const snap = await db.collection("empresas").doc(codigo).collection(col).get();
+          for (let i = 0; i < snap.docs.length; i += 500) {
+            const batch = db.batch();
+            snap.docs.slice(i, i + 500).forEach(d => batch.delete(d.ref));
+            await batch.commit();
+          }
+        }
+        // Apaga o documento da empresa
+        await db.collection("empresas").doc(codigo).delete();
+        ocultarLoading();
+        await carregarEmpresasSuperAdmin();
+      } catch (ex) {
+        ocultarLoading();
+        await confirmar("Erro ao excluir a empresa. Tente novamente.", { btnTexto: "OK" });
+        console.warn("SuperAdmin excluir empresa:", ex);
+      }
     }
 
     document.getElementById("btnNovaEmpresa").addEventListener("click", () => {
