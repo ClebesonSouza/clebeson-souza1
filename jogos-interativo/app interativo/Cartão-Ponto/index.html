@@ -800,7 +800,7 @@
 
   <!-- TELA INICIAL: LOGIN -->
   <div class="container hidden" id="loginScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
     <div class="clock">
       <span id="data">--/--/----</span> |
       <span id="hora">--:--:--</span>
@@ -838,7 +838,7 @@
 
   <!-- TELA LOGIN ADMINISTRADOR -->
   <div class="container hidden" id="loginAdminScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
     <div class="card">
       <div class="card-title">Acesso Administrativo</div>
       <div class="card content">
@@ -924,7 +924,7 @@
 
   <!-- TELA DE CADASTRO -->
   <div class="container hidden" id="cadastroScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
 
     <div class="card">
       <div class="card-title">Cadastre-se</div>
@@ -996,7 +996,7 @@
 
   <!-- TELA PRINCIPAL DO CARTÃO PONTO -->
   <div class="container hidden" id="appScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
 
     <div class="clock">
       <span id="appData">--/--/----</span> |
@@ -1038,7 +1038,7 @@
 
   <!-- TELA DE CONFIGURAÇÃO DE ÁREA -->
   <div class="container hidden" id="configScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
     <div class="card">
       <div class="card-title">Configurar Área de Ponto</div>
       <div class="card content">
@@ -1080,7 +1080,7 @@
 
   <!-- TELA ADMIN -->
   <div class="container hidden" id="adminScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
 
     <!-- DASHBOARD TEMPO REAL -->
     <div class="card" style="margin-bottom:14px;">
@@ -1135,7 +1135,7 @@
 
   <!-- TELA CADASTRO ADMINISTRADOR -->
   <div class="container hidden" id="cadastroAdminScreen">
-    <h1>Cartão Ponto BJK</h1>
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
     <div class="card">
       <div class="card-title">Cadastrar Administrador</div>
       <div class="card content">
@@ -1505,6 +1505,7 @@
     // MULTI-TENANCY — HELPERS
     // ============================
     let empresaCodigo = null; // código da empresa atual (ex: "BJK-2024")
+    let empresaNome   = "";   // nome da empresa atual (ex: "BJK Construções")
 
     // Retorna subcoleção da empresa atual
     function _col(nome) {
@@ -1515,6 +1516,14 @@
     // Retorna chave de localStorage prefixada pela empresa
     function _lsKey(nome) {
       return (empresaCodigo || "bjk") + "_" + nome;
+    }
+
+    // Atualiza todos os títulos de tela com o nome real da empresa
+    function atualizarNomeEmpresaUI() {
+      const label = "Cartão Ponto " + (empresaNome || empresaCodigo || "Pontualize");
+      document.querySelectorAll(".titulo-empresa").forEach(el => {
+        el.textContent = label;
+      });
     }
 
     // Login anônimo automático — aguarda auth antes de liberar operações Firestore
@@ -2320,7 +2329,7 @@
       if (!rel) return;
       const dt = new Date(_relatDiaTelaDataStr + "T00:00:00");
       const dataFmt = dt.toLocaleDateString("pt-BR");
-      const texto = `📋 Relatório do Dia — ${u ? u.nome : ""}\n📅 ${dataFmt}\n\n${rel.texto}\n\n— Pontualize Cartão Ponto BJK`;
+      const texto = `📋 Relatório do Dia — ${u ? u.nome : ""}\n📅 ${dataFmt}\n\n${rel.texto}\n\n— Pontualize Cartão Ponto ${empresaNome}`;
       try {
         if (navigator.share) {
           await navigator.share({ title: "Relatório do Dia", text: texto });
@@ -2364,11 +2373,11 @@
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Relatório do Dia — Pontualize", 14, 12);
+      doc.text("Relatório do Dia — " + empresaNome, 14, 12);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 20);
-      doc.text("Cartão Ponto BJK", 14, 26);
+      doc.text("Cartão Ponto " + empresaNome, 14, 26);
 
       // Dados
       let y = 40;
@@ -2462,9 +2471,7 @@
       // Assinatura do diretor (direita)
       doc.line(120, yAssin, 196, yAssin);
       doc.setFont("helvetica", "normal");
-      doc.text("José Benildo de Souza", 158, yAssin + 5, { align: "center" });
-      doc.setFont("helvetica", "italic");
-      doc.text("Diretor — BJK", 158, yAssin + 10, { align: "center" });
+      doc.text("Diretor — " + empresaNome, 158, yAssin + 5, { align: "center" });
 
       const nomeArq = `relatorio-dia-${(u ? u.nome : "funcionario").replace(/\s+/g,"-")}-${_relatDiaTelaDataStr}.pdf`;
       doc.save(nomeArq);
@@ -2483,11 +2490,11 @@
       doc.setTextColor(255, 255, 255);
       doc.setFontSize(14);
       doc.setFont("helvetica", "bold");
-      doc.text("Relatório do Dia — Pontualize", 14, 12);
+      doc.text("Relatório do Dia — " + empresaNome, 14, 12);
       doc.setFontSize(9);
       doc.setFont("helvetica", "normal");
       doc.text(`Gerado em ${new Date().toLocaleDateString("pt-BR")}`, 14, 20);
-      doc.text("Cartão Ponto BJK", 14, 26);
+      doc.text("Cartão Ponto " + empresaNome, 14, 26);
 
       // Dados
       let y = 40;
@@ -2555,9 +2562,7 @@
       doc.text(u && u.cargo ? u.cargo : "Funcionário", 52, yAssin + 10, { align: "center" });
       doc.line(120, yAssin, 196, yAssin);
       doc.setFont("helvetica", "normal");
-      doc.text("José Benildo de Souza", 158, yAssin + 5, { align: "center" });
-      doc.setFont("helvetica", "italic");
-      doc.text("Diretor — BJK", 158, yAssin + 10, { align: "center" });
+      doc.text("Diretor — " + empresaNome, 158, yAssin + 5, { align: "center" });
 
       return doc.output("blob");
     }
@@ -3128,6 +3133,16 @@
       } catch (e) {
         console.warn("Erro na inicialização:", e);
       }
+      // Carrega nome da empresa para personalizar toda a UI
+      try {
+        const docEmpresa = await db.collection("empresas").doc(empresaCodigo).get();
+        if (docEmpresa.exists) {
+          const nomeDoc = docEmpresa.data().nome;
+          if (nomeDoc) empresaNome = nomeDoc;
+        }
+      } catch (_) {}
+      if (!empresaNome) empresaNome = empresaCodigo || "Pontualize";
+      atualizarNomeEmpresaUI();
       // Fallback offline: 'let batidas' é declarado após inicializarApp() no script, então
       // carregarDadosFirestore() pode ter rodado antes da variável ser inicializada (TDZ).
       // Aqui o await já garantiu que batidas está inicializado; se offline e ainda vazio,
@@ -4514,7 +4529,7 @@
           return `
             <div class="batida-dia-card">
               <div class="cartao-header" style="background:${corHeader};">
-                Cartão Ponto BJK — ${tipoTexto}
+                Cartão Ponto ${empresaNome} — ${tipoTexto}
               </div>
               <div class="cartao-body">
                 ${fotoHtml}
@@ -4841,7 +4856,7 @@
       cx.fillRect(0, 0, LARGURA, HEADER_H);
       cx.fillStyle = "#fff";
       cx.font = "bold 15px Arial"; cx.textAlign = "left";
-      cx.fillText("Cartão Ponto BJK — Base de Cálculo Salarial", 14, 26);
+      cx.fillText("Cartão Ponto " + empresaNome + " — Base de Cálculo Salarial", 14, 26);
       cx.font = "13px Arial";
       cx.fillText(u.nome, 14, 48);
       cx.font = "11px Arial"; cx.fillStyle = "rgba(255,255,255,0.8)";
@@ -4914,7 +4929,7 @@
       cx.fillStyle = "#eee";
       cx.fillRect(0, curY, LARGURA, FOOTER_H);
       cx.fillStyle = "#888"; cx.font = "10px Arial"; cx.textAlign = "center";
-      cx.fillText(`Gerado em ${new Date().toLocaleDateString("pt-BR")} | Cartão Ponto BJK`, LARGURA / 2, curY + 18);
+      cx.fillText(`Gerado em ${new Date().toLocaleDateString("pt-BR")} | Cartão Ponto ${empresaNome}`, LARGURA / 2, curY + 18);
 
       btn.disabled = false;
       btn.textContent = "Compartilhar";
@@ -5153,7 +5168,7 @@
       cx.fillStyle = "#ffffff";
       cx.font = "bold 15px Arial";
       cx.textAlign = "left";
-      cx.fillText("Cartão Ponto BJK — Relatório de Ponto", 14, 22);
+      cx.fillText("Cartão Ponto " + empresaNome + " — Relatório de Ponto", 14, 22);
       cx.font = "13px Arial";
       cx.fillText(`${u.nome}  |  ${NOMES_MESES[mes]} ${ano}`, 14, 42);
       cx.font = "11px Arial";
@@ -6203,7 +6218,7 @@
       novoCartao.className = "cartao-registro ativo";
       novoCartao.id = cardId;
       novoCartao.innerHTML = `
-        <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
+        <div class="cartao-header">Cartão Ponto ${empresaNome} — ${tipoTexto}</div>
         <div class="cartao-body">
           <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
             <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
@@ -6389,7 +6404,7 @@
           : (b.cidade || b.coordenadas || "");
         const locBatidaEsc = escaparHTML(locBatida);
         novoCartao.innerHTML = `
-          <div class="cartao-header">Cartão Ponto BJK — ${tipoTexto}</div>
+          <div class="cartao-header">Cartão Ponto ${empresaNome} — ${tipoTexto}</div>
           <div class="cartao-body">
             <div id="foto-${cardId}" style="width:80px;height:80px;border-radius:50%;background:#dce8f7;border:2px solid #2a6eb6;display:flex;align-items:center;justify-content:center;flex-shrink:0;">
               <svg width="40" height="40" viewBox="0 0 24 24" fill="#2a6eb6"><path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z"/></svg>
@@ -6461,7 +6476,7 @@
       cx.fillStyle = "white";
       cx.font = "bold 14px Arial";
       cx.textAlign = "left";
-      cx.fillText("Cartao Ponto BJK -" + tipoTexto, 10, 26);
+      cx.fillText("Cartao Ponto " + empresaNome + " - " + tipoTexto, 10, 26);
 
       cx.fillStyle = "#f5f5f5";
       cx.fillRect(0, 40, 400, c.height - 40);
@@ -6537,7 +6552,7 @@
           if (navigator.share) {
             const file = new File([blob], filename, { type: "image/png" });
             try {
-              await navigator.share({ files: [file], title: "Comprovante de Ponto BJK" });
+              await navigator.share({ files: [file], title: "Comprovante de Ponto " + empresaNome });
             } catch {
               baixarImagem(c, filename);
             }
