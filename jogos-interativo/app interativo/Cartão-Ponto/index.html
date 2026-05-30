@@ -1109,7 +1109,7 @@
 
     <!-- ALERTAS DE OBSERVAÇÕES -->
     <div class="card" id="painelAlertasObs" style="margin-bottom:14px;display:none;">
-      <div class="card-title" style="background:#c62828;">⚠️ Funcionários com Observação</div>
+      <div class="card-title" style="background:#e65100;">🏥 Funcionários com Falta Justificada</div>
       <div class="card content" id="listaAlertasObs" style="padding:10px 14px;"></div>
     </div>
 
@@ -1931,17 +1931,40 @@
       } catch (e) { console.warn("Firestore excluir observacao:", e); }
     }
 
-    async function salvarObservacao(usuarioId, dataStr, texto) {
+    // Comprime foto do atestado para base64 (320px, JPEG 0.5) — mesmo padrão das batidas
+    function _comprimirFotoAtestado(file) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            const canvas = document.createElement("canvas");
+            canvas.width = 320;
+            canvas.height = Math.round(320 * img.height / img.width);
+            canvas.getContext("2d").drawImage(img, 0, 0, canvas.width, canvas.height);
+            resolve(canvas.toDataURL("image/jpeg", 0.5));
+          };
+          img.onerror = reject;
+          img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function salvarObservacao(usuarioId, dataStr, texto, fotoAtestado) {
       const quem = usuarioLogado ? usuarioLogado.nome : "—";
       const agora = new Date().toISOString();
       const idx = observacoes.findIndex(o => String(o.usuarioId) === String(usuarioId) && o.data === dataStr);
       if (idx >= 0) {
         observacoes[idx].texto = texto;
+        if (fotoAtestado !== undefined) observacoes[idx].fotoAtestado = fotoAtestado || null;
         observacoes[idx].atualizadoEm = agora;
         observacoes[idx].atualizadoPor = quem;
         await _salvarObservacaoFirestore(observacoes[idx]);
       } else {
         const novaObs = { usuarioId: String(usuarioId), data: dataStr, texto, criadoPor: quem, criadoEm: agora };
+        if (fotoAtestado) novaObs.fotoAtestado = fotoAtestado;
         observacoes.push(novaObs);
         await _salvarObservacaoFirestore(novaObs);
       }
@@ -1964,69 +1987,123 @@
       secao.id = "obsDiaSecao";
       secao.style.cssText = "margin-top:14px;border-top:1px solid #e0e0e0;padding-top:12px;";
 
+      // Foto pendente durante edição: undefined = não alterada, null = removida, string = nova foto
+      let _novaFotoAtestado = undefined;
+
       if (obs) {
         secao.innerHTML = `
-          <div id="obsPainelExibicao" style="background:#fff9c4;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #f9a825;">
-            <div style="font-size:0.78em;color:#888;margin-bottom:4px;">💬 <strong>Observação</strong> — ${escaparHTML(obs.criadoPor)}${obs.atualizadoEm ? ' (editado)' : ''}</div>
+          <div id="obsPainelExibicao" style="background:#fff3e0;border-radius:8px;padding:10px 12px;margin-bottom:8px;border-left:3px solid #e65100;">
+            <div style="font-size:0.78em;color:#888;margin-bottom:4px;">🏥 <strong>Falta Justificada</strong> — ${escaparHTML(obs.criadoPor)}${obs.atualizadoEm ? ' (editado)' : ''}</div>
             <div style="font-size:0.9em;color:#333;line-height:1.5;white-space:pre-line;">${escaparHTML(obs.texto)}</div>
+            ${obs.fotoAtestado ? `
+            <div style="margin-top:8px;">
+              <div style="font-size:0.78em;color:#888;margin-bottom:4px;">📎 Atestado médico:</div>
+              <img src="${obs.fotoAtestado}" style="max-width:100%;border-radius:6px;border:1px solid #ffccbc;" />
+            </div>` : ''}
           </div>
-          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Escreva uma observação para este dia..."></textarea>
+          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva o motivo da falta (ex: consulta médica, atestado de 2 dias)..."></textarea>
+          <div id="obsFotoEdicaoArea" style="display:none;margin-top:8px;">
+            <input type="file" id="obsInputFoto" accept="image/*" style="display:none;" />
+            <div id="obsFotoPreview" style="margin-bottom:6px;">${obs.fotoAtestado ? `<img src="${obs.fotoAtestado}" style="max-width:100%;max-height:130px;border-radius:6px;border:1px solid #e0e0e0;" />` : ''}</div>
+            <div style="display:flex;gap:6px;flex-wrap:wrap;">
+              <button id="btnAnexarAtestado" type="button" style="width:auto;padding:6px 12px;font-size:0.82em;background:#5c6bc0;margin:0;">📷 ${obs.fotoAtestado ? 'Trocar' : 'Anexar'} atestado</button>
+              ${obs.fotoAtestado ? `<button id="btnRemoverFoto" type="button" style="width:auto;padding:6px 12px;font-size:0.82em;background:#e53935;margin:0;">🗑 Remover foto</button>` : ''}
+            </div>
+          </div>
           <div id="obsBotoesNormais" style="display:flex;gap:8px;">
             <button id="btnEditarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#f57c00;">✏️ Editar</button>
             <button id="btnExcluirObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e53935;">Excluir</button>
           </div>
           <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2a6eb6;">Salvar</button>
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e65100;">Salvar</button>
             <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
           </div>`;
       } else {
         secao.innerHTML = `
-          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Escreva uma observação para este dia..."></textarea>
+          <textarea id="obsTextarea" style="display:none;width:100%;min-height:80px;padding:8px;border:1px solid #ccc;border-radius:6px;font-size:0.9em;resize:vertical;box-sizing:border-box;" placeholder="Descreva o motivo da falta (ex: consulta médica, atestado de 2 dias)..."></textarea>
+          <div id="obsFotoEdicaoArea" style="display:none;margin-top:8px;">
+            <input type="file" id="obsInputFoto" accept="image/*" style="display:none;" />
+            <div id="obsFotoPreview" style="margin-bottom:6px;"></div>
+            <button id="btnAnexarAtestado" type="button" style="width:auto;padding:6px 12px;font-size:0.82em;background:#5c6bc0;margin:0;">📷 Anexar atestado</button>
+          </div>
           <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2a6eb6;">Salvar</button>
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e65100;">Salvar</button>
             <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
           </div>
-          <button id="btnAdicionarObs" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#2a6eb6;">💬 Adicionar observação</button>`;
+          <button id="btnAdicionarObs" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#e65100;">🏥 Registrar falta justificada</button>`;
       }
 
       container.appendChild(secao);
 
       // Textarea value definida via JS (evita problemas de encoding no innerHTML)
-      const textarea = secao.querySelector("#obsTextarea");
+      const textarea      = secao.querySelector("#obsTextarea");
       if (textarea && obs) textarea.value = obs.texto;
 
-      const ehFuncionario = usuarioLogado && !usuarioLogado.admin;
-
+      const ehFuncionario  = usuarioLogado && !usuarioLogado.admin;
       const btnAdicionar   = secao.querySelector("#btnAdicionarObs");
       const btnEditar      = secao.querySelector("#btnEditarObs");
-
-      // Admin: observação visível por padrão com botão Ocultar/Visualizar
-      if (!ehFuncionario && obs) {
-        if (btnEditar) btnEditar.style.display = "none";
-        const painelObs = secao.querySelector("#obsPainelExibicao");
-        const botoesNorm = secao.querySelector("#obsBotoesNormais");
-        if (botoesNorm && painelObs) {
-          const btnVer = document.createElement("button");
-          btnVer.textContent = "🙈 Ocultar";
-          btnVer.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#5c6bc0;";
-          btnVer.addEventListener("click", () => {
-            const visivel = painelObs.style.display !== "none";
-            painelObs.style.display = visivel ? "none" : "block";
-            btnVer.textContent = visivel ? "👁 Visualizar" : "🙈 Ocultar";
-          });
-          botoesNorm.insertBefore(btnVer, botoesNorm.firstChild);
-        }
-      }
-      if (!ehFuncionario && btnAdicionar) btnAdicionar.style.display = "none";
       const btnExcluir     = secao.querySelector("#btnExcluirObs");
       const btnSalvar      = secao.querySelector("#btnSalvarObs");
       const btnCancelar    = secao.querySelector("#btnCancelarObs");
       const botoesNormais  = secao.querySelector("#obsBotoesNormais");
       const botoesEdicao   = secao.querySelector("#obsBotoesEdicao");
       const painelExibicao = secao.querySelector("#obsPainelExibicao");
+      const fotoEdicaoArea = secao.querySelector("#obsFotoEdicaoArea");
+      const obsInputFoto   = secao.querySelector("#obsInputFoto");
+      const btnAnexar      = secao.querySelector("#btnAnexarAtestado");
+      const btnRemoverFoto = secao.querySelector("#btnRemoverFoto");
+
+      // Upload e compressão do atestado
+      if (btnAnexar && obsInputFoto) {
+        btnAnexar.addEventListener("click", () => obsInputFoto.click());
+        obsInputFoto.addEventListener("change", async (e) => {
+          const file = e.target.files[0];
+          if (!file) return;
+          btnAnexar.disabled = true;
+          btnAnexar.textContent = "⏳ Comprimindo...";
+          try {
+            _novaFotoAtestado = await _comprimirFotoAtestado(file);
+            const preview = secao.querySelector("#obsFotoPreview");
+            if (preview) preview.innerHTML = `<img src="${_novaFotoAtestado}" style="max-width:100%;max-height:130px;border-radius:6px;border:1px solid #e0e0e0;margin-bottom:4px;" />`;
+            btnAnexar.textContent = "📷 Trocar atestado";
+          } catch (err) { console.warn("Erro ao comprimir atestado:", err); }
+          btnAnexar.disabled = false;
+          e.target.value = "";
+        });
+      }
+
+      // Remover foto existente
+      if (btnRemoverFoto) {
+        btnRemoverFoto.addEventListener("click", () => {
+          _novaFotoAtestado = null;
+          const preview = secao.querySelector("#obsFotoPreview");
+          if (preview) preview.innerHTML = "";
+          btnRemoverFoto.style.display = "none";
+          if (btnAnexar) btnAnexar.textContent = "📷 Anexar atestado";
+        });
+      }
+
+      // Admin: falta visível por padrão com botão Ocultar/Visualizar
+      if (!ehFuncionario && obs) {
+        if (btnEditar) btnEditar.style.display = "none";
+        const botoesNorm = secao.querySelector("#obsBotoesNormais");
+        if (botoesNorm && painelExibicao) {
+          const btnVer = document.createElement("button");
+          btnVer.textContent = "🙈 Ocultar";
+          btnVer.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#5c6bc0;";
+          btnVer.addEventListener("click", () => {
+            const visivel = painelExibicao.style.display !== "none";
+            painelExibicao.style.display = visivel ? "none" : "block";
+            btnVer.textContent = visivel ? "👁 Visualizar" : "🙈 Ocultar";
+          });
+          botoesNorm.insertBefore(btnVer, botoesNorm.firstChild);
+        }
+      }
+      if (!ehFuncionario && btnAdicionar) btnAdicionar.style.display = "none";
 
       function mostrarEdicao() {
         if (textarea)       textarea.style.display = "block";
+        if (fotoEdicaoArea) fotoEdicaoArea.style.display = "block";
         if (botoesNormais)  botoesNormais.style.display = "none";
         if (botoesEdicao)   botoesEdicao.style.display = "flex";
         if (btnAdicionar)   btnAdicionar.style.display = "none";
@@ -2034,7 +2111,9 @@
       }
 
       function esconderEdicao() {
+        _novaFotoAtestado = undefined;
         if (textarea)       textarea.style.display = "none";
+        if (fotoEdicaoArea) fotoEdicaoArea.style.display = "none";
         if (botoesNormais)  botoesNormais.style.display = "flex";
         if (botoesEdicao)   botoesEdicao.style.display = "none";
         if (btnAdicionar)   btnAdicionar.style.display = "block";
@@ -2051,7 +2130,11 @@
           if (!texto) { if (textarea) textarea.style.border = "2px solid #e53935"; return; }
           btnSalvar.disabled = true;
           btnSalvar.textContent = "Salvando...";
-          await salvarObservacao(usuarioId, dataStr, texto);
+          // Preserva foto existente se não foi alterada
+          const fotoParaSalvar = _novaFotoAtestado !== undefined
+            ? _novaFotoAtestado
+            : (obs ? obs.fotoAtestado : undefined);
+          await salvarObservacao(usuarioId, dataStr, texto, fotoParaSalvar);
           renderObservacaoDia(container, usuarioId, dataStr);
           renderRelatorio();
           renderAlertasObservacao();
@@ -2061,7 +2144,7 @@
 
       if (btnExcluir) {
         btnExcluir.addEventListener("click", async () => {
-          const ok = await confirmar("Excluir esta observação?\nEsta ação não pode ser desfeita.");
+          const ok = await confirmar("Excluir esta falta justificada?\nEsta ação não pode ser desfeita.");
           if (!ok) return;
           await excluirObservacao(usuarioId, dataStr);
           renderObservacaoDia(container, usuarioId, dataStr);
@@ -4071,13 +4154,13 @@
         const dataEsc = escaparHTML(obs.data);
         return `
           <div onclick="irParaObservacao('${uIdEsc}','${dataEsc}')"
-               style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff3e0;border-radius:8px;margin-bottom:6px;border-left:4px solid #c62828;cursor:pointer;">
-            <span style="font-size:1.3em;">⚠️</span>
+               style="display:flex;align-items:center;gap:10px;padding:9px 12px;background:#fff3e0;border-radius:8px;margin-bottom:6px;border-left:4px solid #e65100;cursor:pointer;">
+            <span style="font-size:1.3em;">🏥</span>
             <div style="flex:1;">
               <div class="obs-alerta-nome">${escaparHTML(u.nome)}</div>
-              <div style="font-size:0.76em;color:#888;margin-top:2px;">Anotação de hoje não lida</div>
+              <div style="font-size:0.76em;color:#888;margin-top:2px;">Falta justificada não revisada</div>
             </div>
-            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:#e53935;color:#fff;border-radius:999px;font-size:0.78em;font-weight:bold;">1</span>
+            <span style="display:inline-flex;align-items:center;justify-content:center;min-width:22px;height:22px;padding:0 6px;background:#e65100;color:#fff;border-radius:999px;font-size:0.78em;font-weight:bold;">1</span>
           </div>`;
       }).filter(Boolean).join("");
     }
@@ -4485,7 +4568,7 @@
         const _dataObs = `${ano}-${String(mes + 1).padStart(2,"0")}-${String(numDia).padStart(2,"0")}`;
         const temObs = observacoes.some(o => String(o.usuarioId) === String(_relatorioUserId) && o.data === _dataObs);
         return `<tr class="${classTr}" ${onclickAttr}>
-          <td>${diaFmt}<br><small>${semAbrv}</small>${temObs ? '<br><span title="Tem observação" style="font-size:0.9em;">💬</span>' : ''}</td>
+          <td>${diaFmt}<br><small>${semAbrv}</small>${temObs ? '<br><span title="Falta justificada" style="font-size:0.9em;">🏥</span>' : ''}</td>
           <td>${e1}</td>
           <td>${s1}</td>
           <td>${e2}</td>
@@ -4639,7 +4722,7 @@
       const btnRelAdd = conteudo.querySelector("#btnAdicionarRelatDia");
       const btnObsAdd = conteudo.querySelector("#btnAdicionarObs");
       if (btnRelAdd) { btnRelAdd.style.flex = "1"; btnRelAdd.style.marginTop = "0"; rowRegistros.appendChild(btnRelAdd); }
-      if (btnObsAdd) { btnObsAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#2a6eb6;"; rowRegistros.appendChild(btnObsAdd); }
+      if (btnObsAdd) { btnObsAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#e65100;"; rowRegistros.appendChild(btnObsAdd); }
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
     }
