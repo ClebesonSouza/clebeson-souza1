@@ -149,6 +149,17 @@
       margin-bottom: 16px;
     }
 
+    .titulo-empresa-sub {
+      display: block;
+      font-size: 0.48em;
+      font-weight: 600;
+      color: #5a8fc0;
+      letter-spacing: 0.03em;
+      text-shadow: none;
+      margin-top: 2px;
+      line-height: 1.4;
+    }
+
     .clock {
       text-align: center;
       margin: 10px 0;
@@ -1534,15 +1545,23 @@
       return (empresaCodigo || "bjk") + "_" + nome;
     }
 
-    // Atualiza todos os títulos de tela com o código curto da empresa (parte antes do hífen)
-    // Ex: "BJK-2024" → "Cartão Ponto BJK"
+    // Atualiza todos os títulos de tela:
+    // Linha 1 — "Cartão Ponto BJK" (código curto, tamanho normal)
+    // Linha 2 — "Montagem e Manutenção Industrial" (nome completo, menor)
     function atualizarNomeEmpresaUI() {
       const codigoCurto = empresaCodigo
         ? empresaCodigo.split("-")[0]
         : (empresaNome || "Pontualize");
-      const label = "Cartão Ponto " + codigoCurto;
       document.querySelectorAll(".titulo-empresa").forEach(el => {
-        el.textContent = label;
+        if (empresaNome && empresaNome !== codigoCurto) {
+          // Remove o código curto do início do nome se existir (ex: "BJK Montagem..." → "Montagem...")
+          const subtitulo = empresaNome.toUpperCase().startsWith(codigoCurto.toUpperCase())
+            ? empresaNome.slice(codigoCurto.length).trim()
+            : empresaNome;
+          el.innerHTML = `Cartão Ponto ${codigoCurto}<span class="titulo-empresa-sub">${subtitulo}</span>`;
+        } else {
+          el.textContent = "Cartão Ponto " + codigoCurto;
+        }
       });
     }
 
