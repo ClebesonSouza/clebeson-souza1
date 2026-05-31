@@ -1518,9 +1518,13 @@
       return (empresaCodigo || "bjk") + "_" + nome;
     }
 
-    // Atualiza todos os títulos de tela com o nome real da empresa
+    // Atualiza todos os títulos de tela com o código curto da empresa (parte antes do hífen)
+    // Ex: "BJK-2024" → "Cartão Ponto BJK"
     function atualizarNomeEmpresaUI() {
-      const label = "Cartão Ponto " + (empresaNome || empresaCodigo || "Pontualize");
+      const codigoCurto = empresaCodigo
+        ? empresaCodigo.split("-")[0]
+        : (empresaNome || "Pontualize");
+      const label = "Cartão Ponto " + codigoCurto;
       document.querySelectorAll(".titulo-empresa").forEach(el => {
         el.textContent = label;
       });
