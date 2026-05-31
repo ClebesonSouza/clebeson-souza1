@@ -852,12 +852,77 @@
 
         <div class="switch">
           <button id="gotoCadastro">Não tenho cadastro</button>
+          <button id="gotoEsqueciSenha" style="background:none;color:#e65100;text-decoration:underline;font-size:0.85em;">
+            Esqueci minha senha
+          </button>
           <button id="gotoLoginAdmin" style="background:none;color:#2a6eb6;text-decoration:underline;font-size:0.85em;">
             Entrar como administrador
           </button>
           <button id="gotoConfig" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">
             Configurar área de ponto
           </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA ESQUECI MINHA SENHA -->
+  <div class="container hidden" id="esqueciSenhaScreen">
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title" style="background:#e65100;">🔑 Recuperação de Senha</div>
+      <div class="card content">
+        <p style="font-size:0.9em;color:#555;margin-bottom:14px;line-height:1.5;">
+          Informe seu e-mail cadastrado. Enviaremos um código de 6 dígitos via WhatsApp para o número registrado em sua conta.
+        </p>
+        <form id="esqueciSenhaForm">
+          <label>E-mail cadastrado</label>
+          <input type="email" name="emailRecuperar" required placeholder="seu@email.com" />
+          <p id="erroEsqueciSenha" class="error" style="min-height:1.2em;"></p>
+          <button type="submit" style="background:#e65100;">📱 Enviar código via WhatsApp</button>
+        </form>
+        <div class="switch">
+          <button id="voltarDoEsqueciSenha" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">Voltar ao login</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TELA REDEFINIR SENHA -->
+  <div class="container hidden" id="redefinirSenhaScreen">
+    <h1 class="titulo-empresa">Cartão Ponto BJK</h1>
+    <div class="card">
+      <div class="card-title" style="background:#2a6eb6;">🔐 Redefinir Senha</div>
+      <div class="card content">
+        <p style="font-size:0.9em;color:#555;margin-bottom:14px;line-height:1.5;">
+          Digite o código de 6 dígitos enviado para o seu WhatsApp e crie uma nova senha.
+        </p>
+        <form id="redefinirSenhaForm">
+          <label>E-mail</label>
+          <input type="email" name="emailRedefinir" required readonly style="background:#f5f5f5;color:#999;" />
+
+          <label>Código de verificação (6 dígitos)</label>
+          <input type="text" name="codigoRecuperacao" required maxlength="6" placeholder="000000"
+            pattern="[0-9]{6}" inputmode="numeric"
+            style="letter-spacing:0.3em;font-size:1.4em;text-align:center;font-weight:bold;" />
+
+          <label>Nova senha</label>
+          <div class="senha-wrapper">
+            <input type="password" name="novaSenha" required minlength="6" placeholder="Mínimo 6 caracteres" />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+          </div>
+
+          <label>Confirmar nova senha</label>
+          <div class="senha-wrapper">
+            <input type="password" name="confirmarNovaSenha" required minlength="6" placeholder="Repita a senha" />
+            <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+          </div>
+
+          <p id="erroRedefinirSenha" class="error" style="min-height:1.2em;"></p>
+          <button type="submit" style="background:#2e7d32;">✅ Redefinir senha</button>
+        </form>
+        <div class="switch">
+          <button id="voltarDoRedefinirSenha" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">Voltar ao login</button>
         </div>
       </div>
     </div>
@@ -2755,6 +2820,170 @@
         .join("");
     }
 
+    // ============================
+    // RECUPERAÇÃO DE SENHA VIA WHATSAPP
+    // ============================
+
+    // Gera código numérico de 6 dígitos
+    function _gerarCodigoRecuperacao() {
+      return String(Math.floor(100000 + Math.random() * 900000));
+    }
+
+    // Formata número para wa.me (remove tudo que não é dígito, adiciona +55 se ausente)
+    function _formatarTelefoneWA(tel) {
+      const digits = tel.replace(/\D/g, "");
+      // Se já tiver 13 dígitos (55 + DDD + número), usa como está
+      // Se tiver 11 (DDD + número) adiciona 55
+      // Se tiver 10 (DDD + número sem 9), adiciona 55
+      if (digits.length >= 12) return digits;
+      return "55" + digits;
+    }
+
+    // Envia código de recuperação: busca usuário, gera código, salva no Firestore, abre WhatsApp
+    async function enviarCodigoRecuperacao(email) {
+      const erroEl = document.getElementById("erroEsqueciSenha");
+      erroEl.textContent = "";
+      erroEl.className = "error";
+
+      if (!email) { erroEl.textContent = "Informe seu e-mail."; return false; }
+
+      // Garante autenticação anônima antes de usar Firestore
+      try { await _authPronto; } catch (_) {}
+
+      // Garante que usuarios está carregado
+      if (usuarios.length === 0) {
+        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
+      }
+
+      const user = usuarios.find(u => !u.admin && u.email === email);
+      if (!user) {
+        erroEl.textContent = "E-mail não encontrado. Verifique e tente novamente.";
+        return false;
+      }
+
+      const telefone = (user.telefone || "").trim();
+      if (!telefone) {
+        erroEl.textContent = "Sua conta não possui número de telefone cadastrado. Solicite ajuda ao administrador.";
+        return false;
+      }
+
+      const codigo = _gerarCodigoRecuperacao();
+      const expiraEm = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(); // +24h
+
+      try {
+        await _col("recuperacoes").doc(email).set({ codigo, expiraEm, usado: false });
+      } catch (ex) {
+        erroEl.textContent = "Erro ao gerar código. Verifique a conexão e tente novamente.";
+        console.warn("Recuperação de senha — Firestore:", ex);
+        return false;
+      }
+
+      const telWA = _formatarTelefoneWA(telefone);
+      const codigoCurto = empresaCodigo ? empresaCodigo.split("-")[0] : "Pontualize";
+      const msgWA = encodeURIComponent(
+        `🔐 *${codigoCurto} — Recuperação de Senha*\n\n` +
+        `Seu código de acesso é:\n\n` +
+        `*${codigo}*\n\n` +
+        `⏰ Válido por 24 horas.\n` +
+        `Não compartilhe este código com ninguém.`
+      );
+
+      window.open(`https://wa.me/${telWA}?text=${msgWA}`, "_blank");
+
+      // Prepara a tela de redefinição com o email
+      document.querySelector("#redefinirSenhaForm [name=emailRedefinir]").value = email;
+      document.getElementById("erroRedefinirSenha").textContent = "";
+      document.querySelector("#redefinirSenhaForm [name=codigoRecuperacao]").value = "";
+      document.querySelector("#redefinirSenhaForm [name=novaSenha]").value = "";
+      document.querySelector("#redefinirSenhaForm [name=confirmarNovaSenha]").value = "";
+
+      mudarTela("redefinirSenhaScreen");
+      return true;
+    }
+
+    // Valida código e redefine senha
+    async function redefinirSenha(email, codigoDigitado, novaSenha) {
+      const erroEl = document.getElementById("erroRedefinirSenha");
+      erroEl.textContent = "";
+      erroEl.className = "error";
+
+      // Garante autenticação anônima antes de usar Firestore
+      try { await _authPronto; } catch (_) {}
+
+      // Busca o código no Firestore
+      let snapRec;
+      try {
+        snapRec = await _col("recuperacoes").doc(email).get();
+      } catch (ex) {
+        erroEl.textContent = "Erro ao verificar código. Verifique a conexão.";
+        return;
+      }
+
+      if (!snapRec.exists) {
+        erroEl.textContent = "Nenhum código de recuperação encontrado. Solicite um novo.";
+        return;
+      }
+
+      const rec = snapRec.data();
+
+      if (rec.usado) {
+        erroEl.textContent = "Este código já foi utilizado. Solicite um novo.";
+        return;
+      }
+
+      if (new Date() > new Date(rec.expiraEm)) {
+        erroEl.textContent = "Código expirado. Solicite um novo código.";
+        return;
+      }
+
+      if (String(rec.codigo).trim() !== String(codigoDigitado).trim()) {
+        erroEl.textContent = "Código incorreto. Verifique o WhatsApp e tente novamente.";
+        return;
+      }
+
+      // Código válido — atualiza a senha do usuário
+      const user = usuarios.find(u => !u.admin && u.email === email);
+      if (!user) {
+        erroEl.textContent = "Usuário não encontrado.";
+        return;
+      }
+
+      const salt = user.salt || crypto.randomUUID();
+      const senhaHash = await hashSenha(novaSenha + salt);
+
+      try {
+        // Atualiza no Firestore
+        const snapUsuarios = await _col("usuarios").where("email", "==", email).limit(1).get();
+        if (!snapUsuarios.empty) {
+          await snapUsuarios.docs[0].ref.update({ senha: senhaHash, salt });
+        }
+        // Marca código como usado
+        await _col("recuperacoes").doc(email).update({ usado: true });
+      } catch (ex) {
+        erroEl.textContent = "Erro ao salvar nova senha. Tente novamente.";
+        console.warn("Redefinir senha — Firestore:", ex);
+        return;
+      }
+
+      // Atualiza localmente
+      const idx = usuarios.findIndex(u => u.email === email);
+      if (idx >= 0) {
+        usuarios[idx].senha = senhaHash;
+        usuarios[idx].salt = salt;
+        localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+      }
+
+      erroEl.className = "sucesso";
+      erroEl.textContent = "✅ Senha redefinida com sucesso!";
+
+      setTimeout(() => {
+        mudarTela("loginScreen");
+        const inputEmail = document.querySelector("#loginForm input[name=email]");
+        if (inputEmail) inputEmail.value = email;
+        document.getElementById("erroLogin").textContent = "";
+      }, 2000);
+    }
+
     // FIX #7: escape de HTML para evitar XSS
     function escaparHTML(str) {
       return String(str)
@@ -3330,7 +3559,7 @@
     // TELAS: LOGIN, CADASTRO, APP
     // ============================
     function mudarTela(id) {
-      ["empresaScreen","loginScreen","loginAdminScreen","cadastroScreen","cadastroAdminScreen","appScreen","adminScreen","configScreen","superadminScreen"].forEach(s => {
+      ["empresaScreen","loginScreen","loginAdminScreen","cadastroScreen","cadastroAdminScreen","appScreen","adminScreen","configScreen","superadminScreen","esqueciSenhaScreen","redefinirSenhaScreen"].forEach(s => {
         document.getElementById(s).classList.add("hidden");
       });
       document.getElementById(id).classList.remove("hidden");
@@ -3349,6 +3578,78 @@
 
     document.getElementById("gotoCadastro").addEventListener("click", () => {
       mudarTela("cadastroScreen");
+    });
+
+    // ============================
+    // RECUPERAÇÃO DE SENHA — navegação e formulários
+    // ============================
+    document.getElementById("gotoEsqueciSenha").addEventListener("click", () => {
+      document.getElementById("erroEsqueciSenha").textContent = "";
+      document.getElementById("esqueciSenhaForm").reset();
+      mudarTela("esqueciSenhaScreen");
+    });
+
+    document.getElementById("voltarDoEsqueciSenha").addEventListener("click", () => {
+      mudarTela("loginScreen");
+    });
+
+    document.getElementById("voltarDoRedefinirSenha").addEventListener("click", () => {
+      mudarTela("loginScreen");
+    });
+
+    document.getElementById("esqueciSenhaForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById("erroEsqueciSenha");
+      const btn = e.target.querySelector("button[type=submit]");
+      const email = (new FormData(e.target).get("emailRecuperar") || "").trim().toLowerCase();
+
+      btn.disabled = true;
+      btn.textContent = "Enviando...";
+      erroEl.textContent = "";
+      erroEl.className = "error";
+
+      try {
+        await enviarCodigoRecuperacao(email);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "📱 Enviar código via WhatsApp";
+      }
+    });
+
+    document.getElementById("redefinirSenhaForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById("erroRedefinirSenha");
+      const fd = new FormData(e.target);
+      const email    = (fd.get("emailRedefinir") || "").trim().toLowerCase();
+      const codigo   = (fd.get("codigoRecuperacao") || "").trim();
+      const nova     = fd.get("novaSenha") || "";
+      const confirma = fd.get("confirmarNovaSenha") || "";
+
+      erroEl.className = "error";
+
+      if (nova.length < 6) {
+        erroEl.textContent = "A nova senha deve ter no mínimo 6 caracteres.";
+        return;
+      }
+      if (nova !== confirma) {
+        erroEl.textContent = "As senhas não coincidem.";
+        return;
+      }
+      if (!/^\d{6}$/.test(codigo)) {
+        erroEl.textContent = "O código deve ter exatamente 6 dígitos numéricos.";
+        return;
+      }
+
+      const btn = e.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+
+      try {
+        await redefinirSenha(email, codigo, nova);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "✅ Redefinir senha";
+      }
     });
 
     // Máscara de CPF e indicador de força de senha no cadastro
