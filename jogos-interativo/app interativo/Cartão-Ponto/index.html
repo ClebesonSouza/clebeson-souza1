@@ -2015,7 +2015,7 @@
             <button id="btnExcluirObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e53935;">Excluir</button>
           </div>
           <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e65100;">Salvar</button>
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2e7d32;">Salvar</button>
             <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
           </div>`;
       } else {
@@ -2027,10 +2027,10 @@
             <button id="btnAnexarAtestado" type="button" style="width:auto;padding:6px 12px;font-size:0.82em;background:#5c6bc0;margin:0;">📷 Anexar atestado</button>
           </div>
           <div id="obsBotoesEdicao" style="display:none;gap:8px;margin-top:0;">
-            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#e65100;">Salvar</button>
+            <button id="btnSalvarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#2e7d32;">Salvar</button>
             <button id="btnCancelarObs" style="flex:1;margin-top:0;padding:8px;font-size:0.85em;background:#888;">Cancelar</button>
           </div>
-          <button id="btnAdicionarObs" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#e65100;">🏥 Registrar falta justificada</button>`;
+          <button id="btnAdicionarObs" style="width:100%;margin-top:0;padding:8px;font-size:0.88em;background:#2e7d32;">🏥 Registrar falta justificada</button>`;
       }
 
       container.appendChild(secao);
@@ -4722,7 +4722,7 @@
       const btnRelAdd = conteudo.querySelector("#btnAdicionarRelatDia");
       const btnObsAdd = conteudo.querySelector("#btnAdicionarObs");
       if (btnRelAdd) { btnRelAdd.style.flex = "1"; btnRelAdd.style.marginTop = "0"; rowRegistros.appendChild(btnRelAdd); }
-      if (btnObsAdd) { btnObsAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#e65100;"; rowRegistros.appendChild(btnObsAdd); }
+      if (btnObsAdd) { btnObsAdd.style.cssText = "flex:1;margin-top:0;padding:8px;font-size:0.88em;background:#2e7d32;"; rowRegistros.appendChild(btnObsAdd); }
 
       document.getElementById("modalBatidasDia").classList.add("ativo");
     }
