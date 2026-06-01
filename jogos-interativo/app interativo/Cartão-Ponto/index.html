@@ -4600,13 +4600,16 @@
           // Funcionário cadastrando a própria biometria dentro do app
           usuarioLogado.faceDescriptors = descritores;
           usuarioLogado.fotoProfile = fotoProfile;
+          // Migra método de autenticação para facial e remove o PIN anterior
+          usuarioLogado.metodoAutenticacao = 'facial';
+          delete usuarioLogado.pinHash;
           const idx = usuarios.findIndex(u => String(u.id) === String(usuarioLogado.id));
           if (idx !== -1) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios)); }
           _salvarUsuarioFirestore(usuarioLogado);
-          statusEl.textContent = "Biometria cadastrada com sucesso!";
+          statusEl.textContent = "Biometria cadastrada! Agora você bate o ponto pelo rosto 😊";
           statusEl.style.color = "green";
           document.getElementById("btnCadastrarBioProprio").style.display = "none";
-          setTimeout(() => fecharBiometriaCadastro(), 1400);
+          setTimeout(() => fecharBiometriaCadastro(), 1800);
 
         } else {
           // Modo 'novo' — cria o usuário com biometria
