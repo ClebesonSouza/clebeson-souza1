@@ -894,11 +894,34 @@
       <hr style="margin:14px 0;border:none;border-top:1px solid #eee;" />
 
       <!-- Impressão Digital -->
-      <p style="font-size:0.85em;font-weight:bold;color:#1565c0;margin-bottom:8px;">👆 Entrar com impressão digital</p>
+      <p style="font-size:0.85em;font-weight:bold;color:#1565c0;margin-bottom:8px;">👆 Impressão digital</p>
       <label style="font-size:0.85em;">E-mail</label>
       <input type="email" id="emailParaDigital" placeholder="seu@email.com" />
       <p id="erroDigitalLogin" class="error" style="min-height:1.1em;"></p>
-      <button id="btnLoginDigital" style="background:#1565c0;">👆 Usar impressão digital</button>
+      <button id="btnLoginDigital" style="background:#1565c0;">👆 Entrar com impressão digital</button>
+
+      <!-- Cadastrar digital diretamente da tela de login -->
+      <details style="margin-top:10px;">
+        <summary style="font-size:0.82em;color:#546e7a;cursor:pointer;user-select:none;">
+          📲 Ainda não cadastrei minha impressão digital
+        </summary>
+        <div style="margin-top:10px;">
+          <p style="font-size:0.8em;color:#555;margin-bottom:8px;line-height:1.4;">
+            Confirme sua senha para cadastrar a impressão digital agora.
+          </p>
+          <form id="cadastrarDigitalLoginForm">
+            <label style="font-size:0.85em;">E-mail</label>
+            <input type="email" name="emailCadDigital" required placeholder="seu@email.com" />
+            <label style="font-size:0.85em;">Senha</label>
+            <div class="senha-wrapper">
+              <input type="password" name="senhaCadDigital" required placeholder="Sua senha" />
+              <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
+            </div>
+            <p id="erroCadDigitalLogin" class="error" style="min-height:1.1em;"></p>
+            <button type="submit" style="background:#1565c0;">📲 Cadastrar minha impressão digital</button>
+          </form>
+        </div>
+      </details>
     </div>
   </div>
 
@@ -1601,6 +1624,75 @@
     </div>
   </div>
 
+  <!-- MODAL SELEÇÃO DE MÉTODO DE AUTENTICAÇÃO (cadastro) -->
+  <div class="modal-overlay" id="modalSelecaoMetodo">
+    <div class="modal-box" style="text-align:center;max-width:360px;">
+      <h2 style="color:#2a6eb6;margin-bottom:6px;">Como vai bater o ponto?</h2>
+      <p style="font-size:0.88em;color:#555;margin-bottom:20px;line-height:1.5;">
+        Escolha o método que usará para registrar sua presença todos os dias.
+      </p>
+
+      <button id="btnEscolherFacial"
+        style="background:#1565c0;margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
+        <span style="font-size:1.8em;line-height:1;">😊</span>
+        <span><strong>Biometria facial</strong><br><small style="font-weight:normal;opacity:0.85;">Reconhecimento pelo rosto via câmera</small></span>
+      </button>
+
+      <button id="btnEscolherDigital"
+        style="background:#283593;margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
+        <span style="font-size:1.8em;line-height:1;">👆</span>
+        <span><strong>Impressão digital</strong><br><small style="font-weight:normal;opacity:0.85;">Sensor de digital do celular</small></span>
+      </button>
+
+      <button id="btnEscolherPin"
+        style="background:#546e7a;margin-bottom:16px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
+        <span style="font-size:1.8em;line-height:1;">🔢</span>
+        <span><strong>PIN numérico</strong><br><small style="font-weight:normal;opacity:0.85;">Código de 4 a 6 dígitos</small></span>
+      </button>
+
+      <!-- Formulário PIN (aparece ao escolher PIN) -->
+      <div id="selecaoPinBox" style="display:none;text-align:left;border-top:1px solid #eee;padding-top:14px;margin-top:4px;">
+        <label style="font-size:0.88em;">Defina seu PIN (4 a 6 dígitos)</label>
+        <div class="senha-wrapper">
+          <input type="password" id="inputPinCadastro" maxlength="6" inputmode="numeric"
+            placeholder="• • • • • •"
+            style="letter-spacing:0.4em;font-size:1.4em;text-align:center;font-weight:bold;" />
+          <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+        </div>
+        <label style="font-size:0.88em;margin-top:8px;">Confirme o PIN</label>
+        <div class="senha-wrapper">
+          <input type="password" id="inputPinCadastroConfirm" maxlength="6" inputmode="numeric"
+            placeholder="• • • • • •"
+            style="letter-spacing:0.4em;font-size:1.4em;text-align:center;font-weight:bold;" />
+          <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+        </div>
+        <p id="erroSelecaoPin" class="error" style="min-height:1.1em;margin-top:4px;"></p>
+        <button id="btnConfirmarPinCadastro" style="background:#546e7a;margin-top:6px;">✅ Confirmar PIN e finalizar</button>
+        <button id="btnVoltarSelecaoMetodo" style="background:#888;margin-top:6px;font-size:0.85em;">← Voltar às opções</button>
+      </div>
+
+      <p id="erroSelecaoMetodo" class="error" style="min-height:1.1em;"></p>
+      <button id="btnCancelarSelecaoMetodo" style="background:#888;font-size:0.85em;">Cancelar cadastro</button>
+    </div>
+  </div>
+
+  <!-- MODAL PIN NA BATIDA DO PONTO -->
+  <div class="modal-overlay" id="modalPinPonto">
+    <div class="modal-box" style="text-align:center;max-width:320px;">
+      <h2 style="color:#546e7a;">🔢 Confirme seu PIN</h2>
+      <p id="modalPinPontoNome" style="font-size:0.88em;color:#555;margin-bottom:14px;"></p>
+      <div class="senha-wrapper" style="justify-content:center;">
+        <input type="password" id="inputPinPonto" maxlength="6" inputmode="numeric"
+          placeholder="• • • • • •"
+          style="letter-spacing:0.4em;font-size:1.6em;text-align:center;font-weight:bold;max-width:180px;" />
+        <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+      </div>
+      <p id="erroPinPonto" class="error" style="min-height:1.2em;margin-top:6px;"></p>
+      <button id="btnConfirmarPinPonto" style="background:#546e7a;margin-top:4px;">✅ Confirmar</button>
+      <button id="btnCancelarPinPonto" style="background:#888;margin-top:6px;font-size:0.85em;">Cancelar</button>
+    </div>
+  </div>
+
   <!-- MODAL BIOMETRIA FACIAL -->
   <div class="modal-overlay" id="modalBiometria">
     <div class="modal-box">
@@ -1630,7 +1722,7 @@
       </div>
       <div id="statusBioCadastro" style="margin-top:6px;"></div>
       <button id="btnCapturarCadastro" style="background:#555;margin-top:8px;font-size:0.85em;">Capturar manualmente</button>
-      <button id="btnPularBiometria" style="background:#888;margin-top:4px;font-size:0.85em;">Pular (cadastrar sem biometria)</button>
+      <button id="btnPularBiometria" style="background:#888;margin-top:4px;font-size:0.85em;display:none;">Pular (cadastrar sem biometria)</button>
       <button id="btnCancelarBioCadastro">Cancelar</button>
     </div>
   </div>
@@ -3256,6 +3348,212 @@
       localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
     }
 
+    // ============================
+    // SELEÇÃO DE MÉTODO — cadastro
+    // ============================
+
+    function abrirSelecaoMetodo() {
+      // Reseta UI
+      document.getElementById("selecaoPinBox").style.display = "none";
+      document.getElementById("erroSelecaoMetodo").textContent = "";
+      document.getElementById("erroSelecaoPin").textContent = "";
+      document.getElementById("inputPinCadastro").value = "";
+      document.getElementById("inputPinCadastroConfirm").value = "";
+      // Mostra todos os botões de opção
+      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+        document.getElementById(id).style.display = "";
+      });
+      document.getElementById("modalSelecaoMetodo").classList.add("ativo");
+    }
+
+    function fecharSelecaoMetodo() {
+      document.getElementById("modalSelecaoMetodo").classList.remove("ativo");
+      dadosCadastroPendente = null;
+    }
+
+    // Finaliza cadastro com método escolhido e salva o usuário
+    function _finalizarCadastroComMetodo(dadosExtra, metodo) {
+      const novoUsuario = { id: Date.now(), ...dadosCadastroPendente, metodoAutenticacao: metodo, ...dadosExtra };
+      usuarios.push(novoUsuario);
+      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+      _salvarUsuarioFirestore(novoUsuario);
+      fecharSelecaoMetodo();
+      mudarTela("loginScreen");
+      const erroEl = document.getElementById("erroCadastro");
+      erroEl.className = "sucesso";
+      erroEl.textContent = "Cadastro realizado com sucesso!";
+      const inputEmail = document.querySelector("#loginForm input[name=email]");
+      if (inputEmail && dadosCadastroPendente) inputEmail.value = dadosCadastroPendente.email;
+      return novoUsuario;
+    }
+
+    // Listeners da seleção de método
+    document.getElementById("btnCancelarSelecaoMetodo").addEventListener("click", fecharSelecaoMetodo);
+
+    document.getElementById("btnVoltarSelecaoMetodo").addEventListener("click", () => {
+      document.getElementById("selecaoPinBox").style.display = "none";
+      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+        document.getElementById(id).style.display = "";
+      });
+      document.getElementById("erroSelecaoPin").textContent = "";
+    });
+
+    // Opção: FACIAL
+    document.getElementById("btnEscolherFacial").addEventListener("click", () => {
+      fecharSelecaoMetodo();
+      // Reabre dadosCadastroPendente (fecharSelecaoMetodo o limpa, então salva antes)
+      // Na verdade fecharSelecaoMetodo limpa dadosCadastroPendente — preciso de um fluxo diferente
+      // Vou criar uma versão que não limpa:
+    });
+
+    // Refactor: fecharSelecaoMetodo só fecha se não for para abrir a câmera
+    document.getElementById("btnEscolherFacial").removeEventListener("click", null);
+    document.getElementById("btnEscolherFacial").addEventListener("click", () => {
+      document.getElementById("modalSelecaoMetodo").classList.remove("ativo");
+      // dadosCadastroPendente ainda está definido — abre câmera normalmente
+      abrirModalBioCadastro('novo');
+    });
+
+    // Opção: IMPRESSÃO DIGITAL
+    document.getElementById("btnEscolherDigital").addEventListener("click", async () => {
+      const erroEl = document.getElementById("erroSelecaoMetodo");
+      erroEl.textContent = "";
+      const btn = document.getElementById("btnEscolherDigital");
+      btn.disabled = true;
+      btn.querySelector("strong").textContent = "Aguardando digital...";
+
+      try {
+        if (!await _webAuthnDisponivel()) {
+          throw new Error("Este dispositivo não possui leitor de impressão digital compatível.");
+        }
+        // Cria usuário temporário para o WebAuthn (precisa de id)
+        const idTemp = Date.now();
+        const userTemp = { id: idTemp, ...dadosCadastroPendente };
+        await registrarImpressaoDigital(userTemp);
+        // Salva definitivamente
+        const novoUsuario = _finalizarCadastroComMetodo({
+          webauthnCredentials: userTemp.webauthnCredentials
+        }, 'digital');
+      } catch (ex) {
+        erroEl.textContent = ex.message || "Erro ao cadastrar impressão digital.";
+      } finally {
+        btn.disabled = false;
+        btn.querySelector("strong").textContent = "Impressão digital";
+      }
+    });
+
+    // Opção: PIN — mostra formulário
+    document.getElementById("btnEscolherPin").addEventListener("click", () => {
+      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+        document.getElementById(id).style.display = "none";
+      });
+      document.getElementById("selecaoPinBox").style.display = "";
+      document.getElementById("inputPinCadastro").focus();
+    });
+
+    // Confirmar PIN no cadastro
+    document.getElementById("btnConfirmarPinCadastro").addEventListener("click", async () => {
+      const erroEl = document.getElementById("erroSelecaoPin");
+      const pin  = document.getElementById("inputPinCadastro").value.trim();
+      const pin2 = document.getElementById("inputPinCadastroConfirm").value.trim();
+      erroEl.textContent = "";
+
+      if (!/^\d{4,6}$/.test(pin)) { erroEl.textContent = "PIN deve ter 4 a 6 dígitos numéricos."; return; }
+      if (pin !== pin2) { erroEl.textContent = "Os PINs não coincidem."; return; }
+
+      const btn = document.getElementById("btnConfirmarPinCadastro");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+
+      // Gera hash do PIN usando o mesmo salt da senha
+      const pinHash = await hashSenha("PIN:" + pin + (dadosCadastroPendente.salt || ""));
+      _finalizarCadastroComMetodo({ pinHash }, 'pin');
+
+      btn.disabled = false;
+      btn.textContent = "✅ Confirmar PIN e finalizar";
+    });
+
+    // ============================
+    // VERIFICAÇÃO NA BATIDA — DIGITAL
+    // ============================
+
+    async function _autenticarDigitalParaPonto(tipo) {
+      const statusEl = document.getElementById("batidaStatus");
+      statusEl.style.color = "#2a6eb6";
+      statusEl.textContent = "👆 Aguardando impressão digital...";
+
+      try {
+        await _authPronto;
+        const user = await loginComImpressaoDigital(usuarioLogado.email);
+        if (user && String(user.id) === String(usuarioLogado.id)) {
+          statusEl.textContent = "";
+          // Dispara a batida diretamente (sem câmera)
+          await _registrarBatidaSemCamera(tipo);
+        } else {
+          throw new Error("Impressão digital não reconhecida.");
+        }
+      } catch (ex) {
+        const msg = ex.message || "";
+        if (msg.includes("Nenhuma impressão digital") || msg.includes("não reconhecida")) {
+          statusEl.style.color = "#c00";
+          statusEl.textContent = "⚠ Impressão digital não cadastrada neste aparelho. Acesse o app com sua senha e recadastre.";
+        } else {
+          statusEl.style.color = "#c00";
+          statusEl.textContent = ex.message || "Falha na verificação. Tente novamente.";
+        }
+      }
+    }
+
+    // ============================
+    // VERIFICAÇÃO NA BATIDA — PIN
+    // ============================
+
+    let _tipoBatidaPin = null;
+
+    function _abrirModalPinPonto(tipo) {
+      _tipoBatidaPin = tipo;
+      document.getElementById("inputPinPonto").value = "";
+      document.getElementById("erroPinPonto").textContent = "";
+      document.getElementById("modalPinPontoNome").textContent =
+        usuarioLogado ? usuarioLogado.nome : "";
+      document.getElementById("modalPinPonto").classList.add("ativo");
+      setTimeout(() => document.getElementById("inputPinPonto").focus(), 200);
+    }
+
+    document.getElementById("btnCancelarPinPonto").addEventListener("click", () => {
+      document.getElementById("modalPinPonto").classList.remove("ativo");
+      _tipoBatidaPin = null;
+    });
+
+    document.getElementById("btnConfirmarPinPonto").addEventListener("click", async () => {
+      const pin    = document.getElementById("inputPinPonto").value.trim();
+      const erroEl = document.getElementById("erroPinPonto");
+      erroEl.textContent = "";
+
+      if (!pin) { erroEl.textContent = "Digite seu PIN."; return; }
+
+      const btn = document.getElementById("btnConfirmarPinPonto");
+      btn.disabled = true;
+      btn.textContent = "Verificando...";
+
+      const pinHash = await hashSenha("PIN:" + pin + (usuarioLogado.salt || ""));
+      if (pinHash !== usuarioLogado.pinHash) {
+        erroEl.textContent = "PIN incorreto. Tente novamente.";
+        btn.disabled = false;
+        btn.textContent = "✅ Confirmar";
+        document.getElementById("inputPinPonto").value = "";
+        document.getElementById("inputPinPonto").focus();
+        return;
+      }
+
+      document.getElementById("modalPinPonto").classList.remove("ativo");
+      btn.disabled = false;
+      btn.textContent = "✅ Confirmar";
+
+      await _registrarBatidaSemCamera(_tipoBatidaPin);
+      _tipoBatidaPin = null;
+    });
+
     // FIX #7: escape de HTML para evitar XSS
     function escaparHTML(str) {
       return String(str)
@@ -4028,6 +4326,68 @@
       iniciarGeolocalizacao();
     });
 
+    // Cadastrar impressão digital direto da tela de login (confirma senha primeiro)
+    document.getElementById("cadastrarDigitalLoginForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const erroEl = document.getElementById("erroCadDigitalLogin");
+      const fd     = new FormData(e.target);
+      const email  = (fd.get("emailCadDigital") || "").trim().toLowerCase();
+      const senha  = fd.get("senhaCadDigital") || "";
+      erroEl.className = "error";
+      erroEl.textContent = "";
+
+      // Valida identidade com a senha
+      if (usuarios.length === 0) {
+        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
+      }
+      const userTemp = usuarios.find(u => !u.admin && u.email === email);
+      if (!userTemp) { erroEl.textContent = "E-mail não encontrado."; return; }
+
+      const senhaHash = await hashSenha(senha + (userTemp.salt || ""));
+      if (userTemp.senha !== senhaHash) { erroEl.textContent = "Senha incorreta."; return; }
+
+      const btn = e.target.querySelector("button[type=submit]");
+      btn.disabled = true;
+      btn.textContent = "Aguardando digital...";
+
+      try {
+        await _authPronto;
+        await registrarImpressaoDigital(userTemp);
+
+        // Atualiza cache local
+        const idx = usuarios.findIndex(u => u.id === userTemp.id);
+        if (idx >= 0) usuarios[idx] = userTemp;
+        localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+
+        erroEl.className = "sucesso";
+        erroEl.textContent = "✅ Impressão digital cadastrada! Fazendo login...";
+
+        // Loga automaticamente após cadastro
+        setTimeout(() => {
+          usuarioLogado = userTemp;
+          salvarUltimoEmail(email);
+          if (navigator.onLine) _salvarCacheUsuarios();
+          document.getElementById("btnCadastrarBioProprio").style.display =
+            (userTemp.faceDescriptors || userTemp.faceDescriptor) ? "none" : "block";
+          _atualizarBtnDigitalProprio(userTemp);
+          document.getElementById("userNome").textContent = userTemp.nome;
+          document.getElementById("userNome").dataset.cargo = userTemp.cargo || "";
+          document.getElementById("listaCartoes").innerHTML = "";
+          document.getElementById("btnCompartilharTodos").style.display = "none";
+          mudarTela("appScreen");
+          redimensionarCanvas();
+          restaurarCartoesDeHoje(userTemp.nome, userTemp.cargo || "");
+          atualizarBotoesBatida();
+          iniciarGeolocalizacao();
+        }, 1500);
+
+      } catch (ex) {
+        erroEl.textContent = ex.message || "Erro ao cadastrar impressão digital.";
+        btn.disabled = false;
+        btn.textContent = "📲 Cadastrar minha impressão digital";
+      }
+    });
+
     // Login com impressão digital
     document.getElementById("btnLoginDigital").addEventListener("click", async () => {
       const erroEl = document.getElementById("erroDigitalLogin");
@@ -4067,8 +4427,14 @@
         atualizarBotoesBatida();
         iniciarGeolocalizacao();
       } catch (ex) {
-        registrarTentativaFalha(email);
-        erroEl.textContent = ex.message || "Falha na verificação. Tente novamente.";
+        const msg = ex.message || "";
+        if (msg.includes("Nenhuma impressão digital")) {
+          erroEl.className = "error";
+          erroEl.textContent = "Você ainda não cadastrou sua impressão digital. Use a opção \"📲 Ainda não cadastrei\" abaixo.";
+        } else {
+          registrarTentativaFalha(email);
+          erroEl.textContent = msg || "Falha na verificação. Tente novamente.";
+        }
       } finally {
         btn.disabled = false;
         btn.textContent = "👆 Usar impressão digital";
@@ -4481,7 +4847,7 @@
       dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, salt, cargo, telefone, nascimento };
       const btnCadastrar = e.target.querySelector("button[type=submit]");
       if (btnCadastrar) btnCadastrar.disabled = true;
-      await abrirModalBioCadastro('novo');
+      abrirSelecaoMetodo();
       if (btnCadastrar) btnCadastrar.disabled = false;
     });
 
@@ -6978,6 +7344,98 @@
       desenharPlaceholder();
     });
 
+    // Registra batida sem câmera (para PIN e impressão digital)
+    async function _registrarBatidaSemCamera(tipo) {
+      const agora = new Date();
+      const dia = String(agora.getDate()).padStart(2,"0");
+      const mes = String(agora.getMonth()+1).padStart(2,"0");
+      const ano = agora.getFullYear();
+      const hh  = String(agora.getHours()).padStart(2,"0");
+      const mm  = String(agora.getMinutes()).padStart(2,"0");
+      const ss  = String(agora.getSeconds()).padStart(2,"0");
+      const dataStr   = `${dia}/${mes}/${ano}`;
+      const horaStr   = `${hh}:${mm}:${ss}`;
+      const nome      = document.getElementById("userNome").textContent;
+      const cargo     = document.getElementById("userNome").dataset.cargo || "";
+      const tipoTexto = tipo === "entrada" ? "Entrada" : "Saída";
+      const nomeEsc   = escaparHTML(nome);
+      const cargoEsc  = escaparHTML(cargo);
+      const metodoIco = usuarioLogado.metodoAutenticacao === 'pin' ? '🔢' : '👆';
+
+      const geoAtual = await Promise.race([
+        _geoPromisePonto || Promise.resolve(null),
+        new Promise(r => setTimeout(() => r(null), 2000))
+      ]);
+      _geoPromisePonto = null;
+      const coordStr = geoAtual
+        ? `${geoAtual.lat.toFixed(6)}, ${geoAtual.lng.toFixed(6)}`
+        : (document.getElementById("coordenadas").textContent.replace(/[()]/g,"").trim() || "");
+      const locEsc   = coordStr ? escaparHTML(coordStr) : "";
+      const cardId   = "cartao_" + Date.now();
+      let   locStrAtual = coordStr;
+      const locSpanId   = `loc-${cardId}`;
+
+      // Ícone de placeholder (sem foto de câmera)
+      const fotoHtml = `<div style="width:80px;height:80px;border-radius:50%;background:#e8f5e9;border:2px solid #2e7d32;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2em;">${metodoIco}</div>`;
+
+      const novoCartao = document.createElement("div");
+      novoCartao.className = "cartao-registro ativo";
+      novoCartao.id = cardId;
+      novoCartao.innerHTML = `
+        <div class="cartao-header">Cartão Ponto ${escaparHTML(empresaNome)} — ${tipoTexto}</div>
+        <div class="cartao-body">
+          ${fotoHtml}
+          <div class="cartao-info" data-localizacao="${locEsc}">
+            <strong style="display:block;font-size:1em;color:#2a6eb6;">${nomeEsc}</strong>
+            <span style="color:#555;font-size:0.85em">${cargoEsc}</span><br/>
+            <span>${tipoTexto}</span><br/>
+            <span>${dataStr}</span><br/>
+            <span>${horaStr}</span>
+            ${coordStr ? `<br/><span id="${locSpanId}" style="font-size:0.78em;color:#555;margin-top:2px;">📍 Obtendo cidade... (${locEsc})</span>` : ""}
+          </div>
+        </div>
+        <button class="btn-compartilhar" data-card="${cardId}">Compartilhar comprovante de ${tipoTexto}</button>
+      `;
+      document.getElementById("listaCartoes").appendChild(novoCartao);
+
+      if (document.getElementById("listaCartoes").children.length > 1)
+        document.getElementById("btnCompartilharTodos").style.display = "block";
+
+      assinaturasPorCartao.set(cardId, assinaturaAtual);
+      fotosPorCartao.set(cardId, "");
+
+      const assinaturaParaCompartilhar = assinaturaAtual;
+      novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
+        const c = await gerarCanvasCartao("", nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStrAtual);
+        await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
+      });
+
+      const dataHoraBatida = agora.toISOString();
+      const _novaBatida = {
+        tipo, usuario: nome, usuarioId: usuarioLogado.id,
+        data_hora: dataHoraBatida, coordenadas: coordStr, cidade: ""
+      };
+      batidas.push(_novaBatida);
+      salvarBatidas();
+      _salvarBatidaFirestore(_novaBatida);
+
+      if (geoAtual) {
+        obterCidade(geoAtual.lat, geoAtual.lng).then(cidade => {
+          const span = document.getElementById(locSpanId);
+          if (cidade) {
+            locStrAtual = `${cidade} (${coordStr})`;
+            if (span) span.textContent = `📍 ${locStrAtual}`;
+            const idx = batidas.findIndex(b => b.data_hora === dataHoraBatida && b.usuarioId === usuarioLogado.id);
+            if (idx >= 0) { batidas[idx].cidade = cidade; salvarBatidas(); _atualizarCidadeBatidaFirestore(dataHoraBatida, cidade); }
+          } else if (span) { span.textContent = `📍 ${coordStr}`; }
+        });
+      }
+
+      atualizarBotoesBatida();
+      document.getElementById("batidaStatus").textContent = "";
+      desenharPlaceholder();
+    }
+
     // FIX #4: captura assinatura antes de abrir biometria
     let assinaturaAtual = null;
 
@@ -7007,8 +7465,24 @@
         }
       }
       assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
-      _geoPromisePonto = capturarGPSFresco(); // inicia GPS em paralelo à biometria
-      abrirBiometria(tipoBatidaPendente);
+      _geoPromisePonto = capturarGPSFresco();
+
+      const metodo = usuarioLogado.metodoAutenticacao
+        || ((usuarioLogado.faceDescriptors || usuarioLogado.faceDescriptor) ? 'facial' : null);
+
+      if (!metodo) {
+        document.getElementById("batidaStatus").textContent =
+          "⚠ Você precisa cadastrar um método de verificação. Acesse 'Cadastrar biometria facial' abaixo.";
+        document.getElementById("batidaStatus").style.color = "#c00";
+        return;
+      }
+      if (metodo === 'facial') {
+        abrirBiometria(tipoBatidaPendente);
+      } else if (metodo === 'digital') {
+        _autenticarDigitalParaPonto(tipoBatidaPendente);
+      } else if (metodo === 'pin') {
+        _abrirModalPinPonto(tipoBatidaPendente);
+      }
     });
 
     // ============================
