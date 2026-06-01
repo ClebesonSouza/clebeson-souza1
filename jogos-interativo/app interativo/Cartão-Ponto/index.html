@@ -3197,21 +3197,17 @@
       document.getElementById("erroSelecaoPin").textContent = "";
     });
 
-    // Opção: FACIAL
-    document.getElementById("btnEscolherFacial").addEventListener("click", () => {
-      fecharSelecaoMetodo();
-      // Reabre dadosCadastroPendente (fecharSelecaoMetodo o limpa, então salva antes)
-      // Na verdade fecharSelecaoMetodo limpa dadosCadastroPendente — preciso de um fluxo diferente
-      // Vou criar uma versão que não limpa:
-    });
-
-    // Refactor: fecharSelecaoMetodo só fecha se não for para abrir a câmera
-    document.getElementById("btnEscolherFacial").removeEventListener("click", null);
-    document.getElementById("btnEscolherFacial").addEventListener("click", () => {
-      document.getElementById("modalSelecaoMetodo").classList.remove("ativo");
-      // dadosCadastroPendente ainda está definido — abre câmera normalmente
-      abrirModalBioCadastro('novo');
-    });
+    // Opção: FACIAL — clona o botão para garantir listener único (sem duplicatas)
+    {
+      const btnF = document.getElementById("btnEscolherFacial");
+      const clone = btnF.cloneNode(true);
+      btnF.parentNode.replaceChild(clone, btnF);
+      clone.addEventListener("click", () => {
+        // Fecha o modal SEM limpar dadosCadastroPendente (dados do formulário preservados)
+        document.getElementById("modalSelecaoMetodo").classList.remove("ativo");
+        abrirModalBioCadastro('novo');
+      });
+    }
 
     // Opção: PIN — mostra formulário
     document.getElementById("btnEscolherPin").addEventListener("click", () => {
@@ -4613,9 +4609,15 @@
 
         } else {
           // Modo 'novo' — cria o usuário com biometria
+          if (!dadosCadastroPendente || !dadosCadastroPendente.email) {
+            statusEl.textContent = "Erro: dados do cadastro perdidos. Volte e preencha o formulário novamente.";
+            statusEl.style.color = "red";
+            return;
+          }
           const novoUsuarioBio = {
             id: Date.now(),
             ...dadosCadastroPendente,
+            metodoAutenticacao: 'facial',
             faceDescriptors: descritores,
             fotoProfile,
           };
