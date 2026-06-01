@@ -862,14 +862,14 @@
             Configurar área de ponto
           </button>
           <button id="btnAbrirLoginAlternativo" style="background:none;color:#546e7a;text-decoration:underline;font-size:0.85em;">
-            🔢 PIN / 👆 Impressão digital
+            🔢 Login com PIN
           </button>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- LOGIN ALTERNATIVO (PIN / Impressão Digital) -->
+  <!-- LOGIN ALTERNATIVO (PIN) -->
   <div id="loginAlternativoCard" style="max-width:480px;margin:0 auto;display:none;">
     <div style="background:#546e7a;color:#fff;padding:10px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
       onclick="toggleLoginAlternativo()">
@@ -891,37 +891,6 @@
         <button type="submit" style="background:#546e7a;">🔢 Entrar com PIN</button>
       </form>
 
-      <hr style="margin:14px 0;border:none;border-top:1px solid #eee;" />
-
-      <!-- Impressão Digital -->
-      <p style="font-size:0.85em;font-weight:bold;color:#1565c0;margin-bottom:8px;">👆 Impressão digital</p>
-      <label style="font-size:0.85em;">E-mail</label>
-      <input type="email" id="emailParaDigital" placeholder="seu@email.com" />
-      <p id="erroDigitalLogin" class="error" style="min-height:1.1em;"></p>
-      <button id="btnLoginDigital" style="background:#1565c0;">👆 Entrar com impressão digital</button>
-
-      <!-- Cadastrar digital diretamente da tela de login -->
-      <details style="margin-top:10px;">
-        <summary style="font-size:0.82em;color:#546e7a;cursor:pointer;user-select:none;">
-          📲 Ainda não cadastrei minha impressão digital
-        </summary>
-        <div style="margin-top:10px;">
-          <p style="font-size:0.8em;color:#555;margin-bottom:8px;line-height:1.4;">
-            Confirme sua senha para cadastrar a impressão digital agora.
-          </p>
-          <form id="cadastrarDigitalLoginForm">
-            <label style="font-size:0.85em;">E-mail</label>
-            <input type="email" name="emailCadDigital" required placeholder="seu@email.com" />
-            <label style="font-size:0.85em;">Senha</label>
-            <div class="senha-wrapper">
-              <input type="password" name="senhaCadDigital" required placeholder="Sua senha" />
-              <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)" title="Mostrar/ocultar">👁</button>
-            </div>
-            <p id="erroCadDigitalLogin" class="error" style="min-height:1.1em;"></p>
-            <button type="submit" style="background:#1565c0;">📲 Cadastrar minha impressão digital</button>
-          </form>
-        </div>
-      </details>
     </div>
   </div>
 
@@ -1191,8 +1160,7 @@
         <button id="btnMeuRelatorio" style="background:#00897b;margin-top:10px;">Ver meu relatório de ponto</button>
         <button id="btnBaseCalculo" style="background:#e65100;margin-top:6px;">Base de Cálculo Salarial</button>
         <button id="btnCadastrarBioProprio" style="background:#f57c00;margin-top:10px;display:none;">Cadastrar biometria facial</button>
-        <button id="btnCadastrarDigitalProprio" style="background:#1565c0;margin-top:6px;display:none;">👆 Cadastrar impressão digital</button>
-        <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
+<button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
   </div>
@@ -1384,12 +1352,6 @@
         </div>
         <p id="statusPin" style="font-size:0.8em;min-height:1.1em;margin-top:4px;"></p>
 
-        <!-- Impressão digital -->
-        <p style="font-size:0.82em;color:#555;margin-top:10px;margin-bottom:4px;">👆 <strong>Impressão digital</strong></p>
-        <p id="statusDigitalAdmin" style="font-size:0.8em;color:#888;margin-bottom:6px;"></p>
-        <button type="button" id="btnRemoverDigital" style="width:auto;padding:8px 14px;background:#e53935;margin:0;display:none;">
-          🗑 Remover impressão digital
-        </button>
       </div>
       <div id="editGeoGroup">
         <hr style="margin:14px 0;border:none;border-top:1px solid #ddd;" />
@@ -1638,13 +1600,7 @@
         <span><strong>Biometria facial</strong><br><small style="font-weight:normal;opacity:0.85;">Reconhecimento pelo rosto via câmera</small></span>
       </button>
 
-      <button id="btnEscolherDigital"
-        style="background:#283593;margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
-        <span style="font-size:1.8em;line-height:1;">👆</span>
-        <span><strong>Impressão digital</strong><br><small style="font-weight:normal;opacity:0.85;">Sensor de digital do celular</small></span>
-      </button>
-
-      <button id="btnEscolherPin"
+<button id="btnEscolherPin"
         style="background:#546e7a;margin-bottom:16px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
         <span style="font-size:1.8em;line-height:1;">🔢</span>
         <span><strong>PIN numérico</strong><br><small style="font-weight:normal;opacity:0.85;">Código de 4 a 6 dígitos</small></span>
@@ -3190,163 +3146,6 @@
       return pinHash === user.pinHash ? user : null;
     }
 
-    // ============================
-    // AUTENTICAÇÃO ALTERNATIVA — IMPRESSÃO DIGITAL (WEBAUTHN)
-    // ============================
-
-    function _bufToB64(buf) {
-      return btoa(String.fromCharCode(...new Uint8Array(buf)));
-    }
-
-    function _b64ToBuf(b64) {
-      const bin = atob(b64.replace(/-/g,'+').replace(/_/g,'/'));
-      const buf = new ArrayBuffer(bin.length);
-      const view = new Uint8Array(buf);
-      for (let i = 0; i < bin.length; i++) view[i] = bin.charCodeAt(i);
-      return buf;
-    }
-
-    // Verifica se o dispositivo suporta biometria WebAuthn
-    async function _webAuthnDisponivel() {
-      if (!window.PublicKeyCredential) return false;
-      try {
-        return await PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-      } catch { return false; }
-    }
-
-    // Registra impressão digital do funcionário no dispositivo atual
-    async function registrarImpressaoDigital(user) {
-      if (!await _webAuthnDisponivel()) {
-        throw new Error("Este dispositivo não possui leitor de impressão digital compatível ou o navegador não suporta.");
-      }
-      const rpId = window.location.hostname || "localhost";
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-      const credential = await navigator.credentials.create({
-        publicKey: {
-          challenge,
-          rp: { name: empresaNome || "Pontualize", id: rpId },
-          user: {
-            id: new TextEncoder().encode(String(user.id)),
-            name: user.email,
-            displayName: user.nome
-          },
-          pubKeyCredParams: [
-            { type: "public-key", alg: -7  }, // ES256
-            { type: "public-key", alg: -257 }  // RS256 fallback
-          ],
-          authenticatorSelection: {
-            authenticatorAttachment: "platform",
-            userVerification: "required",
-            residentKey: "discouraged"
-          },
-          timeout: 60000,
-          attestation: "none"
-        }
-      });
-
-      const credentialId = _bufToB64(credential.rawId);
-      let publicKey = null;
-      let algorithm = -7;
-      try {
-        if (credential.response.getPublicKey) {
-          const pk = credential.response.getPublicKey();
-          if (pk) publicKey = _bufToB64(pk);
-        }
-        if (credential.response.getPublicKeyAlgorithm) {
-          algorithm = credential.response.getPublicKeyAlgorithm();
-        }
-      } catch (_) {}
-
-      if (!user.webauthnCredentials) user.webauthnCredentials = [];
-      // Evita duplicata para o mesmo dispositivo
-      user.webauthnCredentials = user.webauthnCredentials.filter(c => c.credentialId !== credentialId);
-      user.webauthnCredentials.push({
-        credentialId, publicKey, algorithm,
-        registeredAt: new Date().toISOString(),
-        device: navigator.userAgent.slice(0, 100)
-      });
-
-      await _salvarUsuarioFirestore(user);
-      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
-    }
-
-    // Autentica com impressão digital — retorna o objeto user
-    async function loginComImpressaoDigital(email) {
-      if (!await _webAuthnDisponivel()) {
-        throw new Error("Este dispositivo não suporta impressão digital via navegador.");
-      }
-      if (usuarios.length === 0) {
-        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
-      }
-      const user = usuarios.find(u => !u.admin && u.email === email);
-      if (!user || !user.webauthnCredentials || user.webauthnCredentials.length === 0) {
-        throw new Error("Nenhuma impressão digital cadastrada para este e-mail neste app.");
-      }
-
-      const rpId = window.location.hostname || "localhost";
-      const challenge = crypto.getRandomValues(new Uint8Array(32));
-
-      const assertion = await navigator.credentials.get({
-        publicKey: {
-          challenge,
-          rpId,
-          allowCredentials: user.webauthnCredentials.map(c => ({
-            type: "public-key",
-            id: _b64ToBuf(c.credentialId)
-          })),
-          userVerification: "required",
-          timeout: 60000
-        }
-      });
-
-      const assertionId = _bufToB64(assertion.rawId);
-      const stored = user.webauthnCredentials.find(c => c.credentialId === assertionId);
-      if (!stored) throw new Error("Credencial não encontrada. Cadastre a impressão digital novamente.");
-
-      // Verifica assinatura se tiver chave pública armazenada
-      if (stored.publicKey) {
-        const ok = await _verificarAssertionWebAuthn(assertion, stored);
-        if (!ok) throw new Error("Verificação da impressão digital falhou.");
-      }
-      return user;
-    }
-
-    // Verifica assinatura da assertion WebAuthn com a chave pública armazenada
-    async function _verificarAssertionWebAuthn(assertion, storedCred) {
-      try {
-        const { response } = assertion;
-        const clientDataHash = await crypto.subtle.digest('SHA-256', response.clientDataJSON);
-        const authData = new Uint8Array(response.authenticatorData);
-        const signedData = new Uint8Array(authData.byteLength + 32);
-        signedData.set(authData);
-        signedData.set(new Uint8Array(clientDataHash), authData.byteLength);
-
-        const pubKeyBytes = _b64ToBuf(storedCred.publicKey);
-        const isRSA = storedCred.algorithm === -257;
-        const importAlgo = isRSA
-          ? { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }
-          : { name: 'ECDSA', namedCurve: 'P-256' };
-        const verifyAlgo = isRSA
-          ? { name: 'RSASSA-PKCS1-v1_5' }
-          : { name: 'ECDSA', hash: 'SHA-256' };
-
-        const key = await crypto.subtle.importKey('spki', pubKeyBytes, importAlgo, false, ['verify']);
-        return await crypto.subtle.verify(verifyAlgo, key, response.signature, signedData);
-      } catch (e) {
-        console.warn("WebAuthn verify:", e);
-        // Se a verificação criptográfica falhar por falta de suporte,
-        // ainda aceita (o próprio browser já verificou a biometria)
-        return true;
-      }
-    }
-
-    // Remove credenciais WebAuthn do funcionário
-    async function removerImpressaoDigital(user) {
-      user.webauthnCredentials = [];
-      await _salvarUsuarioFirestore(user);
-      localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
-    }
 
     // ============================
     // SELEÇÃO DE MÉTODO — cadastro
@@ -3360,7 +3159,7 @@
       document.getElementById("inputPinCadastro").value = "";
       document.getElementById("inputPinCadastroConfirm").value = "";
       // Mostra todos os botões de opção
-      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+      ["btnEscolherFacial","btnEscolherPin"].forEach(id => {
         document.getElementById(id).style.display = "";
       });
       document.getElementById("modalSelecaoMetodo").classList.add("ativo");
@@ -3392,7 +3191,7 @@
 
     document.getElementById("btnVoltarSelecaoMetodo").addEventListener("click", () => {
       document.getElementById("selecaoPinBox").style.display = "none";
-      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+      ["btnEscolherFacial","btnEscolherPin"].forEach(id => {
         document.getElementById(id).style.display = "";
       });
       document.getElementById("erroSelecaoPin").textContent = "";
@@ -3414,37 +3213,9 @@
       abrirModalBioCadastro('novo');
     });
 
-    // Opção: IMPRESSÃO DIGITAL
-    document.getElementById("btnEscolherDigital").addEventListener("click", async () => {
-      const erroEl = document.getElementById("erroSelecaoMetodo");
-      erroEl.textContent = "";
-      const btn = document.getElementById("btnEscolherDigital");
-      btn.disabled = true;
-      btn.querySelector("strong").textContent = "Aguardando digital...";
-
-      try {
-        if (!await _webAuthnDisponivel()) {
-          throw new Error("Este dispositivo não possui leitor de impressão digital compatível.");
-        }
-        // Cria usuário temporário para o WebAuthn (precisa de id)
-        const idTemp = Date.now();
-        const userTemp = { id: idTemp, ...dadosCadastroPendente };
-        await registrarImpressaoDigital(userTemp);
-        // Salva definitivamente
-        const novoUsuario = _finalizarCadastroComMetodo({
-          webauthnCredentials: userTemp.webauthnCredentials
-        }, 'digital');
-      } catch (ex) {
-        erroEl.textContent = ex.message || "Erro ao cadastrar impressão digital.";
-      } finally {
-        btn.disabled = false;
-        btn.querySelector("strong").textContent = "Impressão digital";
-      }
-    });
-
     // Opção: PIN — mostra formulário
     document.getElementById("btnEscolherPin").addEventListener("click", () => {
-      ["btnEscolherFacial","btnEscolherDigital","btnEscolherPin"].forEach(id => {
+      ["btnEscolherFacial","btnEscolherPin"].forEach(id => {
         document.getElementById(id).style.display = "none";
       });
       document.getElementById("selecaoPinBox").style.display = "";
@@ -3473,36 +3244,6 @@
       btn.textContent = "✅ Confirmar PIN e finalizar";
     });
 
-    // ============================
-    // VERIFICAÇÃO NA BATIDA — DIGITAL
-    // ============================
-
-    async function _autenticarDigitalParaPonto(tipo) {
-      const statusEl = document.getElementById("batidaStatus");
-      statusEl.style.color = "#2a6eb6";
-      statusEl.textContent = "👆 Aguardando impressão digital...";
-
-      try {
-        await _authPronto;
-        const user = await loginComImpressaoDigital(usuarioLogado.email);
-        if (user && String(user.id) === String(usuarioLogado.id)) {
-          statusEl.textContent = "";
-          // Dispara a batida diretamente (sem câmera)
-          await _registrarBatidaSemCamera(tipo);
-        } else {
-          throw new Error("Impressão digital não reconhecida.");
-        }
-      } catch (ex) {
-        const msg = ex.message || "";
-        if (msg.includes("Nenhuma impressão digital") || msg.includes("não reconhecida")) {
-          statusEl.style.color = "#c00";
-          statusEl.textContent = "⚠ Impressão digital não cadastrada neste aparelho. Acesse o app com sua senha e recadastre.";
-        } else {
-          statusEl.style.color = "#c00";
-          statusEl.textContent = ex.message || "Falha na verificação. Tente novamente.";
-        }
-      }
-    }
 
     // ============================
     // VERIFICAÇÃO NA BATIDA — PIN
@@ -3729,18 +3470,6 @@
       }, INATIVIDADE_MS);
     }
 
-    // Atualiza visibilidade do botão de cadastrar impressão digital no appScreen
-    async function _atualizarBtnDigitalProprio(user) {
-      const btn = document.getElementById("btnCadastrarDigitalProprio");
-      if (!btn) return;
-      const suporte = await _webAuthnDisponivel();
-      if (!suporte) { btn.style.display = "none"; return; }
-      const temDigital = !!(user.webauthnCredentials && user.webauthnCredentials.length > 0);
-      btn.style.display = temDigital ? "none" : "";
-      btn.textContent = "👆 Cadastrar impressão digital";
-      btn.style.background = "#1565c0";
-      btn.disabled = false;
-    }
 
     function realizarLogout() {
       // Fecha todos os modais abertos antes de limpar a sessão
@@ -4313,7 +4042,6 @@
 
       document.getElementById("btnCadastrarBioProprio").style.display =
         (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
-      _atualizarBtnDigitalProprio(user);
 
       document.getElementById("userNome").textContent = user.nome;
       document.getElementById("userNome").dataset.cargo = user.cargo || "";
@@ -4324,121 +4052,6 @@
       restaurarCartoesDeHoje(user.nome, user.cargo || "");
       atualizarBotoesBatida();
       iniciarGeolocalizacao();
-    });
-
-    // Cadastrar impressão digital direto da tela de login (confirma senha primeiro)
-    document.getElementById("cadastrarDigitalLoginForm").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const erroEl = document.getElementById("erroCadDigitalLogin");
-      const fd     = new FormData(e.target);
-      const email  = (fd.get("emailCadDigital") || "").trim().toLowerCase();
-      const senha  = fd.get("senhaCadDigital") || "";
-      erroEl.className = "error";
-      erroEl.textContent = "";
-
-      // Valida identidade com a senha
-      if (usuarios.length === 0) {
-        try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
-      }
-      const userTemp = usuarios.find(u => !u.admin && u.email === email);
-      if (!userTemp) { erroEl.textContent = "E-mail não encontrado."; return; }
-
-      const senhaHash = await hashSenha(senha + (userTemp.salt || ""));
-      if (userTemp.senha !== senhaHash) { erroEl.textContent = "Senha incorreta."; return; }
-
-      const btn = e.target.querySelector("button[type=submit]");
-      btn.disabled = true;
-      btn.textContent = "Aguardando digital...";
-
-      try {
-        await _authPronto;
-        await registrarImpressaoDigital(userTemp);
-
-        // Atualiza cache local
-        const idx = usuarios.findIndex(u => u.id === userTemp.id);
-        if (idx >= 0) usuarios[idx] = userTemp;
-        localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
-
-        erroEl.className = "sucesso";
-        erroEl.textContent = "✅ Impressão digital cadastrada! Fazendo login...";
-
-        // Loga automaticamente após cadastro
-        setTimeout(() => {
-          usuarioLogado = userTemp;
-          salvarUltimoEmail(email);
-          if (navigator.onLine) _salvarCacheUsuarios();
-          document.getElementById("btnCadastrarBioProprio").style.display =
-            (userTemp.faceDescriptors || userTemp.faceDescriptor) ? "none" : "block";
-          _atualizarBtnDigitalProprio(userTemp);
-          document.getElementById("userNome").textContent = userTemp.nome;
-          document.getElementById("userNome").dataset.cargo = userTemp.cargo || "";
-          document.getElementById("listaCartoes").innerHTML = "";
-          document.getElementById("btnCompartilharTodos").style.display = "none";
-          mudarTela("appScreen");
-          redimensionarCanvas();
-          restaurarCartoesDeHoje(userTemp.nome, userTemp.cargo || "");
-          atualizarBotoesBatida();
-          iniciarGeolocalizacao();
-        }, 1500);
-
-      } catch (ex) {
-        erroEl.textContent = ex.message || "Erro ao cadastrar impressão digital.";
-        btn.disabled = false;
-        btn.textContent = "📲 Cadastrar minha impressão digital";
-      }
-    });
-
-    // Login com impressão digital
-    document.getElementById("btnLoginDigital").addEventListener("click", async () => {
-      const erroEl = document.getElementById("erroDigitalLogin");
-      const email  = (document.getElementById("emailParaDigital").value || "").trim().toLowerCase();
-      erroEl.className = "error";
-      erroEl.textContent = "";
-
-      if (!email) { erroEl.textContent = "Informe seu e-mail antes."; return; }
-
-      const minutos = verificarBloqueio(email);
-      if (minutos) { erroEl.textContent = `Muitas tentativas. Aguarde ${minutos} min.`; return; }
-
-      const btn = document.getElementById("btnLoginDigital");
-      btn.disabled = true;
-      btn.textContent = "Aguardando biometria...";
-
-      try { await _authPronto; } catch (_) {}
-
-      try {
-        const user = await loginComImpressaoDigital(email);
-        limparBloqueio(email);
-        salvarUltimoEmail(email);
-        usuarioLogado = user;
-        if (navigator.onLine) _salvarCacheUsuarios();
-
-        document.getElementById("btnCadastrarBioProprio").style.display =
-          (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
-        _atualizarBtnDigitalProprio(user);
-
-        document.getElementById("userNome").textContent = user.nome;
-        document.getElementById("userNome").dataset.cargo = user.cargo || "";
-        document.getElementById("listaCartoes").innerHTML = "";
-        document.getElementById("btnCompartilharTodos").style.display = "none";
-        mudarTela("appScreen");
-        redimensionarCanvas();
-        restaurarCartoesDeHoje(user.nome, user.cargo || "");
-        atualizarBotoesBatida();
-        iniciarGeolocalizacao();
-      } catch (ex) {
-        const msg = ex.message || "";
-        if (msg.includes("Nenhuma impressão digital")) {
-          erroEl.className = "error";
-          erroEl.textContent = "Você ainda não cadastrou sua impressão digital. Use a opção \"📲 Ainda não cadastrei\" abaixo.";
-        } else {
-          registrarTentativaFalha(email);
-          erroEl.textContent = msg || "Falha na verificação. Tente novamente.";
-        }
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "👆 Usar impressão digital";
-      }
     });
 
     // Máscara de CPF e indicador de força de senha no cadastro
@@ -5076,7 +4689,6 @@
       // Mostra botão de cadastro biométrico se o funcionário ainda não tem biometria
       document.getElementById("btnCadastrarBioProprio").style.display =
         (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
-      _atualizarBtnDigitalProprio(user);
 
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
@@ -5411,12 +5023,6 @@
         document.getElementById("statusPin").textContent = "";
         document.getElementById("btnRemoverPin").style.display = u.pinHash ? "" : "none";
 
-        // Digital
-        const temDigital = !!(u.webauthnCredentials && u.webauthnCredentials.length > 0);
-        document.getElementById("statusDigitalAdmin").textContent = temDigital
-          ? `✅ Cadastrada em ${new Date(u.webauthnCredentials[u.webauthnCredentials.length-1].registeredAt).toLocaleDateString("pt-BR")}`
-          : "Nenhuma impressão digital cadastrada.";
-        document.getElementById("btnRemoverDigital").style.display = temDigital ? "" : "none";
       }
       document.getElementById("editJornadaGroup").style.display = mostrar(!ehAdmin);
 
@@ -6775,18 +6381,6 @@
       setTimeout(() => { statusEl.textContent = ""; }, 2500);
     });
 
-    // Remover impressão digital (admin)
-    document.getElementById("btnRemoverDigital").addEventListener("click", async () => {
-      if (!usuarioEditando) return;
-      const ok = await confirmar("Remover a impressão digital cadastrada para este funcionário?");
-      if (!ok) return;
-      await removerImpressaoDigital(usuarioEditando);
-      const idx = usuarios.findIndex(u => u.id === usuarioEditando.id);
-      if (idx >= 0) usuarios[idx] = usuarioEditando;
-      document.getElementById("btnRemoverDigital").style.display = "none";
-      document.getElementById("statusDigitalAdmin").textContent = "Nenhuma impressão digital cadastrada.";
-    });
-
     document.getElementById("btnResetarBiometria").addEventListener("click", async () => {
       if (!usuarioEditando) return;
       const temBio = !!(usuarioEditando.faceDescriptors || usuarioEditando.faceDescriptor);
@@ -6978,26 +6572,6 @@
 
     document.getElementById("btnCadastrarBioProprio").addEventListener("click", async () => {
       await abrirModalBioCadastro('proprio');
-    });
-
-    // Cadastrar impressão digital (botão no appScreen do funcionário)
-    document.getElementById("btnCadastrarDigitalProprio").addEventListener("click", async () => {
-      if (!usuarioLogado) return;
-      const btn = document.getElementById("btnCadastrarDigitalProprio");
-      btn.disabled = true;
-      btn.textContent = "Aguardando biometria...";
-      try {
-        await registrarImpressaoDigital(usuarioLogado);
-        btn.textContent = "✅ Impressão digital cadastrada!";
-        btn.style.background = "#2e7d32";
-        const idx = usuarios.findIndex(u => u.id === usuarioLogado.id);
-        if (idx >= 0) usuarios[idx] = usuarioLogado;
-        setTimeout(() => _atualizarBtnDigitalProprio(usuarioLogado), 2000);
-      } catch (ex) {
-        btn.disabled = false;
-        _atualizarBtnDigitalProprio(usuarioLogado);
-        await confirmar(ex.message || "Erro ao cadastrar impressão digital.", { btnTexto: "OK" });
-      }
     });
 
     document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
@@ -7344,7 +6918,7 @@
       desenharPlaceholder();
     });
 
-    // Registra batida sem câmera (para PIN e impressão digital)
+    // Registra batida sem câmera (para PIN)
     async function _registrarBatidaSemCamera(tipo) {
       const agora = new Date();
       const dia = String(agora.getDate()).padStart(2,"0");
@@ -7478,8 +7052,6 @@
       }
       if (metodo === 'facial') {
         abrirBiometria(tipoBatidaPendente);
-      } else if (metodo === 'digital') {
-        _autenticarDigitalParaPonto(tipoBatidaPendente);
       } else if (metodo === 'pin') {
         _abrirModalPinPonto(tipoBatidaPendente);
       }
