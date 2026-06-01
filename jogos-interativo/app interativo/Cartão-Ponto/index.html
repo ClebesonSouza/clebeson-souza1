@@ -6937,8 +6937,6 @@
       const tipoTexto = tipo === "entrada" ? "Entrada" : "Saída";
       const nomeEsc   = escaparHTML(nome);
       const cargoEsc  = escaparHTML(cargo);
-      const metodoIco = usuarioLogado.metodoAutenticacao === 'pin' ? '🔢' : '👆';
-
       const geoAtual = await Promise.race([
         _geoPromisePonto || Promise.resolve(null),
         new Promise(r => setTimeout(() => r(null), 2000))
@@ -6952,8 +6950,11 @@
       let   locStrAtual = coordStr;
       const locSpanId   = `loc-${cardId}`;
 
-      // Ícone de placeholder (sem foto de câmera)
-      const fotoHtml = `<div style="width:80px;height:80px;border-radius:50%;background:#e8f5e9;border:2px solid #2e7d32;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2em;">${metodoIco}</div>`;
+      // Usa foto de perfil cadastrada na biometria; se não tiver, exibe ícone PIN
+      const fotoPerfilPin = usuarioLogado.fotoProfile || "";
+      const fotoHtml = fotoPerfilPin
+        ? `<img src="${fotoPerfilPin}" alt="Foto" style="width:80px;height:80px;border-radius:50%;object-fit:cover;border:2px solid #2a6eb6;flex-shrink:0;" />`
+        : `<div style="width:80px;height:80px;border-radius:50%;background:#e8f5e9;border:2px solid #2e7d32;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:2em;">🔢</div>`;
 
       const novoCartao = document.createElement("div");
       novoCartao.className = "cartao-registro ativo";
@@ -6979,11 +6980,11 @@
         document.getElementById("btnCompartilharTodos").style.display = "block";
 
       assinaturasPorCartao.set(cardId, assinaturaAtual);
-      fotosPorCartao.set(cardId, "");
+      fotosPorCartao.set(cardId, fotoPerfilPin);
 
       const assinaturaParaCompartilhar = assinaturaAtual;
       novoCartao.querySelector(".btn-compartilhar").addEventListener("click", async () => {
-        const c = await gerarCanvasCartao("", nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStrAtual);
+        const c = await gerarCanvasCartao(fotoPerfilPin, nome, cargo, tipoTexto, dataStr, horaStr, assinaturaParaCompartilhar, locStrAtual);
         await compartilharOuBaixar(c, `comprovante-${tipoTexto.toLowerCase()}.png`);
       });
 
