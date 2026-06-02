@@ -1160,6 +1160,7 @@
         <button id="btnMeuRelatorio" style="background:#00897b;margin-top:10px;">Ver meu relatório de ponto</button>
         <button id="btnBaseCalculo" style="background:#e65100;margin-top:6px;">Base de Cálculo Salarial</button>
         <button id="btnCadastrarBioProprio" style="background:#f57c00;margin-top:10px;display:none;">Cadastrar biometria facial</button>
+        <button id="btnAdicionarPinProprio" style="background:#546e7a;margin-top:6px;display:none;">🔢 Adicionar PIN de backup</button>
 <button id="btnSairApp" style="background:#888;margin-top:16px;">Sair</button>
       </div>
     </div>
@@ -1629,6 +1630,53 @@
 
       <p id="erroSelecaoMetodo" class="error" style="min-height:1.1em;"></p>
       <button id="btnCancelarSelecaoMetodo" style="background:#888;font-size:0.85em;">Cancelar cadastro</button>
+    </div>
+  </div>
+
+  <!-- MODAL ESCOLHA DE MÉTODO NA BATIDA (quando tem facial + PIN) -->
+  <div class="modal-overlay" id="modalEscolherMetodoPonto">
+    <div class="modal-box" style="text-align:center;max-width:320px;">
+      <h2 style="color:#2a6eb6;margin-bottom:6px;">Como bater o ponto?</h2>
+      <p id="modalEscolhaMetodoNome" style="font-size:0.88em;color:#555;margin-bottom:16px;"></p>
+      <button id="btnEscolherFacialPonto"
+        style="background:#1565c0;margin-bottom:10px;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
+        <span style="font-size:1.8em;line-height:1;">😊</span>
+        <span><strong>Biometria facial</strong><br><small style="font-weight:normal;opacity:0.85;">Reconhecimento pelo rosto</small></span>
+      </button>
+      <button id="btnEscolherPinMetodoPonto"
+        style="background:#546e7a;display:flex;align-items:center;gap:12px;text-align:left;padding:14px 16px;">
+        <span style="font-size:1.8em;line-height:1;">🔢</span>
+        <span><strong>PIN numérico</strong><br><small style="font-weight:normal;opacity:0.85;">Código de 4 a 6 dígitos</small></span>
+      </button>
+      <button id="btnCancelarEscolhaPonto" style="background:#888;margin-top:12px;font-size:0.85em;">Cancelar</button>
+    </div>
+  </div>
+
+  <!-- MODAL DEFINIR PIN PRÓPRIO (backup dentro do app) -->
+  <div class="modal-overlay" id="modalDefinirPinProprio">
+    <div class="modal-box" style="text-align:center;max-width:320px;">
+      <h2 style="color:#546e7a;">🔢 Adicionar PIN de backup</h2>
+      <p style="font-size:0.88em;color:#555;margin-bottom:14px;">
+        Será usado como alternativa à biometria facial na hora de bater o ponto.
+      </p>
+      <label style="font-size:0.88em;display:block;text-align:left;">PIN (4 a 6 dígitos)</label>
+      <div class="senha-wrapper">
+        <input type="password" id="inputPinProprioNovo" maxlength="6" inputmode="numeric"
+          placeholder="• • • • • •"
+          style="letter-spacing:0.4em;font-size:1.4em;text-align:center;font-weight:bold;" />
+        <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+      </div>
+      <label style="font-size:0.88em;display:block;text-align:left;margin-top:8px;">Confirme o PIN</label>
+      <div class="senha-wrapper">
+        <input type="password" id="inputPinProprioConfirm" maxlength="6" inputmode="numeric"
+          placeholder="• • • • • •"
+          style="letter-spacing:0.4em;font-size:1.4em;text-align:center;font-weight:bold;" />
+        <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+      </div>
+      <p id="erroPinProprio" class="error" style="min-height:1.1em;margin-top:4px;"></p>
+      <p id="sucessoPinProprio" style="color:green;min-height:1.1em;font-size:0.9em;margin-top:2px;"></p>
+      <button id="btnSalvarPinProprio" style="background:#546e7a;margin-top:6px;">✅ Salvar PIN</button>
+      <button id="btnCancelarPinProprio2" style="background:#888;margin-top:6px;font-size:0.85em;">Cancelar</button>
     </div>
   </div>
 
@@ -4036,8 +4084,7 @@
       usuarioLogado = user;
       if (navigator.onLine) _salvarCacheUsuarios();
 
-      document.getElementById("btnCadastrarBioProprio").style.display =
-        (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
+      _atualizarBotoesCadastroProprio(user);
 
       document.getElementById("userNome").textContent = user.nome;
       document.getElementById("userNome").dataset.cargo = user.cargo || "";
@@ -4596,15 +4643,14 @@
           // Funcionário cadastrando a própria biometria dentro do app
           usuarioLogado.faceDescriptors = descritores;
           usuarioLogado.fotoProfile = fotoProfile;
-          // Migra método de autenticação para facial e remove o PIN anterior
+          // Registra biometria facial (PIN anterior mantido como backup, se existir)
           usuarioLogado.metodoAutenticacao = 'facial';
-          delete usuarioLogado.pinHash;
           const idx = usuarios.findIndex(u => String(u.id) === String(usuarioLogado.id));
           if (idx !== -1) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios)); }
           _salvarUsuarioFirestore(usuarioLogado);
-          statusEl.textContent = "Biometria cadastrada! Agora você bate o ponto pelo rosto 😊";
+          statusEl.textContent = "Biometria cadastrada! Agora você pode bater o ponto pelo rosto 😊";
           statusEl.style.color = "green";
-          document.getElementById("btnCadastrarBioProprio").style.display = "none";
+          _atualizarBotoesCadastroProprio(usuarioLogado);
           setTimeout(() => fecharBiometriaCadastro(), 1800);
 
         } else {
@@ -4691,9 +4737,7 @@
       usuarioLogado = user;
       if (navigator.onLine) _salvarCacheUsuarios();
 
-      // Mostra botão de cadastro biométrico se o funcionário ainda não tem biometria
-      document.getElementById("btnCadastrarBioProprio").style.display =
-        (user.faceDescriptors || user.faceDescriptor) ? "none" : "block";
+      _atualizarBotoesCadastroProprio(user);
 
       // Exibe a tela principal do app
       document.getElementById("userNome").textContent = user.nome;
@@ -6579,6 +6623,79 @@
       await abrirModalBioCadastro('proprio');
     });
 
+    // ============================
+    // ESCOLHA DE MÉTODO NA BATIDA
+    // ============================
+    let _tipoBatidaEscolha = null;
+
+    function _abrirEscolhaMetodoPonto(tipo) {
+      _tipoBatidaEscolha = tipo;
+      document.getElementById("modalEscolhaMetodoNome").textContent =
+        usuarioLogado ? `${usuarioLogado.nome} — ${tipo === 'entrada' ? 'Entrada' : 'Saída'}` : "";
+      document.getElementById("modalEscolherMetodoPonto").classList.add("ativo");
+    }
+
+    document.getElementById("btnEscolherFacialPonto").addEventListener("click", () => {
+      document.getElementById("modalEscolherMetodoPonto").classList.remove("ativo");
+      abrirBiometria(_tipoBatidaEscolha);
+    });
+
+    document.getElementById("btnEscolherPinMetodoPonto").addEventListener("click", () => {
+      document.getElementById("modalEscolherMetodoPonto").classList.remove("ativo");
+      _abrirModalPinPonto(_tipoBatidaEscolha);
+    });
+
+    document.getElementById("btnCancelarEscolhaPonto").addEventListener("click", () => {
+      document.getElementById("modalEscolherMetodoPonto").classList.remove("ativo");
+      _tipoBatidaEscolha = null;
+    });
+
+    // ============================
+    // ADICIONAR PIN PRÓPRIO (backup)
+    // ============================
+    document.getElementById("btnAdicionarPinProprio").addEventListener("click", () => {
+      document.getElementById("inputPinProprioNovo").value = "";
+      document.getElementById("inputPinProprioConfirm").value = "";
+      document.getElementById("erroPinProprio").textContent = "";
+      document.getElementById("sucessoPinProprio").textContent = "";
+      document.getElementById("modalDefinirPinProprio").classList.add("ativo");
+      setTimeout(() => document.getElementById("inputPinProprioNovo").focus(), 200);
+    });
+
+    document.getElementById("btnCancelarPinProprio2").addEventListener("click", () => {
+      document.getElementById("modalDefinirPinProprio").classList.remove("ativo");
+    });
+
+    document.getElementById("btnSalvarPinProprio").addEventListener("click", async () => {
+      const erroEl = document.getElementById("erroPinProprio");
+      const okEl   = document.getElementById("sucessoPinProprio");
+      const pin    = document.getElementById("inputPinProprioNovo").value.trim();
+      const pin2   = document.getElementById("inputPinProprioConfirm").value.trim();
+      erroEl.textContent = "";
+      okEl.textContent   = "";
+
+      if (!/^\d{4,6}$/.test(pin)) { erroEl.textContent = "PIN deve ter 4 a 6 dígitos numéricos."; return; }
+      if (pin !== pin2)            { erroEl.textContent = "Os PINs não coincidem.";               return; }
+
+      const btn = document.getElementById("btnSalvarPinProprio");
+      btn.disabled = true;
+      btn.textContent = "Salvando...";
+
+      const pinHash = await hashSenha("PIN:" + pin + (usuarioLogado.salt || ""));
+      usuarioLogado.pinHash = pinHash;
+      const idx = usuarios.findIndex(u => u.id === usuarioLogado.id);
+      if (idx >= 0) { usuarios[idx] = { ...usuarioLogado }; localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios)); }
+      await _salvarUsuarioFirestore(usuarioLogado);
+
+      _atualizarBotoesCadastroProprio(usuarioLogado);
+      okEl.textContent = "✅ PIN salvo! Na batida você escolhe entre facial ou PIN.";
+      btn.disabled = false;
+      btn.textContent = "✅ Salvar PIN";
+      setTimeout(() => {
+        document.getElementById("modalDefinirPinProprio").classList.remove("ativo");
+      }, 2000);
+    });
+
     document.getElementById("btnCadastrarNovoAdmin").addEventListener("click", () => {
       document.getElementById("statusCadastroAdmin").textContent = "";
       document.getElementById("cadastroAdminForm").reset();
@@ -7047,18 +7164,21 @@
       assinaturaAtual = primeiroTraco ? null : canvas.toDataURL("image/png");
       _geoPromisePonto = capturarGPSFresco();
 
-      const metodo = usuarioLogado.metodoAutenticacao
-        || ((usuarioLogado.faceDescriptors || usuarioLogado.faceDescriptor) ? 'facial' : null);
+      const hasFacial = !!(usuarioLogado.faceDescriptors || usuarioLogado.faceDescriptor);
+      const hasPin    = !!usuarioLogado.pinHash;
 
-      if (!metodo) {
+      if (!hasFacial && !hasPin) {
         document.getElementById("batidaStatus").textContent =
           "⚠ Você precisa cadastrar um método de verificação. Acesse 'Cadastrar biometria facial' abaixo.";
         document.getElementById("batidaStatus").style.color = "#c00";
         return;
       }
-      if (metodo === 'facial') {
+      if (hasFacial && hasPin) {
+        // Tem os dois métodos — funcionário escolhe qual usar
+        _abrirEscolhaMetodoPonto(tipoBatidaPendente);
+      } else if (hasFacial) {
         abrirBiometria(tipoBatidaPendente);
-      } else if (metodo === 'pin') {
+      } else {
         _abrirModalPinPonto(tipoBatidaPendente);
       }
     });
@@ -7668,6 +7788,14 @@
     }
 
     // Garante alternância obrigatória entrada → saída → entrada
+    // Atualiza visibilidade dos botões de cadastro no appScreen do funcionário
+    function _atualizarBotoesCadastroProprio(user) {
+      const temBio = !!(user.faceDescriptors || user.faceDescriptor);
+      const temPin = !!user.pinHash;
+      document.getElementById("btnCadastrarBioProprio").style.display  = temBio ? "none" : "";
+      document.getElementById("btnAdicionarPinProprio").style.display   = (temBio && !temPin) ? "" : "none";
+    }
+
     function atualizarBotoesBatida() {
       if (!usuarioLogado || usuarioLogado.admin) return;
       const agora = new Date();
