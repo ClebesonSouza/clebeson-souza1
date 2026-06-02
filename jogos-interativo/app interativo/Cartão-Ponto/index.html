@@ -861,36 +861,35 @@
           <button id="gotoConfig" style="background:none;color:#888;text-decoration:underline;font-size:0.85em;">
             Configurar área de ponto
           </button>
-          <button id="btnAbrirLoginAlternativo" style="background:none;color:#546e7a;text-decoration:underline;font-size:0.85em;">
-            🔢 Login com PIN
-          </button>
         </div>
       </div>
     </div>
-  </div>
 
-  <!-- LOGIN ALTERNATIVO (PIN) -->
-  <div id="loginAlternativoCard" style="max-width:480px;margin:0 auto;display:none;">
-    <div style="background:#546e7a;color:#fff;padding:10px 16px;border-radius:8px 8px 0 0;cursor:pointer;display:flex;justify-content:space-between;align-items:center;"
-      onclick="toggleLoginAlternativo()">
-      <span>🔐 Outras formas de entrar</span>
-      <span id="loginAlternativoSeta">▼</span>
-    </div>
-    <div id="loginAlternativoBody" style="display:none;background:#fff;border:1px solid #ccc;border-top:none;border-radius:0 0 8px 8px;padding:16px 14px 10px;">
-
-      <!-- PIN -->
-      <form id="pinLoginForm">
-        <p style="font-size:0.85em;font-weight:bold;color:#546e7a;margin-bottom:8px;">🔢 Entrar com PIN</p>
-        <label style="font-size:0.85em;">E-mail</label>
-        <input type="email" name="emailPin" required placeholder="seu@email.com" />
-        <label style="font-size:0.85em;">PIN numérico</label>
-        <input type="text" name="pinInput" required maxlength="6" inputmode="numeric"
-          placeholder="• • • • • •"
-          style="letter-spacing:0.4em;font-size:1.5em;text-align:center;font-weight:bold;" />
-        <p id="erroPinLogin" class="error" style="min-height:1.1em;"></p>
-        <button type="submit" style="background:#546e7a;">🔢 Entrar com PIN</button>
-      </form>
-
+    <!-- LOGIN ALTERNATIVO (PIN) — accordion integrado -->
+    <div id="loginAlternativoCard" style="margin-top:10px;">
+      <div class="card" style="padding:0;margin:0;">
+        <div class="card-title" style="background:#546e7a;cursor:pointer;display:flex;justify-content:space-between;align-items:center;margin:0;border-radius:8px;"
+          onclick="toggleLoginAlternativo()">
+          <span>🔐 Outras formas de entrar</span>
+          <span id="loginAlternativoSeta" style="font-size:0.85em;opacity:0.8;">▼</span>
+        </div>
+        <div id="loginAlternativoBody" style="display:none;" class="card content">
+          <form id="pinLoginForm">
+            <p style="font-size:0.88em;font-weight:bold;color:#546e7a;margin-bottom:10px;">🔢 Entrar com PIN numérico</p>
+            <label>E-mail</label>
+            <input type="email" name="emailPin" required placeholder="seu@email.com" />
+            <label>PIN</label>
+            <div class="senha-wrapper">
+              <input type="password" name="pinInput" required maxlength="6" inputmode="numeric"
+                placeholder="• • • • • •"
+                style="letter-spacing:0.4em;font-size:1.5em;text-align:center;font-weight:bold;" />
+              <button type="button" class="btn-toggle-senha" onclick="toggleSenha(this)">👁</button>
+            </div>
+            <p id="erroPinLogin" class="error" style="min-height:1.1em;"></p>
+            <button type="submit" style="background:#546e7a;">🔢 Entrar com PIN</button>
+          </form>
+        </div>
+      </div>
     </div>
   </div>
 
@@ -3919,9 +3918,13 @@
         document.getElementById(s).classList.add("hidden");
       });
       document.getElementById(id).classList.remove("hidden");
-      // Card de login alternativo: só visível na loginScreen e ocultado ao trocar de tela
-      const altCard = document.getElementById("loginAlternativoCard");
-      if (altCard) altCard.style.display = id === "loginScreen" ? "" : "none";
+      // Fecha o accordion PIN ao sair da loginScreen
+      if (id !== "loginScreen") {
+        const body = document.getElementById("loginAlternativoBody");
+        const seta = document.getElementById("loginAlternativoSeta");
+        if (body) body.style.display = "none";
+        if (seta) seta.textContent = "▼";
+      }
     }
 
     function toggleSenha(btn) {
@@ -4024,26 +4027,14 @@
     // ============================
 
     // Exibe/oculta o card de login alternativo
-    function toggleLoginAlternativo(forceOpen) {
-      const card = document.getElementById("loginAlternativoCard");
+    function toggleLoginAlternativo() {
       const body = document.getElementById("loginAlternativoBody");
       const seta = document.getElementById("loginAlternativoSeta");
       const aberto = body.style.display !== "none";
-      if (forceOpen === true || (forceOpen === undefined && aberto)) {
-        body.style.display = aberto ? "none" : "";
-        seta.textContent = aberto ? "▼" : "▲";
-      } else {
-        body.style.display = "";
-        seta.textContent = "▲";
-      }
+      body.style.display = aberto ? "none" : "";
+      seta.textContent   = aberto ? "▼" : "▲";
     }
 
-    document.getElementById("btnAbrirLoginAlternativo").addEventListener("click", () => {
-      const card = document.getElementById("loginAlternativoCard");
-      card.style.display = "";
-      toggleLoginAlternativo(true);
-      card.scrollIntoView({ behavior: "smooth", block: "nearest" });
-    });
 
     // Login com PIN
     document.getElementById("pinLoginForm").addEventListener("submit", async (e) => {
