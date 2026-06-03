@@ -3021,12 +3021,30 @@
       // Garante autenticação anônima antes de usar Firestore
       try { await _authPronto; } catch (_) {}
 
-      // Garante que usuarios está carregado
+      // Garante que usuarios está carregado do cache local
       if (usuarios.length === 0) {
         try { usuarios = JSON.parse(localStorage.getItem(_lsKey("usuarios")) || "[]"); } catch {}
       }
 
-      const user = usuarios.find(u => !u.admin && u.email === email);
+      let user = usuarios.find(u => !u.admin && u.email === email);
+
+      // Se não encontrou localmente ou não tem telefone, busca direto no Firestore
+      if (!user || !user.telefone) {
+        try {
+          erroEl.textContent = "🔍 Buscando sua conta...";
+          const snap = await _col("usuarios").where("email", "==", email).limit(1).get();
+          if (!snap.empty) {
+            const dadosFirestore = snap.docs[0].data();
+            if (!dadosFirestore.admin) {
+              user = dadosFirestore;
+            }
+          }
+        } catch (ex) {
+          console.warn("Recuperação — busca Firestore:", ex);
+        }
+        erroEl.textContent = "";
+      }
+
       if (!user) {
         erroEl.textContent = "E-mail não encontrado. Verifique e tente novamente.";
         return false;
