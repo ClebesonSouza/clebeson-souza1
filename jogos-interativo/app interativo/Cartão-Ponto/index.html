@@ -3002,11 +3002,14 @@
 
     // Formata número para wa.me (remove tudo que não é dígito, normaliza para 55+DDD+número)
     function _formatarTelefoneWA(tel) {
-      // Remove tudo que não é dígito e zeros à esquerda (ex: 0 49 99..., (049)...)
       let digits = tel.replace(/\D/g, "").replace(/^0+/, "");
-      // Se já começa com 55 e tem 12 ou 13 dígitos, está completo
-      if (digits.startsWith("55") && digits.length >= 12) return digits;
-      // Caso contrário, acrescenta código do Brasil
+      // Remove código do país se já presente, para normalizar
+      if (digits.startsWith("55") && digits.length >= 12) digits = digits.slice(2);
+      // Adiciona 9º dígito obrigatório para números móveis salvos no formato pré-2012
+      // 10 dígitos = DDD(2) + número(8) → celular começa com 6-9
+      if (digits.length === 10 && /^[1-9]{2}[6-9]/.test(digits)) {
+        digits = digits.slice(0, 2) + "9" + digits.slice(2);
+      }
       return "55" + digits;
     }
 
