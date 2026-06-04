@@ -1135,7 +1135,7 @@
             </select>
             <input type="tel" id="dddCadastro" placeholder="DDD" maxlength="4" inputmode="numeric"
               style="width:62px;border:1px solid #ccc;border-left:none;border-right:none;border-radius:0;text-align:center;padding:10px 4px;font-size:0.95em;" />
-            <input type="tel" name="telefone" placeholder="99192-4099" inputmode="numeric"
+            <input type="tel" name="telefone" placeholder="99999-9999" inputmode="numeric"
               style="border-radius:0 6px 6px 0;flex:1;border-left:none;" />
           </div>
 
@@ -1373,7 +1373,7 @@
           </select>
           <input type="tel" id="editDdd" placeholder="DDD" maxlength="4" inputmode="numeric"
             style="width:62px;border:1px solid #ccc;border-left:none;border-right:none;border-radius:0;text-align:center;padding:10px 4px;font-size:0.95em;" />
-          <input type="tel" id="editTelefone" placeholder="99192-4099" inputmode="numeric"
+          <input type="tel" id="editTelefone" placeholder="99999-9999" inputmode="numeric"
             style="border-radius:0 6px 6px 0;flex:1;border-left:none;" />
         </div>
       </div>
@@ -6614,8 +6614,13 @@
       statusEl.style.color = "#555";
       try {
         localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
-        await _salvarUsuarioFirestore(usuarioEditando);
-        statusEl.textContent = "Alterações salvas com sucesso!";
+        // Salva direto no Firestore sem try/catch interno para garantir que erro seja detectado
+        await _authPronto;
+        const uSalvar = { ...usuarioEditando };
+        if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
+        if (uSalvar.faceDescriptor)  uSalvar.faceDescriptor  = JSON.stringify(Array.from(uSalvar.faceDescriptor));
+        await _col("usuarios").doc(String(uSalvar.id)).set(uSalvar);
+        statusEl.textContent = "✅ Alterações salvas!";
         statusEl.style.color = "green";
         setTimeout(() => {
           document.getElementById("modalEditarUsuario").classList.remove("ativo");
@@ -6624,7 +6629,7 @@
         }, 1000);
       } catch (ex) {
         console.warn("Erro ao salvar edição:", ex);
-        statusEl.textContent = "Erro ao salvar. Verifique a conexão e tente novamente.";
+        statusEl.textContent = "❌ Erro ao salvar. Verifique a conexão e tente novamente.";
         statusEl.style.color = "red";
       }
     });
