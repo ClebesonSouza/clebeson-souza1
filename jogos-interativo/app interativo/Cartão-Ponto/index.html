@@ -6579,9 +6579,11 @@
         statusEl.style.color = "red";
         return;
       }
-      const conflito = usuarios.some(u => u.id !== usuarioEditando.id && (
-        u.email === novoEmail || (!ehAdmin && u.cpf === novoCpf)
-      ));
+      const conflito = usuarios.some(u =>
+        String(u.id) !== String(usuarioEditando.id) && u.nome && (
+          u.email === novoEmail || (!ehAdmin && novoCpf && u.cpf === novoCpf)
+        )
+      );
       if (conflito) {
         statusEl.textContent = "CPF ou e-mail já usado por outro funcionário.";
         statusEl.style.color = "red";
