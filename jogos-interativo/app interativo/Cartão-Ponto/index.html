@@ -1109,7 +1109,10 @@
           <input type="text" name="cargo" />
 
           <label>Telefone</label>
-          <input type="tel" name="telefone" />
+          <div style="display:flex;align-items:stretch;gap:0;">
+            <span style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 10px;font-size:0.93em;color:#444;display:flex;align-items:center;white-space:nowrap;font-weight:600;">🇧🇷 +55</span>
+            <input type="tel" name="telefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
+          </div>
 
           <p id="erroCadastro" class="error" style="min-height:1.2em;"></p>
           <button type="submit">Cadastrar</button>
@@ -1319,7 +1322,10 @@
       </div>
       <div id="editTelefoneGroup">
         <label>Telefone</label>
-        <input type="tel" id="editTelefone" />
+        <div style="display:flex;align-items:stretch;gap:0;">
+          <span style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 10px;font-size:0.93em;color:#444;display:flex;align-items:center;white-space:nowrap;font-weight:600;">🇧🇷 +55</span>
+          <input type="tel" id="editTelefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
+        </div>
       </div>
       <div id="editNascimentoGroup">
         <label>Data de nascimento</label>
@@ -3000,13 +3006,13 @@
       return String(Math.floor(100000 + Math.random() * 900000));
     }
 
-    // Formata número para wa.me (remove tudo que não é dígito, normaliza para 55+DDD+número)
+    // Formata número para wa.me — aceita qualquer formato digitado pelo usuário
     function _formatarTelefoneWA(tel) {
+      // Remove tudo que não é dígito e zeros à esquerda
       let digits = tel.replace(/\D/g, "").replace(/^0+/, "");
-      // Remove código do país se já presente, para normalizar
+      // Se já começa com 55 (código do Brasil), remove para normalizar
       if (digits.startsWith("55") && digits.length >= 12) digits = digits.slice(2);
-      // Adiciona 9º dígito obrigatório para números móveis salvos no formato pré-2012
-      // 10 dígitos = DDD(2) + número(8) → celular começa com 6-9
+      // Números antigos (pré-2012): DDD(2) + 8 dígitos iniciando com 6-9 → adiciona 9º dígito
       if (digits.length === 10 && /^[1-9]{2}[6-9]/.test(digits)) {
         digits = digits.slice(0, 2) + "9" + digits.slice(2);
       }
