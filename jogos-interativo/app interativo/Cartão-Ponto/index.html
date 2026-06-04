@@ -4604,6 +4604,16 @@
         return;
       }
 
+      // Verifica se a senha já está em uso por qualquer outro usuário (admin ou funcionário)
+      for (const u of usuarios) {
+        if (!u.salt || !u.senha) continue;
+        const hashTeste = await hashSenha(senha + u.salt);
+        if (hashTeste === u.senha) {
+          erroEl.textContent = "Essa senha já está em uso. Escolha uma senha diferente.";
+          return;
+        }
+      }
+
       const salt = crypto.randomUUID();
       const senhaHash = await hashSenha(senha + salt);
       dadosCadastroPendente = { nome, cpf, email, senha: senhaHash, salt, cargo, telefone, nascimento };
@@ -6580,7 +6590,8 @@
         return;
       }
       const conflito = usuarios.some(u =>
-        String(u.id) !== String(usuarioEditando.id) && u.nome && (
+        String(u.id) !== String(usuarioEditando.id) && u.nome &&
+        !!u.admin === ehAdmin && (
           u.email === novoEmail || (!ehAdmin && novoCpf && u.cpf === novoCpf)
         )
       );
@@ -6613,6 +6624,16 @@
         }
       }
       if (novaSenha) {
+        // Verifica se a nova senha já está em uso por outro usuário
+        for (const u of usuarios) {
+          if (String(u.id) === String(usuarioEditando.id) || !u.salt || !u.senha) continue;
+          const hashTeste = await hashSenha(novaSenha + u.salt);
+          if (hashTeste === u.senha) {
+            statusEl.textContent = "Essa senha já está em uso. Escolha uma senha diferente.";
+            statusEl.style.color = "red";
+            return;
+          }
+        }
         const novoSalt = crypto.randomUUID();
         usuarioEditando.salt = novoSalt;
         usuarioEditando.senha = await hashSenha(novaSenha + novoSalt);
