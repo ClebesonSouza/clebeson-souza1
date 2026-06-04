@@ -1110,7 +1110,29 @@
 
           <label>Telefone</label>
           <div style="display:flex;align-items:stretch;gap:0;">
-            <span style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 10px;font-size:0.93em;color:#444;display:flex;align-items:center;white-space:nowrap;font-weight:600;">🇧🇷 +55</span>
+            <select id="selectPaisCadastro" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 6px;font-size:0.84em;color:#444;font-weight:600;cursor:pointer;outline:none;">
+              <option value="55">🇧🇷 +55</option>
+              <option value="1">🇺🇸 +1</option>
+              <option value="54">🇦🇷 +54</option>
+              <option value="351">🇵🇹 +351</option>
+              <option value="34">🇪🇸 +34</option>
+              <option value="44">🇬🇧 +44</option>
+              <option value="49">🇩🇪 +49</option>
+              <option value="39">🇮🇹 +39</option>
+              <option value="33">🇫🇷 +33</option>
+              <option value="52">🇲🇽 +52</option>
+              <option value="57">🇨🇴 +57</option>
+              <option value="56">🇨🇱 +56</option>
+              <option value="51">🇵🇪 +51</option>
+              <option value="591">🇧🇴 +591</option>
+              <option value="595">🇵🇾 +595</option>
+              <option value="598">🇺🇾 +598</option>
+              <option value="58">🇻🇪 +58</option>
+              <option value="244">🇦🇴 +244</option>
+              <option value="258">🇲🇿 +258</option>
+              <option value="81">🇯🇵 +81</option>
+              <option value="86">🇨🇳 +86</option>
+            </select>
             <input type="tel" name="telefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
           </div>
 
@@ -1323,7 +1345,29 @@
       <div id="editTelefoneGroup">
         <label>Telefone</label>
         <div style="display:flex;align-items:stretch;gap:0;">
-          <span style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 10px;font-size:0.93em;color:#444;display:flex;align-items:center;white-space:nowrap;font-weight:600;">🇧🇷 +55</span>
+          <select id="editSelectPais" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 6px;font-size:0.84em;color:#444;font-weight:600;cursor:pointer;outline:none;">
+            <option value="55">🇧🇷 +55</option>
+            <option value="1">🇺🇸 +1</option>
+            <option value="54">🇦🇷 +54</option>
+            <option value="351">🇵🇹 +351</option>
+            <option value="34">🇪🇸 +34</option>
+            <option value="44">🇬🇧 +44</option>
+            <option value="49">🇩🇪 +49</option>
+            <option value="39">🇮🇹 +39</option>
+            <option value="33">🇫🇷 +33</option>
+            <option value="52">🇲🇽 +52</option>
+            <option value="57">🇨🇴 +57</option>
+            <option value="56">🇨🇱 +56</option>
+            <option value="51">🇵🇪 +51</option>
+            <option value="591">🇧🇴 +591</option>
+            <option value="595">🇵🇾 +595</option>
+            <option value="598">🇺🇾 +598</option>
+            <option value="58">🇻🇪 +58</option>
+            <option value="244">🇦🇴 +244</option>
+            <option value="258">🇲🇿 +258</option>
+            <option value="81">🇯🇵 +81</option>
+            <option value="86">🇨🇳 +86</option>
+          </select>
           <input type="tel" id="editTelefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
         </div>
       </div>
@@ -3006,17 +3050,32 @@
       return String(Math.floor(100000 + Math.random() * 900000));
     }
 
-    // Formata número para wa.me — aceita qualquer formato digitado pelo usuário
-    function _formatarTelefoneWA(tel) {
-      // Remove tudo que não é dígito e zeros à esquerda
-      let digits = tel.replace(/\D/g, "").replace(/^0+/, "");
-      // Se já começa com 55 (código do Brasil), remove para normalizar
-      if (digits.startsWith("55") && digits.length >= 12) digits = digits.slice(2);
-      // Números antigos (pré-2012): DDD(2) + 8 dígitos iniciando com 6-9 → adiciona 9º dígito
-      if (digits.length === 10 && /^[1-9]{2}[6-9]/.test(digits)) {
-        digits = digits.slice(0, 2) + "9" + digits.slice(2);
+    // Detecta código do país de um número já salvo e retorna { pais, local }
+    function _detectarPaisTelefone(tel) {
+      const digits = tel.replace(/\D/g, "").replace(/^0+/, "");
+      for (const c of ["351","591","595","598","244","258"]) {
+        if (digits.startsWith(c) && digits.length > c.length + 5)
+          return { pais: c, local: digits.slice(c.length) };
       }
-      return "55" + digits;
+      for (const c of ["55","54","34","44","49","52","56","57","58","81","86","39","33","51"]) {
+        if (digits.startsWith(c) && digits.length > c.length + 5)
+          return { pais: c, local: digits.slice(c.length) };
+      }
+      if (digits.startsWith("1") && digits.length >= 11)
+        return { pais: "1", local: digits.slice(1) };
+      return { pais: "55", local: digits };
+    }
+
+    // Formata número para wa.me — o número salvo já contém o código do país
+    function _formatarTelefoneWA(tel) {
+      let digits = tel.replace(/\D/g, "").replace(/^0+/, "");
+      // Retrocompatibilidade: número antigo salvo sem código do país (≤11 dígitos)
+      if (digits.length <= 11) {
+        if (digits.length === 10 && /^[1-9]{2}[6-9]/.test(digits))
+          digits = digits.slice(0, 2) + "9" + digits.slice(2);
+        digits = "55" + digits;
+      }
+      return digits;
     }
 
     // Envia código de recuperação: busca usuário, gera código, salva no Firestore, abre WhatsApp
@@ -4488,7 +4547,9 @@
       const senha = fd.get("senha");
       const confirmarSenha = fd.get("confirmarSenha");
       const cargo    = (fd.get("cargo") || "").trim();
-      const telefone = (fd.get("telefone") || "").trim();
+      const telPais  = (document.getElementById("selectPaisCadastro").value || "55");
+      const telRaw   = (fd.get("telefone") || "").replace(/\D/g, "");
+      const telefone = telRaw ? (telPais + telRaw) : "";
       const nascimento = fd.get("nascimento");
 
       // Validação de senha
@@ -5074,7 +5135,9 @@
       if (!ehAdmin) {
         document.getElementById("editCpf").value = u.cpf || "";
         document.getElementById("editCargo").value = u.cargo || "";
-        document.getElementById("editTelefone").value = u.telefone || "";
+        const _tp = _detectarPaisTelefone(u.telefone || "");
+        document.getElementById("editSelectPais").value = _tp.pais;
+        document.getElementById("editTelefone").value   = _tp.local;
         document.getElementById("editNascimento").value = u.nascimento || "";
         document.getElementById("editJornada").value = u.jornadaHoras != null ? u.jornadaHoras : "";
         document.getElementById("editGeoLat").value = u.geoLat != null ? u.geoLat : "";
@@ -6467,7 +6530,9 @@
       const novoCpf = document.getElementById("editCpf").value.trim();
       const novoEmail = document.getElementById("editEmail").value.trim();
       const novoCargo = document.getElementById("editCargo").value.trim();
-      const novoTelefone = document.getElementById("editTelefone").value.trim();
+      const editPais     = (document.getElementById("editSelectPais").value || "55");
+      const editTelRaw   = document.getElementById("editTelefone").value.replace(/\D/g, "");
+      const novoTelefone = editTelRaw ? (editPais + editTelRaw) : "";
       const novoNascimento = document.getElementById("editNascimento").value;
       const novaSenha = document.getElementById("editSenha").value;
 
