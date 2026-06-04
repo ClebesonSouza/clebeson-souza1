@@ -6610,14 +6610,23 @@
         usuarioEditando.senha = await hashSenha(novaSenha + novoSalt);
       }
 
-      salvarUsuarios();
-      statusEl.textContent = "Alterações salvas com sucesso!";
-      statusEl.style.color = "green";
-      setTimeout(() => {
-        document.getElementById("modalEditarUsuario").classList.remove("ativo");
-        usuarioEditando = null;
-        renderAdminUsers();
-      }, 1000);
+      statusEl.textContent = "Salvando...";
+      statusEl.style.color = "#555";
+      try {
+        localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
+        await _salvarUsuarioFirestore(usuarioEditando);
+        statusEl.textContent = "Alterações salvas com sucesso!";
+        statusEl.style.color = "green";
+        setTimeout(() => {
+          document.getElementById("modalEditarUsuario").classList.remove("ativo");
+          usuarioEditando = null;
+          renderAdminUsers();
+        }, 1000);
+      } catch (ex) {
+        console.warn("Erro ao salvar edição:", ex);
+        statusEl.textContent = "Erro ao salvar. Verifique a conexão e tente novamente.";
+        statusEl.style.color = "red";
+      }
     });
 
     document.getElementById("btnFecharEdicao").addEventListener("click", () => {
