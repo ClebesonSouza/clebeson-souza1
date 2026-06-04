@@ -2031,15 +2031,23 @@
       } catch {}
     }
 
+    // Serializa biometria para Firestore (suporta Float32Array e string JSON já serializada)
+    function _prepararUsuarioParaFirestore(u) {
+      const s = { ...u };
+      if (s.faceDescriptors && typeof s.faceDescriptors !== "string")
+        s.faceDescriptors = JSON.stringify(s.faceDescriptors.map(d => Array.from(d)));
+      if (s.faceDescriptor && typeof s.faceDescriptor !== "string")
+        s.faceDescriptor = JSON.stringify(Array.from(s.faceDescriptor));
+      return s;
+    }
+
     async function _syncUsuariosFirestore() {
       try {
         await _authPronto;
         for (let i = 0; i < usuarios.length; i += 500) {
           const batch = db.batch();
           usuarios.slice(i, i + 500).forEach(u => {
-            const uSalvar = { ...u };
-            if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
-            if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
+            const uSalvar = _prepararUsuarioParaFirestore(u);
             batch.set(_col("usuarios").doc(String(uSalvar.id)), uSalvar);
           });
           await batch.commit();
@@ -2050,9 +2058,7 @@
     async function _salvarUsuarioFirestore(u) {
       try {
         await _authPronto;
-        const uSalvar = { ...u };
-        if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
-        if (uSalvar.faceDescriptor) uSalvar.faceDescriptor = JSON.stringify(Array.from(uSalvar.faceDescriptor));
+        const uSalvar = _prepararUsuarioParaFirestore(u);
         await _col("usuarios").doc(String(uSalvar.id)).set(uSalvar);
       } catch (e) { console.warn("Firestore salvar usuario:", e); }
     }
@@ -6614,11 +6620,8 @@
       statusEl.style.color = "#555";
       try {
         localStorage.setItem(_lsKey("usuarios"), JSON.stringify(usuarios));
-        // Salva direto no Firestore sem try/catch interno para garantir que erro seja detectado
         await _authPronto;
-        const uSalvar = { ...usuarioEditando };
-        if (uSalvar.faceDescriptors) uSalvar.faceDescriptors = JSON.stringify(uSalvar.faceDescriptors.map(d => Array.from(d)));
-        if (uSalvar.faceDescriptor)  uSalvar.faceDescriptor  = JSON.stringify(Array.from(uSalvar.faceDescriptor));
+        const uSalvar = _prepararUsuarioParaFirestore(usuarioEditando);
         await _col("usuarios").doc(String(uSalvar.id)).set(uSalvar);
         statusEl.textContent = "✅ Alterações salvas!";
         statusEl.style.color = "green";
