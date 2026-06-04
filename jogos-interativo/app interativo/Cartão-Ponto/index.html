@@ -1110,7 +1110,7 @@
 
           <label>Telefone</label>
           <div style="display:flex;align-items:stretch;gap:0;">
-            <select id="selectPaisCadastro" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 6px;font-size:0.84em;color:#444;font-weight:600;cursor:pointer;outline:none;">
+            <select id="selectPaisCadastro" onchange="_labelDddCadastro()" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 4px;font-size:0.82em;color:#444;font-weight:600;cursor:pointer;outline:none;">
               <option value="55">🇧🇷 +55</option>
               <option value="1">🇺🇸 +1</option>
               <option value="54">🇦🇷 +54</option>
@@ -1133,7 +1133,10 @@
               <option value="81">🇯🇵 +81</option>
               <option value="86">🇨🇳 +86</option>
             </select>
-            <input type="tel" name="telefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
+            <input type="tel" id="dddCadastro" placeholder="DDD" maxlength="4" inputmode="numeric"
+              style="width:62px;border:1px solid #ccc;border-left:none;border-right:none;border-radius:0;text-align:center;padding:10px 4px;font-size:0.95em;" />
+            <input type="tel" name="telefone" placeholder="99192-4099" inputmode="numeric"
+              style="border-radius:0 6px 6px 0;flex:1;border-left:none;" />
           </div>
 
           <p id="erroCadastro" class="error" style="min-height:1.2em;"></p>
@@ -1345,7 +1348,7 @@
       <div id="editTelefoneGroup">
         <label>Telefone</label>
         <div style="display:flex;align-items:stretch;gap:0;">
-          <select id="editSelectPais" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 6px;font-size:0.84em;color:#444;font-weight:600;cursor:pointer;outline:none;">
+          <select id="editSelectPais" onchange="_labelDddEdit()" style="background:#f0f0f0;border:1px solid #ccc;border-right:none;border-radius:6px 0 0 6px;padding:10px 4px;font-size:0.82em;color:#444;font-weight:600;cursor:pointer;outline:none;">
             <option value="55">🇧🇷 +55</option>
             <option value="1">🇺🇸 +1</option>
             <option value="54">🇦🇷 +54</option>
@@ -1368,7 +1371,10 @@
             <option value="81">🇯🇵 +81</option>
             <option value="86">🇨🇳 +86</option>
           </select>
-          <input type="tel" id="editTelefone" placeholder="49 99192-4099" inputmode="numeric" style="border-radius:0 6px 6px 0;flex:1;" />
+          <input type="tel" id="editDdd" placeholder="DDD" maxlength="4" inputmode="numeric"
+            style="width:62px;border:1px solid #ccc;border-left:none;border-right:none;border-radius:0;text-align:center;padding:10px 4px;font-size:0.95em;" />
+          <input type="tel" id="editTelefone" placeholder="99192-4099" inputmode="numeric"
+            style="border-radius:0 6px 6px 0;flex:1;border-left:none;" />
         </div>
       </div>
       <div id="editNascimentoGroup">
@@ -3050,6 +3056,20 @@
       return String(Math.floor(100000 + Math.random() * 900000));
     }
 
+    // Atualiza placeholder do campo DDD conforme país selecionado
+    function _labelDddCadastro() {
+      const pais = document.getElementById("selectPaisCadastro").value;
+      const el   = document.getElementById("dddCadastro");
+      el.placeholder = pais === "55" ? "DDD" : "Área";
+      el.maxLength   = pais === "1" ? 3 : 2;
+    }
+    function _labelDddEdit() {
+      const pais = document.getElementById("editSelectPais").value;
+      const el   = document.getElementById("editDdd");
+      el.placeholder = pais === "55" ? "DDD" : "Área";
+      el.maxLength   = pais === "1" ? 3 : 2;
+    }
+
     // Detecta código do país de um número já salvo e retorna { pais, local }
     function _detectarPaisTelefone(tel) {
       const digits = tel.replace(/\D/g, "").replace(/^0+/, "");
@@ -4548,8 +4568,9 @@
       const confirmarSenha = fd.get("confirmarSenha");
       const cargo    = (fd.get("cargo") || "").trim();
       const telPais  = (document.getElementById("selectPaisCadastro").value || "55");
-      const telRaw   = (fd.get("telefone") || "").replace(/\D/g, "");
-      const telefone = telRaw ? (telPais + telRaw) : "";
+      const telDdd   = (document.getElementById("dddCadastro").value || "").replace(/\D/g, "");
+      const telNum   = (fd.get("telefone") || "").replace(/\D/g, "");
+      const telefone = telNum ? (telPais + telDdd + telNum) : "";
       const nascimento = fd.get("nascimento");
 
       // Validação de senha
@@ -5137,7 +5158,16 @@
         document.getElementById("editCargo").value = u.cargo || "";
         const _tp = _detectarPaisTelefone(u.telefone || "");
         document.getElementById("editSelectPais").value = _tp.pais;
-        document.getElementById("editTelefone").value   = _tp.local;
+        // Separa DDD (2 primeiros dígitos para BR, 3 para US) do número restante
+        const _dddLen = _tp.pais === "1" ? 3 : 2;
+        if (_tp.local.length > _dddLen + 4) {
+          document.getElementById("editDdd").value      = _tp.local.slice(0, _dddLen);
+          document.getElementById("editTelefone").value = _tp.local.slice(_dddLen);
+        } else {
+          document.getElementById("editDdd").value      = "";
+          document.getElementById("editTelefone").value = _tp.local;
+        }
+        _labelDddEdit();
         document.getElementById("editNascimento").value = u.nascimento || "";
         document.getElementById("editJornada").value = u.jornadaHoras != null ? u.jornadaHoras : "";
         document.getElementById("editGeoLat").value = u.geoLat != null ? u.geoLat : "";
@@ -6531,8 +6561,9 @@
       const novoEmail = document.getElementById("editEmail").value.trim();
       const novoCargo = document.getElementById("editCargo").value.trim();
       const editPais     = (document.getElementById("editSelectPais").value || "55");
+      const editDddRaw   = document.getElementById("editDdd").value.replace(/\D/g, "");
       const editTelRaw   = document.getElementById("editTelefone").value.replace(/\D/g, "");
-      const novoTelefone = editTelRaw ? (editPais + editTelRaw) : "";
+      const novoTelefone = editTelRaw ? (editPais + editDddRaw + editTelRaw) : "";
       const novoNascimento = document.getElementById("editNascimento").value;
       const novaSenha = document.getElementById("editSenha").value;
 
